@@ -20,10 +20,25 @@ The TwinTrack Master module: login, users and permissions, and the API behind ev
 npm install
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
+npm run seed
 npm run dev
 ```
 
 Open http://twintrack.localhost:3100. The page should say "API and database connected".
+
+## Example data
+
+`npm run seed` loads the Master and HR modules and the 10-person example team from `seed/`. Everyone's password is `SEED_PASSWORD` from `backend/.env`, or `demo1234` if that isn't set.
+
+- **Safe to re-run:** it updates records by id and creates no duplicates. It resets each person's roles and privileges to what the files say, and keeps passwords already set.
+- **All or nothing:** every file is checked first and all problems are listed together. If anything fails, nothing is saved.
+- **Development only:** it refuses to run when `NODE_ENV` is `production`.
+
+`seed/manifests/hr.json` is a copy of `access.manifest.json` from the `twintrack-hr` repo, so this repo works on its own. Update both together.
+
+## Manifests
+
+`access.manifest.json` lists this module's resources, routes and fixed role templates. A route marked `"planned": true` is designed but not built yet. Remove the flag when it's built.
 
 ## Checks
 

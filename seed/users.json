@@ -25,7 +25,7 @@
       "managerId": "u_01",
       "assignments": {
         "hr": "staff",
-        "master": "employee-access"
+        "master": "hr-access"
       }
     },
     {

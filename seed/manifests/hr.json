@@ -1,0 +1,48 @@
+{
+  "manifestVersion": 1,
+  "module": {
+    "key": "hr",
+    "name": "HR",
+    "version": "1.3.0",
+    "description": "Employee records, leave, attendance and hiring.",
+    "repository": "twintrack-hr",
+    "baseUrl": "/hr"
+  },
+  "resources": [
+    { "key": "employee",    "label": "Employees",   "actions": ["read", "create", "update", "delete"], "scoped": true },
+    { "key": "salary",      "label": "Salaries",    "actions": ["read", "update"], "grantable": ["read"] },
+    { "key": "leave",       "label": "Leave",       "actions": ["read", "create", "delete", "approve"], "scoped": true, "grantable": ["read", "approve"] },
+    { "key": "attendance",  "label": "Attendance",  "actions": ["read", "update"], "scoped": true },
+    { "key": "recruitment", "label": "Recruitment", "actions": ["read", "create", "update"], "grantable": ["read"] }
+  ],
+  "routes": [
+    { "method": "GET",   "path": "/jobs",                 "access": "public" },
+    { "method": "POST",  "path": "/jobs/:id/apply",       "access": "public" },
+    { "method": "GET",   "path": "/employees",            "access": "private", "permission": "employee.read" },
+    { "method": "POST",  "path": "/employees",            "access": "private", "permission": "employee.create" },
+    { "method": "PATCH", "path": "/employees/:id",        "access": "private", "permission": "employee.update" },
+    { "method": "GET",   "path": "/employees/:id/salary", "access": "private", "permission": "salary.read" },
+    { "method": "GET",   "path": "/leave",                "access": "private", "permission": "leave.read" },
+    { "method": "PATCH", "path": "/leave/:id/approve",    "access": "private", "permission": "leave.approve" },
+    { "method": "GET",   "path": "/attendance",           "access": "private", "permission": "attendance.read" },
+    { "method": "POST",  "path": "/jobs",                 "access": "private", "permission": "recruitment.create" }
+  ],
+  "roles": [
+    { "key": "admin", "name": "HR Admin", "description": "Full control of HR.", "grants": "*" },
+    { "key": "manager", "name": "Manager", "description": "Sees their team and approves their leave.",
+      "grants": {
+        "employee":   { "actions": ["read"], "scope": "team" },
+        "leave":      { "actions": ["read", "approve"], "scope": "team" },
+        "attendance": { "actions": ["read"], "scope": "team" }
+      } },
+    { "key": "staff", "name": "HR Staff", "description": "Keeps records and attendance up to date.",
+      "grants": {
+        "employee":    { "actions": ["read", "create", "update"], "scope": "all" },
+        "leave":       { "actions": ["read", "create"], "scope": "all" },
+        "attendance":  { "actions": ["read", "update"], "scope": "all" },
+        "recruitment": { "actions": ["read", "create", "update"] }
+      } },
+    { "key": "viewer", "name": "Viewer", "description": "Read-only view of employee records.",
+      "grants": { "employee": { "actions": ["read"], "scope": "all" } } }
+  ]
+}

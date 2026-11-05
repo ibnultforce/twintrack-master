@@ -1,0 +1,58 @@
+{
+  "type": "users",
+  "users": [
+    {
+      "id": "b1",
+      "name": "Wrong Contract",
+      "email": "b1@twintrack.test",
+      "contract": "freelance"
+    },
+    {
+      "id": "b2",
+      "name": "Wrong Status",
+      "email": "b2@twintrack.test",
+      "status": "on-leave"
+    },
+    {
+      "id": "b3",
+      "name": "Missing Manager",
+      "email": "b3@twintrack.test",
+      "managerId": "u_999"
+    },
+    {
+      "id": "b4",
+      "name": "Own Manager",
+      "email": "b4@twintrack.test",
+      "managerId": "b4"
+    },
+    {
+      "id": "b5",
+      "name": "Duplicate Email",
+      "email": "b1@twintrack.test"
+    },
+    {
+      "id": "b1",
+      "name": "Duplicate Id",
+      "email": "b6@twintrack.test"
+    },
+    {
+      "id": "b7",
+      "name": "Bad Email",
+      "email": "not-an-email"
+    },
+    {
+      "id": "b8",
+      "name": "",
+      "email": "b8@twintrack.test"
+    },
+    {
+      "id": "b9",
+      "name": "Bad Assignments",
+      "email": "b9@twintrack.test",
+      "assignments": [
+        "hr",
+        "admin"
+      ]
+    }
+  ]
+}

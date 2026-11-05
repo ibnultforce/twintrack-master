@@ -1,0 +1,48 @@
+{
+  "manifestVersion": 1,
+  "module": {
+    "key": "Payroll App",
+    "name": "Payroll",
+    "version": "v2"
+  },
+  "resources": [
+    {
+      "key": "run",
+      "label": "Payroll runs",
+      "actions": [
+        "read",
+        "approve",
+        "export"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/runs",
+      "access": "private"
+    },
+    {
+      "method": "POST",
+      "path": "/runs",
+      "access": "private",
+      "permission": "run.create"
+    },
+    {
+      "method": "FETCH",
+      "path": "/runs/:id"
+    }
+  ],
+  "roles": [
+    {
+      "key": "admin",
+      "name": "Admin",
+      "grants": "*"
+    },
+    {
+      "key": "admin",
+      "name": "Admin again",
+      "grants": {}
+    }
+  ]
+}
