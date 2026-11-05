@@ -1,0 +1,137 @@
+{
+  "type": "users",
+  "users": [
+    {
+      "id": "u_01",
+      "name": "Farhana Kabir",
+      "email": "farhana@twintrack.test",
+      "title": "Founder",
+      "department": "operations",
+      "team": "leadership",
+      "contract": "permanent",
+      "status": "active",
+      "superAdmin": true,
+      "assignments": {}
+    },
+    {
+      "id": "u_03",
+      "name": "Sabbir Alam",
+      "email": "sabbir@twintrack.test",
+      "title": "HR Executive",
+      "department": "people",
+      "team": "people-ops",
+      "contract": "permanent",
+      "status": "active",
+      "managerId": "u_01",
+      "assignments": {
+        "hr": "staff",
+        "master": "employee-access"
+      }
+    },
+    {
+      "id": "u_04",
+      "name": "Rahim Uddin",
+      "email": "rahim@twintrack.test",
+      "title": "Engineering Lead",
+      "department": "engineering",
+      "team": "platform",
+      "contract": "permanent",
+      "status": "active",
+      "managerId": "u_01",
+      "assignments": {
+        "hr": "manager",
+        "account": "viewer"
+      }
+    },
+    {
+      "id": "u_05",
+      "name": "Rumana Akter",
+      "email": "rumana@twintrack.test",
+      "title": "Finance Lead",
+      "department": "finance",
+      "team": "finance",
+      "contract": "permanent",
+      "status": "active",
+      "managerId": "u_01",
+      "assignments": {
+        "account": "admin",
+        "hr": "viewer",
+        "master": "auditor"
+      }
+    },
+    {
+      "id": "u_06",
+      "name": "Kamrul Islam",
+      "email": "kamrul@twintrack.test",
+      "title": "Accountant",
+      "department": "finance",
+      "team": "finance",
+      "contract": "permanent",
+      "status": "active",
+      "managerId": "u_05",
+      "assignments": {
+        "account": "accountant"
+      }
+    },
+    {
+      "id": "u_07",
+      "name": "Arif Chowdhury",
+      "email": "arif@twintrack.test",
+      "title": "Frontend Developer",
+      "department": "engineering",
+      "team": "platform",
+      "contract": "permanent",
+      "status": "active",
+      "managerId": "u_04",
+      "assignments": {}
+    },
+    {
+      "id": "u_08",
+      "name": "Karim Ahmed",
+      "email": "karim@twintrack.test",
+      "title": "Backend Developer",
+      "department": "engineering",
+      "team": "platform",
+      "contract": "permanent",
+      "status": "active",
+      "managerId": "u_04",
+      "assignments": {}
+    },
+    {
+      "id": "u_09",
+      "name": "Mehedi Hasan",
+      "email": "mehedi@twintrack.test",
+      "title": "Engineering Intern",
+      "department": "engineering",
+      "team": "platform",
+      "contract": "intern",
+      "status": "active",
+      "managerId": "u_04",
+      "assignments": {}
+    },
+    {
+      "id": "u_10",
+      "name": "Sumaiya Islam",
+      "email": "sumaiya@twintrack.test",
+      "title": "UI Designer (agency)",
+      "department": "design",
+      "team": "platform",
+      "contract": "contractor",
+      "status": "active",
+      "managerId": "u_04",
+      "assignments": {}
+    },
+    {
+      "id": "u_11",
+      "name": "Jahid Rana",
+      "email": "jahid@twintrack.test",
+      "title": "Support Agent (left)",
+      "department": "operations",
+      "team": "support",
+      "contract": "permanent",
+      "status": "inactive",
+      "managerId": "u_01",
+      "assignments": {}
+    }
+  ]
+}
