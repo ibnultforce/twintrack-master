@@ -1,6 +1,7 @@
 import { loadConfig } from '../config.js';
 import { connectDatabase, disconnectDatabase } from '../db.js';
-import { readSeedFiles, seedDatabase } from './seedDatabase.js';
+import { seedDatabase } from './seedDatabase.js';
+import { readSeedFiles } from './seedFiles.js';
 
 const config = loadConfig();
 
@@ -15,8 +16,8 @@ try {
     console.log(`Module ${key} ${version}: ${created ? 'added' : 'updated'}`);
   }
   console.log(`Users: ${result.usersCreated} added, ${result.usersUpdated} updated`);
-} catch (err) {
-  console.error(err instanceof Error ? err.message : err);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 } finally {
   await disconnectDatabase();

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { asArray, asRecord, fieldErrors, type FieldError, type Validated } from '../lib/validation.js';
+import { asArray, asRecord, fieldErrors, type FieldError, type Validated } from '../../../lib/validation.js';
 
 export const MODULE_KEY = /^[a-z][a-z0-9-]*$/;
 const ROLE_KEY = /^[a-z][a-z0-9-]*$/;
@@ -40,12 +40,12 @@ const grantsRecordSchema = z.record(z.string(), grantSchema);
 // A plain union would report only "Invalid input" here, without saying which grant is wrong.
 const grantsSchema = z
   .unknown()
-  .superRefine((value, ctx) => {
+  .superRefine((value, context) => {
     if (value === '*') return;
     const parsed = grantsRecordSchema.safeParse(value);
     if (parsed.success) return;
     for (const issue of parsed.error.issues) {
-      ctx.addIssue({ code: 'custom', message: issue.message, path: issue.path.map(String) });
+      context.addIssue({ code: 'custom', message: issue.message, path: issue.path.map(String) });
     }
   })
   .transform((value) => value as '*' | z.infer<typeof grantsRecordSchema>);
@@ -78,14 +78,87 @@ export type ManifestResource = z.infer<typeof resourceSchema>;
 export type ManifestRoute = z.infer<typeof routeSchema>;
 export type ManifestRole = z.infer<typeof roleSchema>;
 
-function duplicates(items: unknown[], path: string, label: string): FieldError[] {
-  const seen = new Set<unknown>();
+type ActionsByResource = Map<string, unknown[]>;
+
+function findDuplicateKeys(items: unknown[], path: string, label: string): FieldError[] {
+  const seenKeys = new Set<unknown>();
   const errors: FieldError[] = [];
   items.forEach((item, index) => {
     const key = asRecord(item).key;
     if (key === undefined) return;
-    if (seen.has(key)) errors.push({ path: `${path}.${index}.key`, message: `${label} "${String(key)}" is listed twice` });
-    seen.add(key);
+    if (seenKeys.has(key)) errors.push({ path: `${path}.${index}.key`, message: `${label} "${String(key)}" is listed twice` });
+    seenKeys.add(key);
+  });
+  return errors;
+}
+
+function readActionsByResource(resources: unknown[]): ActionsByResource {
+  return new Map(
+    resources.map((item) => {
+      const resource = asRecord(item);
+      return [String(resource.key), asArray(resource.actions)];
+    }),
+  );
+}
+
+function checkGrantableActions(resources: unknown[]): FieldError[] {
+  const errors: FieldError[] = [];
+  resources.forEach((item, index) => {
+    const resource = asRecord(item);
+    const actions = asArray(resource.actions);
+    for (const grantableAction of asArray(resource.grantable)) {
+      if (!actions.includes(grantableAction)) {
+        errors.push({ path: `resources.${index}.grantable`, message: `"${String(grantableAction)}" is not an action of this resource` });
+      }
+    }
+  });
+  return errors;
+}
+
+function checkPermissionExists(permission: unknown, path: string, actionsByResource: ActionsByResource): FieldError[] {
+  if (typeof permission !== 'string') return [];
+  const lastDot = permission.lastIndexOf('.');
+  const resourceKey = permission.slice(0, lastDot);
+  const actionName = permission.slice(lastDot + 1);
+  if (lastDot > 0 && actionsByResource.get(resourceKey)?.includes(actionName)) return [];
+  return [{ path, message: `permission "${permission}" is not an action of any resource` }];
+}
+
+function checkRoutes(routes: unknown[], actionsByResource: ActionsByResource): FieldError[] {
+  const errors: FieldError[] = [];
+  const seenRoutes = new Set<string>();
+  routes.forEach((item, index) => {
+    const route = asRecord(item);
+    const routeId = `${String(route.method)} ${String(route.path)}`;
+    if (seenRoutes.has(routeId)) errors.push({ path: `routes.${index}`, message: `route ${routeId} is listed twice` });
+    seenRoutes.add(routeId);
+
+    errors.push(...checkPermissionExists(route.permission, `routes.${index}.permission`, actionsByResource));
+    for (const permission of asArray(route.anyPermission)) {
+      errors.push(...checkPermissionExists(permission, `routes.${index}.anyPermission`, actionsByResource));
+    }
+    if (route.access === 'private' && route.permission === undefined && route.anyPermission === undefined) {
+      errors.push({ path: `routes.${index}`, message: 'a private route needs a permission' });
+    }
+  });
+  return errors;
+}
+
+function checkRoleGrants(roles: unknown[], actionsByResource: ActionsByResource): FieldError[] {
+  const errors: FieldError[] = [];
+  roles.forEach((item, index) => {
+    const grants = asRecord(asRecord(item).grants);
+    for (const [resourceKey, grant] of Object.entries(grants)) {
+      const path = `roles.${index}.grants.${resourceKey}`;
+      const actions = actionsByResource.get(resourceKey);
+      if (!actions) {
+        errors.push({ path, message: `"${resourceKey}" is not a resource of this module` });
+        continue;
+      }
+      for (const grantedAction of asArray(asRecord(grant).actions)) {
+        if (!actions.includes(grantedAction)) errors.push({ path, message: `"${String(grantedAction)}" is not an action of "${resourceKey}"` });
+      }
+    }
   });
   return errors;
 }
@@ -96,57 +169,15 @@ function crossChecks(raw: unknown): FieldError[] {
   const resources = asArray(manifest.resources);
   const routes = asArray(manifest.routes);
   const roles = asArray(manifest.roles);
-  const errors = [...duplicates(resources, 'resources', 'Resource'), ...duplicates(roles, 'roles', 'Role')];
+  const actionsByResource = readActionsByResource(resources);
 
-  const actionsOf = new Map<string, unknown[]>();
-  resources.forEach((item, index) => {
-    const resource = asRecord(item);
-    const actions = asArray(resource.actions);
-    actionsOf.set(String(resource.key), actions);
-    for (const granted of asArray(resource.grantable)) {
-      if (!actions.includes(granted)) {
-        errors.push({ path: `resources.${index}.grantable`, message: `"${String(granted)}" is not an action of this resource` });
-      }
-    }
-  });
-
-  const checkPermission = (permission: unknown, path: string) => {
-    if (typeof permission !== 'string') return;
-    const dot = permission.lastIndexOf('.');
-    if (dot > 0 && actionsOf.get(permission.slice(0, dot))?.includes(permission.slice(dot + 1))) return;
-    errors.push({ path, message: `permission "${permission}" is not an action of any resource` });
-  };
-
-  const seenRoutes = new Set<string>();
-  routes.forEach((item, index) => {
-    const route = asRecord(item);
-    const id = `${String(route.method)} ${String(route.path)}`;
-    if (seenRoutes.has(id)) errors.push({ path: `routes.${index}`, message: `route ${id} is listed twice` });
-    seenRoutes.add(id);
-
-    checkPermission(route.permission, `routes.${index}.permission`);
-    asArray(route.anyPermission).forEach((permission) => checkPermission(permission, `routes.${index}.anyPermission`));
-    if (route.access === 'private' && route.permission === undefined && route.anyPermission === undefined) {
-      errors.push({ path: `routes.${index}`, message: 'a private route needs a permission' });
-    }
-  });
-
-  roles.forEach((item, index) => {
-    const grants = asRecord(asRecord(item).grants);
-    for (const [resourceKey, grant] of Object.entries(grants)) {
-      const path = `roles.${index}.grants.${resourceKey}`;
-      const actions = actionsOf.get(resourceKey);
-      if (!actions) {
-        errors.push({ path, message: `"${resourceKey}" is not a resource of this module` });
-        continue;
-      }
-      for (const granted of asArray(asRecord(grant).actions)) {
-        if (!actions.includes(granted)) errors.push({ path, message: `"${String(granted)}" is not an action of "${resourceKey}"` });
-      }
-    }
-  });
-
-  return errors;
+  return [
+    ...findDuplicateKeys(resources, 'resources', 'Resource'),
+    ...findDuplicateKeys(roles, 'roles', 'Role'),
+    ...checkGrantableActions(resources),
+    ...checkRoutes(routes, actionsByResource),
+    ...checkRoleGrants(roles, actionsByResource),
+  ];
 }
 
 export function validateManifest(raw: unknown): Validated<Manifest> {

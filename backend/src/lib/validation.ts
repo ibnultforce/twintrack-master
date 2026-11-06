@@ -13,7 +13,7 @@ export class ValidationFailure extends Error {
     summary: string,
     readonly errors: FieldError[],
   ) {
-    super(`${summary}:\n${errors.map((e) => `  ${e.path || '(file)'}: ${e.message}`).join('\n')}`);
+    super(`${summary}:\n${errors.map((error) => `  ${error.path || '(file)'}: ${error.message}`).join('\n')}`);
   }
 }
 

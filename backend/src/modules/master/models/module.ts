@@ -1,5 +1,5 @@
 import { Schema, model } from 'mongoose';
-import type { ManifestResource, ManifestRole, ManifestRoute } from '../modules/manifest.js';
+import type { ManifestResource, ManifestRole, ManifestRoute } from '../moduleRegistry/manifest.js';
 
 /** An imported module manifest. Role templates here are the fixed permission layer. */
 export interface ModuleDoc {

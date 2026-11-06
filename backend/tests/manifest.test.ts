@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { CoreModuleError, importManifest } from '../src/modules/importManifest.js';
-import { validateManifest, type Manifest } from '../src/modules/manifest.js';
-import { Module } from '../src/models/module.js';
-import { User } from '../src/models/user.js';
+import { Module } from '../src/modules/master/models/module.js';
+import { User } from '../src/modules/master/models/user.js';
+import { validateManifest, type Manifest } from '../src/modules/master/moduleRegistry/manifest.js';
+import { CoreModuleError, importManifest } from '../src/modules/master/moduleRegistry/moduleRegistry.service.js';
 import { useTestDatabase } from './helpers/database.js';
 
 const readJson = (path: string): unknown => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));

@@ -2,11 +2,12 @@ import { readFileSync } from 'node:fs';
 import { verify } from '@node-rs/argon2';
 import { describe, expect, it } from 'vitest';
 import { ValidationFailure } from '../src/lib/validation.js';
-import { Module } from '../src/models/module.js';
-import { User } from '../src/models/user.js';
-import { validateManifest, type Manifest } from '../src/modules/manifest.js';
-import { readSeedFiles, seedDatabase, type SeedFiles } from '../src/seed/seedDatabase.js';
-import { validateUsersFile } from '../src/users/usersFile.js';
+import { Module } from '../src/modules/master/models/module.js';
+import { User } from '../src/modules/master/models/user.js';
+import { validateManifest, type Manifest } from '../src/modules/master/moduleRegistry/manifest.js';
+import { validateUsersFile } from '../src/modules/master/users/usersFile.js';
+import { seedDatabase } from '../src/seed/seedDatabase.js';
+import { readSeedFiles, type SeedFiles } from '../src/seed/seedFiles.js';
 import { useTestDatabase } from './helpers/database.js';
 
 const readJson = (path: string): unknown => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));

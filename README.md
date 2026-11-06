@@ -36,6 +36,18 @@ Open http://twintrack.localhost:3100. The page should say "API and database conn
 
 `seed/manifests/hr.json` is a copy of `access.manifest.json` from the `twintrack-hr` repo, so this repo works on its own. Update both together.
 
+## Backend layout
+
+All module backends live in this repo, each in its own folder under `backend/src/modules/`. Inside a module, each feature has its own folder, split by job:
+
+| File | Job |
+|---|---|
+| `*.routes.ts` | HTTP only: reads the request and sends the response |
+| `*.service.ts` | Rules and workflows |
+| `*.repository.ts` | Database queries |
+
+Mongoose schemas are in the module's `models/` folder. Code shared between modules is in `backend/src/lib/`. `backend/src/seed/` loads example data across modules.
+
 ## Manifests
 
 `access.manifest.json` lists this module's resources, routes and fixed role templates. A route marked `"planned": true` is designed but not built yet. Remove the flag when it's built.
