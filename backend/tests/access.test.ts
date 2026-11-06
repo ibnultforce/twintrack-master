@@ -394,7 +394,7 @@ describe('access checks', () => {
         role: 'manager',
         permissions: { 'employee.read': 'team', 'leave.approve': 'team', 'attendance.read': 'team' },
       });
-      expect(response.body.permissions['salary.read']).toBeUndefined();
+      expect(response.body.permissions['salary.update']).toBeUndefined();
     });
 
     it('answers normally for someone with no access to the module', async () => {

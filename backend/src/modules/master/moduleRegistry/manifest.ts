@@ -1,11 +1,14 @@
 import { z } from 'zod';
 import { asArray, asRecord, fieldErrors, type FieldError, type Validated } from '../../../lib/validation.js';
 
-export const MODULE_KEY = /^[a-z][a-z0-9-]*$/;
+// People's access is stored in plain objects keyed by module, where "constructor" would find a JavaScript built-in.
+export const MODULE_KEY = /^(?!constructor$)[a-z][a-z0-9-]*$/;
 const ROLE_KEY = /^[a-z][a-z0-9-]*$/;
 // Field resources are named after their collection, such as payslip.net.
 const RESOURCE_KEY = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9]+)*$/;
 const SEMVER = /^\d+\.\d+\.\d+$/;
+
+export const MASTER_MODULE_KEY = 'master';
 
 export const SCOPES = ['all', 'team', 'own'] as const;
 export type Scope = (typeof SCOPES)[number];
@@ -19,6 +22,8 @@ const resourceSchema = z.looseObject({
   actions: z.array(action).min(1),
   scoped: z.boolean().optional(),
   grantable: z.array(action).optional(),
+  /** In Master: this resource's update permission lets someone change access in the named module. */
+  managesAccessOf: z.string().optional(),
 });
 
 const routeSchema = z.object({
@@ -60,7 +65,7 @@ const roleSchema = z.object({
 const manifestSchema = z.looseObject({
   manifestVersion: z.literal(1),
   module: z.object({
-    key: z.string().regex(MODULE_KEY, 'must be lowercase letters, numbers and hyphens, such as "hr"'),
+    key: z.string().regex(MODULE_KEY, 'must be lowercase letters, numbers and hyphens, such as "hr", and not "constructor"'),
     name: z.string().min(1),
     version: z.string().regex(SEMVER, 'must look like 1.2.0'),
     description: z.string().optional(),
@@ -140,11 +145,19 @@ function checkRoutes(routes: unknown[], actionsByResource: ActionsByResource): F
     if (route.access === 'private' && route.permission === undefined && route.anyPermission === undefined) {
       errors.push({ path: `routes.${index}`, message: 'a private route needs a permission' });
     }
+    // Only private routes check permissions, so one named anywhere else would look enforced but never be.
+    if (route.access !== 'private' && (route.permission !== undefined || route.anyPermission !== undefined)) {
+      errors.push({ path: `routes.${index}`, message: `a ${String(route.access)} route can't require a permission` });
+    }
   });
   return errors;
 }
 
-function checkRoleGrants(roles: unknown[], actionsByResource: ActionsByResource): FieldError[] {
+function readScopedResourceKeys(resources: unknown[]): Set<unknown> {
+  return new Set(resources.map(asRecord).filter((resource) => resource.scoped === true).map((resource) => resource.key));
+}
+
+function checkRoleGrants(roles: unknown[], actionsByResource: ActionsByResource, scopedResourceKeys: Set<unknown>): FieldError[] {
   const errors: FieldError[] = [];
   roles.forEach((item, index) => {
     const grants = asRecord(asRecord(item).grants);
@@ -157,6 +170,10 @@ function checkRoleGrants(roles: unknown[], actionsByResource: ActionsByResource)
       }
       for (const grantedAction of asArray(asRecord(grant).actions)) {
         if (!actions.includes(grantedAction)) errors.push({ path, message: `"${String(grantedAction)}" is not an action of "${resourceKey}"` });
+      }
+      const { scope } = asRecord(grant);
+      if (scope !== undefined && scope !== 'all' && !scopedResourceKeys.has(resourceKey)) {
+        errors.push({ path, message: `"${resourceKey}" isn't scoped, so it can't have the scope "${String(scope)}"` });
       }
     }
   });
@@ -176,7 +193,7 @@ function crossChecks(raw: unknown): FieldError[] {
     ...findDuplicateKeys(roles, 'roles', 'Role'),
     ...checkGrantableActions(resources),
     ...checkRoutes(routes, actionsByResource),
-    ...checkRoleGrants(roles, actionsByResource),
+    ...checkRoleGrants(roles, actionsByResource, readScopedResourceKeys(resources)),
   ];
 }
 

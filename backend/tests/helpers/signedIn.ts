@@ -1,0 +1,49 @@
+import { hash } from '@node-rs/argon2';
+import type { Application } from 'express';
+import request from 'supertest';
+import { User } from '../../src/modules/master/models/user.js';
+import { validateManifest } from '../../src/modules/master/moduleRegistry/manifest.js';
+import { importManifest } from '../../src/modules/master/moduleRegistry/moduleRegistry.service.js';
+import { readSeedFiles } from '../../src/seed/seedFiles.js';
+import { TEST_ORIGIN } from './testConfig.js';
+
+export const TEST_PASSWORD = 'correct-password';
+
+const passwordHashPromise = hash(TEST_PASSWORD);
+
+/** Loads the same modules as the seed. Master has to be loaded for any private route to answer. */
+export async function importSeedManifests(): Promise<void> {
+  for (const raw of readSeedFiles().manifests) {
+    const manifest = validateManifest(raw);
+    if (!manifest.ok) throw new Error(JSON.stringify(manifest.errors));
+    await importManifest(manifest.value, { allowCore: true });
+  }
+}
+
+export async function addPerson(id: string, overrides: Record<string, unknown> = {}) {
+  return User.create({
+    _id: id,
+    name: `Person ${id}`,
+    email: `${id}@twintrack.test`,
+    passwordHash: await passwordHashPromise,
+    ...overrides,
+  });
+}
+
+export async function signIn(app: Application, email: string, password = TEST_PASSWORD): Promise<string> {
+  const response = await request(app).post('/auth/login').set('Origin', TEST_ORIGIN).send({ email, password });
+  if (response.status !== 200) throw new Error(`Sign-in for ${email} answered ${response.status}.`);
+  return (response.body as { accessToken: string }).accessToken;
+}
+
+/** Sends requests as one signed-in person. */
+export function requestsAs(app: Application, token: string) {
+  const bearer = `Bearer ${token}`;
+  return {
+    get: (path: string) => request(app).get(path).set('Authorization', bearer),
+    post: (path: string, body?: object) => request(app).post(path).set('Authorization', bearer).send(body),
+    patch: (path: string, body?: object) => request(app).patch(path).set('Authorization', bearer).send(body),
+    put: (path: string, body: object) => request(app).put(path).set('Authorization', bearer).send(body),
+    delete: (path: string) => request(app).delete(path).set('Authorization', bearer),
+  };
+}

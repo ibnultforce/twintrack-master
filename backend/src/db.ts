@@ -17,6 +17,12 @@ export async function prepareCollections(models: { init(): Promise<unknown> }[])
   await Promise.all(models.map((model) => model.init()));
 }
 
+const DUPLICATE_KEY_ERROR_CODE = 11000;
+
+export function isDuplicateKeyError(error: unknown): boolean {
+  return error instanceof mongoose.mongo.MongoServerError && error.code === DUPLICATE_KEY_ERROR_CODE;
+}
+
 /** Runs the work as one transaction, so a failure anywhere saves nothing. */
 export function runInTransaction<Result>(work: (session: ClientSession) => Promise<Result>): Promise<Result> {
   return mongoose.connection.transaction(work);

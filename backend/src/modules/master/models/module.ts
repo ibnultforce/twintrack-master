@@ -13,6 +13,8 @@ export interface ModuleDoc {
   resources: ManifestResource[];
   routes: ManifestRoute[];
   roles: ManifestRole[];
+  /** Set when a super admin edits roles or grantable permissions here, so only a super admin can replace those edits. */
+  permissionsEditedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +31,7 @@ const moduleSchema = new Schema<ModuleDoc>(
     resources: { type: Schema.Types.Mixed, default: [] },
     routes: { type: Schema.Types.Mixed, default: [] },
     roles: { type: Schema.Types.Mixed, default: [] },
+    permissionsEditedAt: Date,
   },
   { timestamps: true },
 );

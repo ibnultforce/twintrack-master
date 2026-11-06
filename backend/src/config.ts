@@ -51,6 +51,7 @@ const envSchema = z
     REFRESH_COOKIE_SECURE: z.enum(['true', 'false']).optional(),
     LOGIN_MAX_FAILED_ATTEMPTS: positiveInteger(10),
     LOGIN_RATE_WINDOW_MINUTES: positiveInteger(15),
+    TEST_PAGE_ENABLED: z.enum(['true', 'false']).default('false'),
   })
   .superRefine((env, context) => {
     // A module frontend that isn't allowed to call the API would open and then fail on its first request.
@@ -65,6 +66,9 @@ const envSchema = z
     }
     if (env.NODE_ENV === 'production' && env.REFRESH_COOKIE_SECURE === 'false') {
       context.addIssue({ code: 'custom', path: ['REFRESH_COOKIE_SECURE'], message: 'must not be false in production' });
+    }
+    if (env.NODE_ENV === 'production' && env.TEST_PAGE_ENABLED === 'true') {
+      context.addIssue({ code: 'custom', path: ['TEST_PAGE_ENABLED'], message: 'must not be true in production' });
     }
   });
 
@@ -93,6 +97,8 @@ export interface Config {
   logLevel: string;
   /** How many proxies sit in front of the API, so rate limits see the caller's real address. */
   trustProxyHops: number;
+  /** Serves the browser test page at /try. Never allowed in production. */
+  isTestPageEnabled: boolean;
   auth: AuthSettings;
 }
 
@@ -113,6 +119,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     moduleFrontendUrls: values.MODULE_FRONTEND_URLS,
     logLevel: values.LOG_LEVEL,
     trustProxyHops: values.TRUST_PROXY_HOPS,
+    isTestPageEnabled: values.TEST_PAGE_ENABLED === 'true',
     auth: {
       accessTokenSecret: values.JWT_ACCESS_SECRET,
       tokenIssuer: values.JWT_ISSUER,

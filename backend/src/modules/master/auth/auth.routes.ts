@@ -6,22 +6,23 @@ import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { requireAllowedOrigin } from '../../../lib/requireAllowedOrigin.js';
 import { parseRequestBody } from '../../../lib/validation.js';
 import { getCaller } from '../access/caller.js';
+import { emailField, nameField } from '../users/userFields.js';
 import { changeOwnPassword, getProfile, updateOwnName } from './account.service.js';
 import { login, logout, refresh, SessionEndedError } from './auth.service.js';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './passwords.js';
+import { MongoRateLimitStore } from './rateLimitStore.js';
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from './refreshCookie.js';
 
 const MILLISECONDS_PER_MINUTE = 60_000;
-const MAX_NAME_LENGTH = 100;
 
 const loginBodySchema = z.object({
-  email: z.string().trim().toLowerCase().pipe(z.email('must be a valid email address')),
+  email: emailField,
   password: z.string().min(1, 'is required').max(MAX_PASSWORD_LENGTH),
 });
 
 // Strict, so a request can't slip in other fields such as a role.
 const updateProfileBodySchema = z.strictObject({
-  name: z.string().trim().min(1, 'is required').max(MAX_NAME_LENGTH),
+  name: nameField,
 });
 
 const changePasswordBodySchema = z
@@ -37,11 +38,12 @@ const changePasswordBodySchema = z
     message: 'must be different from your current password',
   });
 
-function createFailedAttemptLimiter(settings: AuthSettings): RequestHandler {
+function createFailedAttemptLimiter(settings: AuthSettings, counterPrefix: string): RequestHandler {
   return rateLimit({
     windowMs: settings.loginRateWindowMinutes * MILLISECONDS_PER_MINUTE,
     limit: settings.loginMaxFailedAttempts,
     skipSuccessfulRequests: true,
+    store: new MongoRateLimitStore(counterPrefix),
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     message: { error: { code: 'too_many_attempts', message: 'Too many failed attempts. Try again later.' } },
@@ -55,7 +57,7 @@ function sendTokenResponse(res: Response, body: object): void {
 
 export function createAuthRoutes(config: Config): ApiRoute[] {
   const settings = config.auth;
-  const originCheck = requireAllowedOrigin(config.allowedOrigins);
+  const originCheck = requireAllowedOrigin(config.allowedOrigins, { allowSameAddress: config.isTestPageEnabled });
 
   const handleLogin: RequestHandler = async (req, res) => {
     const credentials = parseRequestBody(loginBodySchema, req.body);
@@ -101,7 +103,7 @@ export function createAuthRoutes(config: Config): ApiRoute[] {
       method: 'POST',
       path: '/auth/login',
       access: 'public',
-      middleware: [originCheck, createFailedAttemptLimiter(settings)],
+      middleware: [originCheck, createFailedAttemptLimiter(settings, 'login')],
       handler: handleLogin,
     },
     { method: 'POST', path: '/auth/refresh', access: 'public', middleware: [originCheck], handler: handleRefresh },
@@ -120,7 +122,7 @@ export function createAuthRoutes(config: Config): ApiRoute[] {
       path: '/auth/change-password',
       access: 'signed',
       allowedDuringPasswordChange: true,
-      middleware: [createFailedAttemptLimiter(settings)],
+      middleware: [createFailedAttemptLimiter(settings, 'change-password')],
       handler: handleChangePassword,
     },
   ];

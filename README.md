@@ -50,7 +50,7 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 
 `manifests/` has one file per module: `master`, `hr`, `employee` and `account`. Each lists that module's resources, routes and fixed role templates. Like `postman/`, this folder is ignored by git, so it has to be added by hand on a new machine, and `npm run seed` and `npm test` need it. The seed loads only Master and HR for now, and a test checks that every file in the folder is valid.
 
-Update a module's manifest in the same change as any of its routes. A route marked `"planned": true` is designed but not built yet, so remove the flag when it's built.
+Update a module's manifest in the same change as any of its routes. A route marked `"planned": true` is designed but not built yet, so remove the flag when it's built. A module can't be named `constructor`, a permission belongs only on a `private` route, and a `team` or `own` scope belongs only on a resource marked `scoped`. Validation refuses anything else.
 
 Each feature exports its routes, and `backend/src/modules/master/master.routes.ts` combines them. A test fails if that list and the Master manifest disagree about which routes are built or who can use them.
 
@@ -65,7 +65,7 @@ A module's `baseUrl` is the path prefix of its routes on this API, such as `/hr`
 - **Stolen tokens:** an older token used after that ends the whole session and writes `auth.session_token_reused` to the activity log.
 - **Origin check:** login, refresh and logout refuse any origin not in `ALLOWED_ORIGINS`, and any request with no `Origin` header. Postman requests set the header themselves.
 - **Logout:** `/auth/logout` is `public` because it works from the refresh cookie alone, so someone with an expired access token can still sign out.
-- **Rate limit:** failed logins and failed password changes are limited per address, in the memory of each API instance. Multiple instances need a shared store, which isn't built yet.
+- **Rate limit:** failed logins and failed password changes are limited per address. Counts are kept in MongoDB, so every API instance shares them and a restart doesn't clear them. While testing by hand, deleting the `ratelimitcounters` documents lifts a block straight away.
 - **Passwords:** a new password needs at least 12 characters. Changing it ends the person's other sessions.
 
 ## Access checks
@@ -82,6 +82,50 @@ Each route declares its `access` in its feature's route file, and `registerRoute
 - **Special privilege scope:** `team` on a resource marked `scoped` in its manifest, and `all` otherwise.
 - **Rules that depend on the data** being changed, such as "nobody changes their own access", belong in services, because middleware can't see that data.
 - **Temporary passwords:** while `mustChangePassword` is set, only `GET /auth/me`, `POST /auth/change-password` and logout work.
+
+## Admin API
+
+These routes run the admin console. Each one's permission is in `manifests/master.manifest.json`, and every change writes to the activity log.
+
+| Routes | What they do |
+|---|---|
+| `GET /users`, `GET /users/:id`, `POST /users`, `PATCH /users/:id` | List, read, add and edit people. Lists take `page`, `pageSize` (up to 100), `search` and `status`. |
+| `PATCH /users/:id/status` | Deactivate or reactivate someone |
+| `POST /users/:id/reset-password` | Give someone a new temporary password |
+| `GET /users/access-options` | The roles and privileges each module offers, and whether this caller may change them |
+| `PATCH /users/:id/roles`, `PUT /users/:id/privileges` | Set one person's role or special privileges in one module |
+| `GET /modules`, `POST /modules/import`, `DELETE /modules/:key` | List, import and remove modules |
+| `GET /roles` | The role templates of every loaded module |
+| `POST /roles/:module`, `PATCH` and `DELETE /roles/:module/:key` | Add, edit and remove roles. Needs `role.update`. |
+| `PUT` and `DELETE /modules/:key/resources/:resource` | Add or change a resource and its actions, or remove it, which is how a module gains or loses permissions. Needs `role.update`. |
+| `PUT /modules/:key/resources/:resource/grantable` | Choose which actions can be given to one person. Needs `role.update`. |
+| `GET /audit` | The activity log, newest first. Takes `page`, `pageSize` and `actionPrefix`. |
+
+Services enforce these rules, because they depend on the data being changed:
+
+- **Own access:** only a super admin can change their own role or privileges. Nobody can deactivate themselves or reset their own password here. To change your own password, use `POST /auth/change-password`.
+- **Super admins:** only a super admin can edit, deactivate or reset a super admin, or change their access, and no route can create one. A super admin always has everything, whatever role or privilege is on their record.
+- **Changing someone's access through Master:** `user.update` reaches every module. `hrAccess.update` reaches HR only.
+- **Module admins:** `access.update` in a module, which HR Admin has, lets someone give or change anyone's roles and privileges in that module, with no Master role. Those people can list a module with `GET /modules/:key/people`.
+- **Special privileges:** only what the module's manifest marks `grantable`, except for a super admin, who can give any permission the module has. Those are stored in `superAdminGrants`, which nobody else can change. Giving a new one needs a `reason`, which goes in the activity log.
+- **Editing roles and permissions:** decided only by `role.update`, which only super admins have by default. Give it to a role and that role can edit them too, including its own permissions, so treat it like super admin access. Edits are saved in the database, not the manifest files, and apply on each person's next request. After an edit, re-importing or removing that module needs `role.update`. `npm run seed` still replaces edits with what the manifest files say.
+- **Removing:** a role someone holds can't be removed. Neither can an action or resource that a role or route still uses. Actions come from a fixed list: `read`, `create`, `update`, `delete` and `approve`.
+- **HR access managers:** which module a Master role can change access in comes from `managesAccessOf` on a Master resource, such as `hrAccess`.
+- **Temporary passwords:** new people and password resets get one, returned once and stored only as a hash. There's no email sending yet, so the admin passes it on. The person must replace it before they can do anything else.
+- **Deactivating and resetting** end all the person's sessions, so reactivating someone can't bring an old session back.
+- **Modules:** Master is core and can't be replaced or removed through the API. Someone with a role in a removed module keeps it on their record, but it grants nothing unless the module is imported again.
+- **Test page:** with it on, sign-in also accepts a request from the address the API is being reached on, so a tunnel link works without changing `ALLOWED_ORIGINS`. Browsers set `Origin` themselves, so another site can't claim that address.
+
+## HR salaries
+
+| Route | Needs | What it does |
+|---|---|---|
+| `GET /hr/salaries` | `salary.read` | Lists salaries the role reaches, with `page` and `pageSize` |
+| `POST /hr/salaries` | `salary.create` | Adds a salary, which starts as pending |
+| `PATCH /hr/salaries/:id` | `salary.update` | Changes a salary, which sends it back to pending |
+| `PATCH /hr/salaries/:id/approve` | `salary.approve` | Marks it approved and records who did it |
+
+A role's scope decides who that reaches: `own` is the person, `team` adds their direct reports, and `all` is everyone. Someone outside their reach gets `out_of_scope`. The activity log leaves out amounts, because people can read it without being allowed to see salaries. Sample salaries are in `seed/salaries.json`.
 
 ## Checks
 
@@ -102,4 +146,42 @@ The API requests and their tests are saved in `postman/`. That folder is ignored
 3. Start the backend with `npm run dev:backend`.
 4. Send one request, or run the whole **TwinTrack Master API** collection to see its tests.
 
-**From the terminal:** `npm run test:postman` runs the same collection. It starts its own copy of the API, so the dev server doesn't need to be running. MongoDB does.
+**From the terminal:** `npm run test:postman` runs the same collection. It starts its own copy of the API, so the dev server doesn't need to be running. MongoDB does. It empties and re-seeds its own `twintrack_postman` database on each run.
+
+Running the **Admin** folder in Postman against a dev server adds one test person to that server's database each time, because people can't be deleted. Each full run also counts 3 failed logins, so a fourth run within 15 minutes can hit the rate limit there. The **Refusals** folder changes nothing and can run on its own. A rate limit, a database outage and an expired session need more setup than a collection can do, so `npm test` covers those.
+
+## Let someone else test the API
+
+`localhost` only works on the computer running the API, so other people need an address that reaches it. MongoDB stays private either way, because only the API talks to it.
+
+With `TEST_PAGE_ENABLED=true`, the API serves a test page at `/try`, with nothing to install. It's off by default, and the API refuses to start with it on in production. On it, testers can:
+
+- Sign in as any test account, listed in `backend/test-page/accounts.json`, see what that person can do and reach, and send any route as them.
+- Sign in as the super admin, change someone's role or permissions, then sign in as that person to test the change.
+- Run the ready-made scenarios for each route.
+
+Use a separate database, so testers can't change your dev data. The test page fills in the password `demo1234` from `backend/test-page/accounts.json`, so **anyone with your link can sign in as any test person, including the super admin**. That reaches only this test database, not your computer, and it stops when you close the tunnel. If you seed with a different password, change it in that file too. In PowerShell, from `backend/`:
+
+```powershell
+$env:MONGODB_URI = 'mongodb://127.0.0.1:27017/twintrack_demo?replicaSet=rs0'
+$env:SEED_PASSWORD = 'demo1234'
+$env:TRUST_PROXY_HOPS = '1'
+$env:TEST_PAGE_ENABLED = 'true'
+$env:PORT = '4200'
+npm run seed
+npm run dev
+```
+
+Then, in a second terminal, open a temporary public address with [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/):
+
+```powershell
+cloudflared tunnel --url http://localhost:4200
+```
+
+It prints an `https://….trycloudflare.com` address. Send testers that address followed by `/try`. It stops working when you close the tunnel, or when the computer sleeps. `TRUST_PROXY_HOPS=1` lets rate limits see each tester's own address through the tunnel. Environment variables set this way take priority over `backend/.env`, and last only for that terminal.
+
+For someone on the same network, skip the tunnel and `TRUST_PROXY_HOPS`, allow the port through Windows Firewall, and use `http://<your computer's IP>:4200/try`.
+
+**Resetting the test data:** scenarios tagged **Changes data** affect everyone testing. `npm run seed` keeps passwords already set, so to start completely fresh, stop the API, run `mongosh "mongodb://127.0.0.1:27017/twintrack_demo?replicaSet=rs0" --eval "db.dropDatabase()"`, then seed and start it again.
+
+**Keeping the page current:** its scenarios are in `backend/test-page/scenarios.json`. `tests/test-page.test.ts` replays every one against the API, and fails if a built route has none. It also fails if `accounts.json` and `seed/users.json` list different people.

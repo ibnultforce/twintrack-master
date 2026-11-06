@@ -16,7 +16,7 @@ const messages = (raw: unknown): string => {
 const minimal = (overrides: Record<string, unknown> = {}) => ({
   manifestVersion: 1,
   module: { key: 'demo', name: 'Demo', version: '1.0.0' },
-  resources: [{ key: 'thing', label: 'Things', actions: ['read', 'approve'], grantable: ['approve'] }],
+  resources: [{ key: 'thing', label: 'Things', actions: ['read', 'approve'], scoped: true, grantable: ['approve'] }],
   routes: [{ method: 'GET', path: '/things', access: 'private', permission: 'thing.read' }],
   roles: [{ key: 'viewer', name: 'Viewer', grants: { thing: { actions: ['read'], scope: 'team' } } }],
   ...overrides,
@@ -66,6 +66,24 @@ describe('validateManifest', () => {
     const text = messages(minimal({ roles }));
     expect(text).toMatch(/"ghost" is not a resource/);
     expect(text).toMatch(/roles\.0\.grants\.ghost\.scope/);
+  });
+
+  it('rejects a module key that would find a JavaScript built-in', () => {
+    expect(messages(minimal({ module: { key: 'constructor', name: 'Demo', version: '1.0.0' } }))).toMatch(/module\.key/);
+    expect(validateManifest(minimal({ module: { key: 'constructors', name: 'Demo', version: '1.0.0' } })).ok).toBe(true);
+  });
+
+  it.each(['public', 'signed'])('rejects a permission on a %s route, which would never be checked', (access) => {
+    const routes = [{ method: 'GET', path: '/things', access, permission: 'thing.read' }];
+    expect(messages(minimal({ routes }))).toMatch(new RegExp(`routes\\.0: a ${access} route can't require a permission`));
+  });
+
+  it('rejects a narrow scope on a resource that is not scoped, but accepts "all"', () => {
+    const resources = [{ key: 'thing', label: 'Things', actions: ['read'] }];
+    const rolesWith = (scope: string) => [{ key: 'viewer', name: 'Viewer', grants: { thing: { actions: ['read'], scope } } }];
+    const routes = [{ method: 'GET', path: '/things', access: 'private', permission: 'thing.read' }];
+    expect(messages(minimal({ resources, routes, roles: rolesWith('team') }))).toMatch(/"thing" isn't scoped/);
+    expect(validateManifest(minimal({ resources, routes, roles: rolesWith('all') })).ok).toBe(true);
   });
 
   it('rejects grantable actions the resource does not have', () => {

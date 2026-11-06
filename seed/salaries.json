@@ -1,0 +1,11 @@
+{
+  "type": "salaries",
+  "salaries": [
+    { "id": "s_01", "employeeId": "u_01", "amount": 250000, "currency": "BDT", "effectiveFrom": "2026-01-01", "status": "approved" },
+    { "id": "s_03", "employeeId": "u_03", "amount": 65000, "currency": "BDT", "effectiveFrom": "2026-01-01", "status": "approved" },
+    { "id": "s_04", "employeeId": "u_04", "amount": 180000, "currency": "BDT", "effectiveFrom": "2026-01-01", "status": "approved" },
+    { "id": "s_05", "employeeId": "u_05", "amount": 150000, "currency": "BDT", "effectiveFrom": "2026-01-01", "status": "approved" },
+    { "id": "s_07", "employeeId": "u_07", "amount": 80000, "currency": "BDT", "effectiveFrom": "2026-12-01", "status": "pending" },
+    { "id": "s_08", "employeeId": "u_08", "amount": 95000, "currency": "BDT", "effectiveFrom": "2026-01-01", "status": "approved" }
+  ]
+}

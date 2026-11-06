@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Try the TwinTrack API</title>
+<link rel="stylesheet" href="app.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" aria-label="Routes">
+    <div class="rail-top">
+      <h1>Try the TwinTrack API</h1>
+      <p class="small muted" id="who">Not signed in</p>
+      <a class="home" id="home" href="#account">Sign in</a>
+      <label for="search">Find a route, error or scenario
+        <input id="search" type="search" autocomplete="off" placeholder="users, email_taken, deactivate">
+      </label>
+    </div>
+    <div class="list" id="list"></div>
+  </nav>
+  <main class="view" id="view"></main>
+</div>
+</body>
+</html>

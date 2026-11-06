@@ -6,6 +6,7 @@ import newman from 'newman';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { connectDatabase, disconnectDatabase } from '../src/db.js';
+import { appModels } from '../src/modules/models.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { readSeedFiles } from '../src/seed/seedFiles.js';
 
@@ -27,6 +28,8 @@ const config = loadConfig({
 const uri = new URL(config.mongodbUri);
 uri.pathname = '/twintrack_postman';
 await connectDatabase(uri.toString());
+// Starts from nothing each run, so people, modules and failed attempts from the last run can't change the results.
+await Promise.all(appModels.map((model) => model.collection.deleteMany({})));
 await seedDatabase({ files: readSeedFiles(), password: seedPassword, nodeEnv: config.nodeEnv });
 
 const server = createApp(config).listen(0);

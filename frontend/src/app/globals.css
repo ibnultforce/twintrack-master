@@ -1,52 +1,19 @@
-/* Design tokens shared with the HR and Accounts portal designs in documents/. */
 :root {
-  --background: #f4f6fa;
-  --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --border: #e1e6ee;
-  --border-strong: #ccd4df;
-  --ink: #111a2c;
-  --ink-muted: #5c6879;
-  --accent: #0e7c70;
-  --accent-soft: #e0f3f0;
-  --on-accent: #ffffff;
-  --good: #17703f;
-  --good-soft: #dcf7e5;
-  --warning: #9a4f08;
-  --warning-soft: #fdf0c8;
-  --danger: #b01f27;
-  --danger-soft: #fde3e4;
-  --neutral: #4b586a;
-  --neutral-soft: #e5e9f0;
-  --meter-track: #e5e9f0;
-  --shadow-card: 0 1px 2px rgb(17 26 44 / 4%);
-  --radius-card: 14px;
-  --radius-control: 8px;
-  color-scheme: light;
+  --bg: #f7f7f5;
+  --fg: #1b1b1a;
+  --muted: #6b6b66;
+  --good: #23845f;
+  --danger: #b4382f;
+  --font: 'Segoe UI', system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #05080d;
-    --surface: #10151d;
-    --surface-muted: #151b24;
-    --border: #232b36;
-    --border-strong: #333d4b;
-    --ink: #f2f5f8;
-    --ink-muted: #98a3b1;
-    --accent: #1ce8cf;
-    --accent-soft: #0f2b2c;
-    --on-accent: #03201c;
-    --good: #4eea91;
-    --good-soft: #12352a;
-    --warning: #fcc23c;
-    --warning-soft: #3a2f14;
-    --danger: #ff6b81;
-    --danger-soft: #3b1620;
-    --neutral: #a9b4c2;
-    --neutral-soft: #222a35;
-    --meter-track: #222a35;
-    --shadow-card: none;
+    --bg: #111111;
+    --fg: #ececea;
+    --muted: #a3a39d;
+    --good: #4fc29e;
+    --danger: #ef7a70;
     color-scheme: dark;
   }
 }
@@ -55,32 +22,33 @@
   box-sizing: border-box;
 }
 
-html,
-body {
-  height: 100%;
-}
-
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.45;
-  font-variant-numeric: tabular-nums;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
 }
 
-h1,
-h2,
-h3,
-p {
-  margin: 0;
+.placeholder {
+  max-width: 32rem;
+  margin: 20vh auto 0;
+  padding: 0 1.5rem;
 }
 
-a {
-  color: inherit;
+.placeholder h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
 }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.placeholder p {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+}
+
+.status[data-state='ok'] {
+  color: var(--good);
+}
+
+.status[data-state='unavailable'] {
+  color: var(--danger);
 }

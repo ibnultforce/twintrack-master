@@ -12,9 +12,9 @@ export interface ModuleAccess {
   specialPrivileges: string[];
 }
 
-type UserAccessFields = Pick<UserDoc, 'superAdmin' | 'assignments' | 'privileges'>;
+type UserAccessFields = Pick<UserDoc, 'superAdmin' | 'assignments' | 'privileges' | 'superAdminGrants'>;
 type ModuleAccessFields = Pick<ModuleDoc, 'key' | 'resources' | 'roles'>;
-type PermissionMap = Record<string, Scope>;
+export type PermissionMap = Record<string, Scope>;
 
 const SCOPE_BREADTH: Record<Scope, number> = { own: 0, team: 1, all: 2 };
 
@@ -42,13 +42,50 @@ function applyRole(permissions: PermissionMap, role: ManifestRole, resources: Ma
   }
 }
 
-function findPrivilegeScope(privilege: string, resources: ManifestResource[]): Scope | undefined {
-  const lastDot = privilege.lastIndexOf('.');
-  const resource = resources.find((candidate) => candidate.key === privilege.slice(0, lastDot));
-  const action = privilege.slice(lastDot + 1) as ManifestResource['actions'][number];
-  if (!resource?.grantable?.includes(action)) return undefined;
-  return resource.scoped ? 'team' : 'all';
+/** What one role template allows, before any special privileges are added. */
+export function listRolePermissions(role: ManifestRole, resources: ManifestResource[]): PermissionMap {
+  const permissions: PermissionMap = {};
+  applyRole(permissions, role, resources);
+  return permissions;
 }
+
+const privilegeScopeOf = (resource: ManifestResource): Scope => (resource.scoped ? 'team' : 'all');
+
+/** The special privileges a module allows, and how far each one reaches. */
+export function listGrantablePermissions(resources: ManifestResource[]): { permission: string; scope: Scope }[] {
+  return resources.flatMap((resource) =>
+    (resource.grantable ?? []).map((action) => ({ permission: `${resource.key}.${action}`, scope: privilegeScopeOf(resource) })),
+  );
+}
+
+/** Every permission a module has, which is what a super admin can give one person. */
+export function listAllPermissions(resources: ManifestResource[]): { permission: string; scope: Scope }[] {
+  return resources.flatMap((resource) =>
+    resource.actions.map((action) => ({ permission: `${resource.key}.${action}`, scope: privilegeScopeOf(resource) })),
+  );
+}
+
+function splitPermission(permission: string, resources: ManifestResource[]) {
+  const lastDot = permission.lastIndexOf('.');
+  return {
+    resource: resources.find((candidate) => candidate.key === permission.slice(0, lastDot)),
+    action: permission.slice(lastDot + 1) as ManifestResource['actions'][number],
+  };
+}
+
+function findPrivilegeScope(privilege: string, resources: ManifestResource[]): Scope | undefined {
+  const { resource, action } = splitPermission(privilege, resources);
+  return resource?.grantable?.includes(action) ? privilegeScopeOf(resource) : undefined;
+}
+
+function findSuperAdminGrantScope(permission: string, resources: ManifestResource[]): Scope | undefined {
+  const { resource, action } = splitPermission(permission, resources);
+  return resource?.actions.includes(action) ? privilegeScopeOf(resource) : undefined;
+}
+
+/** Reads a person's access map, which is a plain object, without finding anything it inherits from JavaScript. */
+const readOwnEntry = <Value>(map: Record<string, Value>, key: string): Value | undefined =>
+  Object.hasOwn(map, key) ? map[key] : undefined;
 
 /** Combines a person's fixed role template with their special privileges. The widest scope wins. */
 export function resolveModuleAccess(user: UserAccessFields, module: ModuleAccessFields): ModuleAccess {
@@ -60,15 +97,22 @@ export function resolveModuleAccess(user: UserAccessFields, module: ModuleAccess
   }
 
   // A role the module no longer has, or a module that isn't loaded, grants nothing.
-  const role = module.roles.find((candidate) => candidate.key === user.assignments[module.key]);
+  const assignedRoleKey = readOwnEntry(user.assignments, module.key);
+  const role = module.roles.find((candidate) => candidate.key === assignedRoleKey);
   if (role) applyRole(permissions, role, module.resources);
 
   const specialPrivileges: string[] = [];
-  for (const privilege of user.privileges[module.key] ?? []) {
+  for (const privilege of readOwnEntry(user.privileges, module.key) ?? []) {
     const scope = findPrivilegeScope(privilege, module.resources);
     if (!scope) continue;
     grantPermission(permissions, privilege, scope);
     specialPrivileges.push(privilege);
+  }
+  for (const permission of readOwnEntry(user.superAdminGrants ?? {}, module.key) ?? []) {
+    const scope = findSuperAdminGrantScope(permission, module.resources);
+    if (!scope) continue;
+    grantPermission(permissions, permission, scope);
+    specialPrivileges.push(permission);
   }
 
   return {

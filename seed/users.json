@@ -70,7 +70,8 @@
       "status": "active",
       "managerId": "u_05",
       "assignments": {
-        "account": "accountant"
+        "account": "accountant",
+        "hr": "admin"
       }
     },
     {
@@ -83,7 +84,9 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_04",
-      "assignments": {}
+      "assignments": {
+        "master": "admin"
+      }
     },
     {
       "id": "u_08",

@@ -51,6 +51,10 @@ export async function revokeOtherUserSessions(userId: string, keptSessionId: str
   );
 }
 
+export async function revokeAllUserSessions(userId: string, session?: ClientSession): Promise<void> {
+  await Session.updateMany({ userId, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } }, { session });
+}
+
 /** Ends a session. Returns false if it had already ended. */
 export async function revokeSession(sessionId: string): Promise<boolean> {
   const result = await Session.updateOne(

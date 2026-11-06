@@ -51,6 +51,7 @@ function createPermissionCheck(route: ApiRoute, moduleKey: string): RequestHandl
     if (!heldPermission) throw new ApiError(403, 'forbidden', 'You do not have permission to do this.');
 
     req.permissionScope = permissions[heldPermission];
+    req.callerPermissions = permissions;
     next();
   };
 }

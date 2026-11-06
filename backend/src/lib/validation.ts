@@ -25,11 +25,20 @@ export function fieldErrors(issues: z.core.$ZodIssue[], prefix = ''): FieldError
   }));
 }
 
-/** Checks a request body against its schema, so services only receive values of the expected types. */
-export function parseRequestBody<Body>(schema: z.ZodType<Body>, body: unknown): Body {
-  const parsed = schema.safeParse(body);
+function parseRequestInput<Input>(schema: z.ZodType<Input>, input: unknown): Input {
+  const parsed = schema.safeParse(input);
   if (parsed.success) return parsed.data;
   throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', fieldErrors(parsed.error.issues));
+}
+
+/** Checks a request body against its schema, so services only receive values of the expected types. */
+export function parseRequestBody<Body>(schema: z.ZodType<Body>, body: unknown): Body {
+  return parseRequestInput(schema, body);
+}
+
+/** Checks a query string against its schema, which also turns numbers from text into numbers. */
+export function parseRequestQuery<Query>(schema: z.ZodType<Query>, query: unknown): Query {
+  return parseRequestInput(schema, query);
 }
 
 /** For cross-field checks, which must not assume the raw input has the right shape. */

@@ -20,6 +20,8 @@ export interface UserDoc {
   assignments: Record<string, string>;
   /** Module key to extra permissions, for example { hr: ['salary.read'] }. */
   privileges: Record<string, string[]>;
+  /** Module key to permissions only a super admin can give, because the module doesn't mark them grantable. */
+  superAdminGrants?: Record<string, string[]>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +42,7 @@ const userSchema = new Schema<UserDoc>(
     superAdmin: { type: Boolean, default: false },
     assignments: { type: Schema.Types.Mixed, default: {} },
     privileges: { type: Schema.Types.Mixed, default: {} },
+    superAdminGrants: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true, minimize: false },
 );
