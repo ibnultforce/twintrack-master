@@ -1,19 +1,33 @@
 // Runs the Postman collection with Newman against its own copy of the API, on a free port and in its own database.
+import { randomBytes } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import newman from 'newman';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { connectDatabase, disconnectDatabase } from '../src/db.js';
+import { seedDatabase } from '../src/seed/seedDatabase.js';
+import { readSeedFiles } from '../src/seed/seedFiles.js';
 
 const postmanFile = (name: string) => fileURLToPath(new URL(`../../postman/${name}`, import.meta.url));
 
 const webOrigin = 'http://twintrack.localhost:3100';
-const config = loadConfig({ ...process.env, ALLOWED_ORIGINS: webOrigin, LOG_LEVEL: 'silent' });
+// Only used in this run's own database, so it can be a fixed value for the collection to sign in with.
+const seedPassword = 'postman-test-password';
+
+const config = loadConfig({
+  ...process.env,
+  ALLOWED_ORIGINS: webOrigin,
+  MODULE_FRONTEND_URLS: '',
+  LOG_LEVEL: 'silent',
+  REFRESH_COOKIE_SECURE: 'false',
+  JWT_ACCESS_SECRET: randomBytes(48).toString('base64url'),
+});
 
 const uri = new URL(config.mongodbUri);
 uri.pathname = '/twintrack_postman';
 await connectDatabase(uri.toString());
+await seedDatabase({ files: readSeedFiles(), password: seedPassword, nodeEnv: config.nodeEnv });
 
 const server = createApp(config).listen(0);
 await new Promise((resolve) => server.once('listening', resolve));
@@ -24,7 +38,11 @@ const failures = await new Promise<number>((resolve, reject) => {
     {
       collection: postmanFile('twintrack-master.postman_collection.json'),
       environment: postmanFile('twintrack-local.postman_environment.json'),
-      envVar: [{ key: 'baseUrl', value: `http://127.0.0.1:${port}` }, { key: 'webOrigin', value: webOrigin }],
+      envVar: [
+        { key: 'baseUrl', value: `http://127.0.0.1:${port}` },
+        { key: 'webOrigin', value: webOrigin },
+        { key: 'password', value: seedPassword },
+      ],
       reporters: 'cli',
     },
     (err, summary) => (err ? reject(err) : resolve(summary.run.failures.length)),

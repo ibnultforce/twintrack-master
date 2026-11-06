@@ -7,6 +7,7 @@ const validEnv = {
   MONGODB_URI: 'mongodb://127.0.0.1:27017/test',
   ALLOWED_ORIGINS: 'http://twintrack.localhost:3100, http://hr.twintrack.localhost:3101',
   LOG_LEVEL: 'silent',
+  JWT_ACCESS_SECRET: 'test-secret-that-is-long-enough-for-validation',
 };
 
 describe('environment validation', () => {
@@ -25,7 +26,48 @@ describe('environment validation', () => {
       expect(message).toContain('PORT');
       expect(message).toContain('MONGODB_URI');
       expect(message).toContain('ALLOWED_ORIGINS');
+      expect(message).toContain('JWT_ACCESS_SECRET');
     }
+  });
+
+  it('applies the agreed session and token defaults', () => {
+    expect(loadConfig(validEnv).auth).toMatchObject({
+      accessTokenTtlSeconds: 900,
+      sessionIdleDays: 7,
+      sessionMaxDays: 30,
+      isRefreshCookieSecure: false,
+    });
+  });
+
+  it('refuses a short token secret', () => {
+    expect(() => loadConfig({ ...validEnv, JWT_ACCESS_SECRET: 'too-short' })).toThrow(/JWT_ACCESS_SECRET/);
+  });
+
+  it('secures the refresh cookie in production and refuses to turn that off', () => {
+    expect(loadConfig({ ...validEnv, NODE_ENV: 'production' }).auth.isRefreshCookieSecure).toBe(true);
+    expect(() => loadConfig({ ...validEnv, NODE_ENV: 'production', REFRESH_COOKIE_SECURE: 'false' })).toThrow(
+      /REFRESH_COOKIE_SECURE/,
+    );
+  });
+
+  it('reads module frontend addresses', () => {
+    const config = loadConfig({
+      ...validEnv,
+      MODULE_FRONTEND_URLS: 'master=http://twintrack.localhost:3100, hr=http://hr.twintrack.localhost:3101',
+    });
+    expect(config.moduleFrontendUrls.get('hr')).toBe('http://hr.twintrack.localhost:3101');
+    expect(loadConfig(validEnv).moduleFrontendUrls.size).toBe(0);
+  });
+
+  it.each([
+    ['a non-web address', 'hr=javascript:alert(1)'],
+    ['an address with a path', 'hr=http://hr.twintrack.localhost:3101/app'],
+    ['a missing address', 'hr'],
+    ['an invalid module key', 'HR=http://hr.twintrack.localhost:3101'],
+    ['a repeated module', 'hr=http://hr.twintrack.localhost:3101,hr=http://twintrack.localhost:3100'],
+    ['an address not in ALLOWED_ORIGINS', 'hr=https://hr.twintrack.com'],
+  ])('refuses %s in MODULE_FRONTEND_URLS', (_label, value) => {
+    expect(() => loadConfig({ ...validEnv, MODULE_FRONTEND_URLS: value })).toThrow(/MODULE_FRONTEND_URLS/);
   });
 });
 

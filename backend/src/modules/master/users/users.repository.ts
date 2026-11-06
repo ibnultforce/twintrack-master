@@ -2,6 +2,15 @@ import type { ClientSession } from 'mongoose';
 import { User } from '../models/user.js';
 import type { UserRow } from './usersFile.js';
 
+/** Includes the password hash, which other queries leave out. Use it only to check a login. */
+export function findUserWithPasswordByEmail(email: string) {
+  return User.findOne({ email }).select('+passwordHash').lean();
+}
+
+export function findUserById(userId: string) {
+  return User.findById(userId).lean();
+}
+
 export function countUsersWithRoleOutside(moduleKey: string, roleKeys: string[], session?: ClientSession) {
   return User.countDocuments({
     [`assignments.${moduleKey}`]: { $exists: true, $nin: roleKeys },

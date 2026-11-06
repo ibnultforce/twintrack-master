@@ -28,7 +28,7 @@ const errorsFor = (users: unknown[], modules: Manifest[] = []): string => {
 
 describe('validateUsersFile', () => {
   const hr = (() => {
-    const result = validateManifest(readJson('../../seed/manifests/hr.json'));
+    const result = validateManifest(readJson('../../manifests/hr.manifest.json'));
     if (!result.ok) throw new Error('HR manifest is invalid');
     return result.value;
   })();

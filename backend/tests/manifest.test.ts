@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Module } from '../src/modules/master/models/module.js';
 import { User } from '../src/modules/master/models/user.js';
@@ -29,9 +29,20 @@ const valid = (raw: unknown): Manifest => {
 };
 
 describe('validateManifest', () => {
-  it('accepts the real Master and HR manifests', () => {
-    expect(validateManifest(readJson('../../access.manifest.json')).ok).toBe(true);
-    expect(validateManifest(readJson('../../seed/manifests/hr.json')).ok).toBe(true);
+  const manifestFiles = readdirSync(new URL('../../manifests/', import.meta.url));
+
+  it('finds one manifest for each module', () => {
+    expect(manifestFiles.sort()).toEqual([
+      'account.manifest.json',
+      'employee.manifest.json',
+      'hr.manifest.json',
+      'master.manifest.json',
+    ]);
+  });
+
+  it.each(manifestFiles)('accepts %s, whose module key matches its file name', (fileName) => {
+    const manifest = valid(readJson(`../../manifests/${fileName}`));
+    expect(`${manifest.module.key}.manifest.json`).toBe(fileName);
   });
 
   it('reports every problem in the invalid sample at once', () => {

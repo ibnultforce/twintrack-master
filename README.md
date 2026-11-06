@@ -28,13 +28,11 @@ Open http://twintrack.localhost:3100. The page should say "API and database conn
 
 ## Example data
 
-`npm run seed` loads the Master and HR modules and the 10-person example team from `seed/`. Everyone's password is `SEED_PASSWORD` from `backend/.env`, or `demo1234` if that isn't set.
+`npm run seed` loads the Master and HR modules and the 10-person example team from `seed/`. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
 
 - **Safe to re-run:** it updates records by id and creates no duplicates. It resets each person's roles and privileges to what the files say, and keeps passwords already set.
 - **All or nothing:** every file is checked first and all problems are listed together. If anything fails, nothing is saved.
 - **Development only:** it refuses to run when `NODE_ENV` is `production`.
-
-`seed/manifests/hr.json` is a copy of `access.manifest.json` from the `twintrack-hr` repo, so this repo works on its own. Update both together.
 
 ## Backend layout
 
@@ -50,7 +48,24 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 
 ## Manifests
 
-`access.manifest.json` lists this module's resources, routes and fixed role templates. A route marked `"planned": true` is designed but not built yet. Remove the flag when it's built.
+`manifests/` has one file per module: `master`, `hr`, `employee` and `account`. Each lists that module's resources, routes and fixed role templates. The seed reads this folder, so unlike `postman/` it's kept in git. It loads only Master and HR for now, and a test checks that every file in the folder is valid.
+
+Update a module's manifest in the same change as any of its routes. A route marked `"planned": true` is designed but not built yet, so remove the flag when it's built.
+
+Each feature exports its routes, and `backend/src/modules/master/master.routes.ts` combines them. A test fails if that list and the Master manifest disagree about which routes are built or who can use them.
+
+A module's `baseUrl` is the path prefix of its routes on this API, such as `/hr`. Its frontend's address comes from `MODULE_FRONTEND_URLS` in `backend/.env`, and that address must also be in `ALLOWED_ORIGINS`.
+
+## Login and sessions
+
+- **Access token:** a 15-minute HS256 token holding identity only. It's sent as `Authorization: Bearer` and kept in the frontend's memory.
+- **Refresh token:** kept in an `HttpOnly`, `SameSite=Strict` cookie that only `/auth` routes on the API receive. Only its hash is stored. It's replaced on every refresh.
+- **Session limits:** a session ends after 7 days without use, and after 30 days regardless. `backend/.env` sets these.
+- **Two open tabs:** a just-replaced token keeps working for 10 seconds, so tabs refreshing together don't end the session.
+- **Stolen tokens:** an older token used after that ends the whole session and writes `auth.session_token_reused` to the activity log.
+- **Origin check:** login, refresh and logout refuse any origin not in `ALLOWED_ORIGINS`, and any request with no `Origin` header. Postman requests set the header themselves.
+- **Logout:** `/auth/logout` is `public` because it works from the refresh cookie alone, so someone with an expired access token can still sign out.
+- **Rate limit:** failed logins are limited per address, in the memory of each API instance. Multiple instances need a shared store, which isn't built yet.
 
 ## Checks
 
@@ -63,7 +78,7 @@ npm run build
 
 ## Postman
 
-The API requests and their tests are saved in `postman/`. That folder is ignored by git, so it only exists on machines where it has been added by hand, and `npm run test:postman` needs it. Update the collection whenever a route changes. If the folder is there, `npm test` fails when a route has no request in it. If it isn't, that check is skipped.
+The API requests and their tests are saved in `postman/`. That folder is ignored by git, so it only exists on machines where it has been added by hand, and `npm run test:postman` needs it. Update the collection whenever a route changes. If the folder is there, `npm test` fails when a route has no request in it. If it isn't, that check is skipped. Write route parameters as variables, so `/users/:id` is `{{baseUrl}}/users/{{userId}}`.
 
 **In Postman:**
 1. Choose **Import** and select both files in `postman/`.

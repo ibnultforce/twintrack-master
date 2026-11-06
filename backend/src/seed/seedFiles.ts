@@ -10,7 +10,7 @@ const readJson = (relativePath: string): unknown =>
 
 export function readSeedFiles(): SeedFiles {
   return {
-    manifests: [readJson('access.manifest.json'), readJson('seed/manifests/hr.json')],
+    manifests: [readJson('manifests/master.manifest.json'), readJson('manifests/hr.manifest.json')],
     users: readJson('seed/users.json'),
   };
 }

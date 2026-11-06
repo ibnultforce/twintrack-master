@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { ApiError } from './errors.js';
 
 export interface FieldError {
   path: string;
@@ -22,6 +23,13 @@ export function fieldErrors(issues: z.core.$ZodIssue[], prefix = ''): FieldError
     path: [prefix, ...issue.path.map(String)].filter(Boolean).join('.'),
     message: issue.message,
   }));
+}
+
+/** Checks a request body against its schema, so services only receive values of the expected types. */
+export function parseRequestBody<Body>(schema: z.ZodType<Body>, body: unknown): Body {
+  const parsed = schema.safeParse(body);
+  if (parsed.success) return parsed.data;
+  throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', fieldErrors(parsed.error.issues));
 }
 
 /** For cross-field checks, which must not assume the raw input has the right shape. */

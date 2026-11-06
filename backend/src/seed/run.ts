@@ -4,14 +4,13 @@ import { seedDatabase } from './seedDatabase.js';
 import { readSeedFiles } from './seedFiles.js';
 
 const config = loadConfig();
+const seedPassword = process.env.SEED_PASSWORD;
 
 try {
+  if (!seedPassword) throw new Error('Set SEED_PASSWORD in backend/.env before running the seed.');
+
   await connectDatabase(config.mongodbUri);
-  const result = await seedDatabase({
-    files: readSeedFiles(),
-    password: process.env.SEED_PASSWORD || 'demo1234',
-    nodeEnv: config.nodeEnv,
-  });
+  const result = await seedDatabase({ files: readSeedFiles(), password: seedPassword, nodeEnv: config.nodeEnv });
   for (const { key, version, created } of result.modules) {
     console.log(`Module ${key} ${version}: ${created ? 'added' : 'updated'}`);
   }
