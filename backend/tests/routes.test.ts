@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import express from 'express';
+import express, { type RequestHandler } from 'express';
+import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { registerRoutes, type ApiRoute } from '../src/lib/apiRoute.js';
 import { createMasterRoutes } from '../src/modules/master/master.routes.js';
@@ -28,9 +29,26 @@ describe('Master route table', () => {
     expect(tableRoutes.map(accessRules).sort(byMethodAndPath)).toEqual(builtRoutes.map(accessRules).sort(byMethodAndPath));
   });
 
-  it('refuses to register a protected route before access checks exist', () => {
-    const handler: ApiRoute['handler'] = (_req, res) => res.end();
-    const protectedRoute: ApiRoute = { method: 'GET', path: '/secret', access: 'signed', handler };
-    expect(() => registerRoutes(express(), [protectedRoute])).toThrow(/needs access checks/);
+  it('runs the access checks before the route middleware and handler', async () => {
+    const calls: string[] = [];
+    const recordCall = (name: string): RequestHandler => (_req, _res, next) => {
+      calls.push(name);
+      next();
+    };
+    const route: ApiRoute = {
+      method: 'GET',
+      path: '/ordered',
+      access: 'signed',
+      middleware: [recordCall('route middleware')],
+      handler: (_req, res) => {
+        calls.push('handler');
+        res.end();
+      },
+    };
+    const app = express();
+    registerRoutes(app, [route], () => [recordCall('access check')]);
+
+    await request(app).get('/ordered');
+    expect(calls).toEqual(['access check', 'route middleware', 'handler']);
   });
 });

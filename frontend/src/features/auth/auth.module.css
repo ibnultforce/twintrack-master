@@ -1,0 +1,42 @@
+.page {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+
+.panel {
+  width: 100%;
+  max-width: 400px;
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 28px;
+  display: grid;
+  gap: 20px;
+}
+
+.heading {
+  display: grid;
+  gap: 4px;
+}
+
+.heading h1 {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.heading p {
+  color: var(--ink-muted);
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+}

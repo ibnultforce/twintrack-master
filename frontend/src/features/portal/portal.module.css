@@ -1,0 +1,65 @@
+.moduleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.moduleCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 170px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.moduleHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.moduleHeading h2 {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.moduleDescription {
+  color: var(--ink-muted);
+}
+
+.moduleAction {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.nameForm {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.nameForm > div {
+  flex: 1;
+}
+
+.nameForm > button {
+  margin-top: 23px;
+}
+
+.note {
+  margin-top: 8px;
+  color: var(--ink-muted);
+  font-size: 13px;
+}

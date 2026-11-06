@@ -1,3 +1,4 @@
+import type { ClientSession } from 'mongoose';
 import { Session } from '../models/session.js';
 
 export interface NewSession {
@@ -10,6 +11,10 @@ export interface NewSession {
 
 export async function createSession({ sessionId, ...session }: NewSession): Promise<void> {
   await Session.create({ _id: sessionId, ...session });
+}
+
+export function findSessionById(sessionId: string) {
+  return Session.findById(sessionId).lean();
 }
 
 /** Finds a session from its current refresh token or any earlier one. */
@@ -36,6 +41,14 @@ export async function rotateSessionToken(rotation: {
     },
   );
   return result.modifiedCount > 0;
+}
+
+export async function revokeOtherUserSessions(userId: string, keptSessionId: string, session?: ClientSession): Promise<void> {
+  await Session.updateMany(
+    { userId, _id: { $ne: keptSessionId }, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } },
+    { session },
+  );
 }
 
 /** Ends a session. Returns false if it had already ended. */

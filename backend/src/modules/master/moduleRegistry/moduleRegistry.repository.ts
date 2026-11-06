@@ -6,6 +6,10 @@ export function findModuleByKey(key: string, session?: ClientSession) {
   return Module.findOne({ key }).session(session ?? null).lean();
 }
 
+export function findAllModules() {
+  return Module.find().sort({ key: 1 }).lean();
+}
+
 /** Creates or replaces a module from its manifest. Returns true if it was created. */
 export async function saveModule(manifest: Manifest, isCore: boolean, session?: ClientSession): Promise<boolean> {
   const { resources, routes, roles } = manifest;

@@ -7,8 +7,22 @@ export function findUserWithPasswordByEmail(email: string) {
   return User.findOne({ email }).select('+passwordHash').lean();
 }
 
+/** Includes the password hash, which other queries leave out. Use it only to check a password. */
+export function findUserWithPasswordById(userId: string) {
+  return User.findById(userId).select('+passwordHash').lean();
+}
+
 export function findUserById(userId: string) {
   return User.findById(userId).lean();
+}
+
+export function updateUserName(userId: string, name: string) {
+  return User.findByIdAndUpdate(userId, { $set: { name } }, { returnDocument: 'after' }).lean();
+}
+
+/** Saves a new password, which also ends any requirement to change a temporary one. */
+export async function updateUserPassword(userId: string, passwordHash: string, session?: ClientSession): Promise<void> {
+  await User.updateOne({ _id: userId }, { $set: { passwordHash, mustChangePassword: false } }, { session });
 }
 
 export function countUsersWithRoleOutside(moduleKey: string, roleKeys: string[], session?: ClientSession) {

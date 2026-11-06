@@ -80,7 +80,7 @@ export async function login(
   };
 }
 
-function hasExpired(session: SessionDoc): boolean {
+export function hasSessionExpired(session: SessionDoc): boolean {
   const now = Date.now();
   return session.expiresAt.getTime() <= now || session.absoluteExpiresAt.getTime() <= now;
 }
@@ -94,7 +94,7 @@ function isWithinGracePeriod(session: SessionDoc, tokenHash: string, settings: A
 async function requireUsableSession(session: SessionDoc) {
   if (session.revokedAt) throw new SessionEndedError('session_revoked', 'Your session has ended. Sign in again.');
 
-  if (hasExpired(session)) {
+  if (hasSessionExpired(session)) {
     await revokeSession(session._id);
     throw new SessionEndedError('session_expired', 'Your session has expired. Sign in again.');
   }

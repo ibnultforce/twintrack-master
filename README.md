@@ -48,7 +48,7 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 
 ## Manifests
 
-`manifests/` has one file per module: `master`, `hr`, `employee` and `account`. Each lists that module's resources, routes and fixed role templates. The seed reads this folder, so unlike `postman/` it's kept in git. It loads only Master and HR for now, and a test checks that every file in the folder is valid.
+`manifests/` has one file per module: `master`, `hr`, `employee` and `account`. Each lists that module's resources, routes and fixed role templates. Like `postman/`, this folder is ignored by git, so it has to be added by hand on a new machine, and `npm run seed` and `npm test` need it. The seed loads only Master and HR for now, and a test checks that every file in the folder is valid.
 
 Update a module's manifest in the same change as any of its routes. A route marked `"planned": true` is designed but not built yet, so remove the flag when it's built.
 
@@ -65,7 +65,23 @@ A module's `baseUrl` is the path prefix of its routes on this API, such as `/hr`
 - **Stolen tokens:** an older token used after that ends the whole session and writes `auth.session_token_reused` to the activity log.
 - **Origin check:** login, refresh and logout refuse any origin not in `ALLOWED_ORIGINS`, and any request with no `Origin` header. Postman requests set the header themselves.
 - **Logout:** `/auth/logout` is `public` because it works from the refresh cookie alone, so someone with an expired access token can still sign out.
-- **Rate limit:** failed logins are limited per address, in the memory of each API instance. Multiple instances need a shared store, which isn't built yet.
+- **Rate limit:** failed logins and failed password changes are limited per address, in the memory of each API instance. Multiple instances need a shared store, which isn't built yet.
+- **Passwords:** a new password needs at least 12 characters. Changing it ends the person's other sessions.
+
+## Access checks
+
+Each route declares its `access` in its feature's route file, and `registerRoutes` attaches the matching middleware, so a protected route can't go live without its checks:
+
+| `access` | Checks on every call |
+|---|---|
+| `public` | None. Login, refresh and logout add the origin check themselves. |
+| `signed` | Access token, session, active account, and no temporary password waiting to be changed |
+| `private` | The same, plus the `permission` or one of the `anyPermission` values the route names |
+
+- **Permissions** are read from the database on each call, so a role change applies on the person's next request, even with a token they already hold. `modules/master/access/permissions.ts` combines the role template with special privileges, and the widest scope wins.
+- **Special privilege scope:** `team` on a resource marked `scoped` in its manifest, and `all` otherwise.
+- **Rules that depend on the data** being changed, such as "nobody changes their own access", belong in services, because middleware can't see that data.
+- **Temporary passwords:** while `mustChangePassword` is set, only `GET /auth/me`, `POST /auth/change-password` and logout work.
 
 ## Checks
 
