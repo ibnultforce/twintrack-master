@@ -13,7 +13,7 @@ import { Session } from '../src/modules/master/models/session.js';
 import { User } from '../src/modules/master/models/user.js';
 import { validateManifest } from '../src/modules/master/moduleRegistry/manifest.js';
 import { importManifest } from '../src/modules/master/moduleRegistry/moduleRegistry.service.js';
-import { readSeedFiles } from '../src/seed/seedFiles.js';
+import { readSeedFiles } from './helpers/testAccess.js';
 import { useTestDatabase } from './helpers/database.js';
 import { createTestConfig, TEST_ENV, TEST_ORIGIN } from './helpers/testConfig.js';
 
@@ -324,6 +324,7 @@ describe('access checks', () => {
 
     it.each([
       ['too short', { currentPassword: PASSWORD, newPassword: 'short' }],
+      ['one character under the minimum', { currentPassword: PASSWORD, newPassword: 'seven-7' }],
       ['the same as the current one', { currentPassword: PASSWORD, newPassword: PASSWORD }],
       ['too long', { currentPassword: PASSWORD, newPassword: 'x'.repeat(257) }],
       ['not a string', { currentPassword: PASSWORD, newPassword: { $ne: null } }],
@@ -373,8 +374,8 @@ describe('access checks', () => {
 
     it('lists every loaded module for a super admin, with no address when none is set', async () => {
       const { body } = await getAs(await signIn('farhana@twintrack.test'), '/me/modules');
-      expect(moduleKeys(body)).toEqual(['hr', 'master']);
-      expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules[1]?.frontendUrl).toBeNull();
+      expect(moduleKeys(body)).toEqual(['employee', 'hr', 'master']);
+      expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules[2]?.frontendUrl).toBeNull();
     });
 
     it('lists a module reached through a special privilege alone', async () => {
@@ -392,7 +393,7 @@ describe('access checks', () => {
         module: 'hr',
         hasAccess: true,
         role: 'manager',
-        permissions: { 'employee.read': 'team', 'leave.approve': 'team', 'attendance.read': 'team' },
+        permissions: { 'salary.read': 'team' },
       });
       expect(response.body.permissions['salary.update']).toBeUndefined();
     });

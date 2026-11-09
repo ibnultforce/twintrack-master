@@ -18,9 +18,11 @@ export type PermissionMap = Record<string, Scope>;
 
 const SCOPE_BREADTH: Record<Scope, number> = { own: 0, team: 1, all: 2 };
 
+export const isWiderScope = (candidate: Scope, current: Scope) => SCOPE_BREADTH[candidate] > SCOPE_BREADTH[current];
+
 function grantPermission(permissions: PermissionMap, permission: string, scope: Scope): void {
   const currentScope = permissions[permission];
-  if (!currentScope || SCOPE_BREADTH[scope] > SCOPE_BREADTH[currentScope]) permissions[permission] = scope;
+  if (!currentScope || isWiderScope(scope, currentScope)) permissions[permission] = scope;
 }
 
 function grantEverything(permissions: PermissionMap, resources: ManifestResource[]): void {

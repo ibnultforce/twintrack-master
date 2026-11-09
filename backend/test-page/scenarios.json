@@ -287,7 +287,7 @@
             },
             {
               "kind": "fail",
-              "title": "New password under 12 characters",
+              "title": "New password under 8 characters",
               "expected": 422,
               "code": "validation_failed",
               "request": {
@@ -1141,6 +1141,69 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /modules/:key/addable-people",
+          "method": "GET",
+          "path": "/modules/:key/addable-people",
+          "purpose": "Lists active people who could be given a role in one module.",
+          "input": "module key in the path; page, pageSize (up to 100), search",
+          "access": "Master access rights, or access.update in that module",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "HR Admin searches who can be added to HR, with no Master role",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/modules/hr/addable-people",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/modules/hr/addable-people"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/modules/hr/addable-people",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "HR Admin can not list for another module",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/modules/master/addable-people",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Module not loaded",
+              "expected": 404,
+              "code": "unknown_module",
+              "request": {
+                "method": "GET",
+                "path": "/modules/account/addable-people",
+                "as": "arif@twintrack.test"
+              }
+            }
+          ]
         }
       ]
     },
@@ -1379,6 +1442,29 @@
                 "as": "arif@twintrack.test",
                 "body": "{\"module\":\"constructor\",\"role\":null}"
               }
+            },
+            {
+              "kind": "success",
+              "title": "Jasmin removes Jack's Employee role",
+              "expected": 200,
+              "request": {
+                "method": "PATCH",
+                "path": "/users/u_13/roles",
+                "as": "jasmin@twintrack.test",
+                "body": "{\"module\":\"employee\",\"role\":null}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Jasmin can not change a Master role",
+              "expected": 403,
+              "code": "hr_roles_only",
+              "request": {
+                "method": "PATCH",
+                "path": "/users/u_13/roles",
+                "as": "jasmin@twintrack.test",
+                "body": "{\"module\":\"master\",\"role\":\"admin\"}"
+              }
             }
           ]
         },
@@ -1540,7 +1626,7 @@
                 "method": "PUT",
                 "path": "/users/u_03/privileges",
                 "as": "kamrul@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissions\":[\"recruitment.read\"],\"reason\":\"Helping with hiring\"}"
+                "body": "{\"module\":\"hr\",\"permissions\":[\"salary.read\"],\"reason\":\"Helping with payroll\"}"
               }
             },
             {
@@ -1565,6 +1651,41 @@
                 "path": "/users/u_08/privileges",
                 "as": "arif@twintrack.test",
                 "body": "{\"module\":\"constructor\",\"permissions\":[]}"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Jasmin gives Jack profile.update",
+              "expected": 200,
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_13/privileges",
+                "as": "jasmin@twintrack.test",
+                "body": "{\"module\":\"employee\",\"permissions\":[\"profile.update\"],\"reason\":\"Keeps his own details current\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Jasmin can not give a non-grantable Employee permission",
+              "expected": 422,
+              "code": "not_grantable",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_13/privileges",
+                "as": "jasmin@twintrack.test",
+                "body": "{\"module\":\"employee\",\"permissions\":[\"role.update\"],\"reason\":\"Wants to edit roles\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Jack can not give himself profile.update",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_13/privileges",
+                "as": "jack@twintrack.test",
+                "body": "{\"module\":\"employee\",\"permissions\":[\"profile.update\"],\"reason\":\"Please\"}"
               }
             }
           ]
@@ -1627,7 +1748,7 @@
           "path": "/roles/:module",
           "purpose": "Adds a role to a module.",
           "input": "key, name, grants, and optionally description",
-          "access": "Needs role.update",
+          "access": "role.update in that module",
           "scenarios": [
             {
               "kind": "success",
@@ -1638,7 +1759,7 @@
                 "method": "POST",
                 "path": "/roles/hr",
                 "as": "farhana@twintrack.test",
-                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"employee\":{\"actions\":[\"read\"],\"scope\":\"team\"},\"salary\":{\"actions\":[\"read\"]}}}"
+                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"read\"]}}}"
               }
             },
             {
@@ -1671,7 +1792,7 @@
                 "method": "POST",
                 "path": "/roles/hr",
                 "as": "arif@twintrack.test",
-                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"employee\":{\"actions\":[\"read\"],\"scope\":\"team\"},\"salary\":{\"actions\":[\"read\"]}}}"
+                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"read\"]}}}"
               }
             },
             {
@@ -1683,7 +1804,7 @@
                 "method": "POST",
                 "path": "/roles/hr",
                 "as": "farhana@twintrack.test",
-                "body": "{\"key\":\"manager\",\"name\":\"Team Lead\",\"grants\":{\"employee\":{\"actions\":[\"read\"],\"scope\":\"team\"},\"salary\":{\"actions\":[\"read\"]}}}"
+                "body": "{\"key\":\"manager\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"read\"]}}}"
               }
             },
             {
@@ -1707,7 +1828,19 @@
                 "method": "POST",
                 "path": "/roles/account",
                 "as": "farhana@twintrack.test",
-                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"employee\":{\"actions\":[\"read\"],\"scope\":\"team\"},\"salary\":{\"actions\":[\"read\"]}}}"
+                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"read\"]}}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone who is not a super admin asks for everything",
+              "expected": 403,
+              "code": "beyond_own_access",
+              "request": {
+                "method": "POST",
+                "path": "/roles/hr",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"key\":\"all-hr\",\"name\":\"All of HR\",\"grants\":\"*\"}"
               }
             }
           ]
@@ -1729,7 +1862,7 @@
                 "method": "PATCH",
                 "path": "/roles/hr/manager",
                 "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"employee\":{\"actions\":[\"read\"],\"scope\":\"team\"},\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
+                "body": "{\"grants\":{\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
               }
             },
             {
@@ -1774,7 +1907,7 @@
                 "method": "PATCH",
                 "path": "/roles/hr/manager",
                 "as": "arif@twintrack.test",
-                "body": "{\"grants\":{\"employee\":{\"actions\":[\"read\"],\"scope\":\"team\"},\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
+                "body": "{\"grants\":{\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
               }
             },
             {
@@ -1798,7 +1931,7 @@
                 "method": "PATCH",
                 "path": "/roles/hr/manager",
                 "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"recruitment\":{\"actions\":[\"read\"],\"scope\":\"team\"}}}"
+                "body": "{\"grants\":{\"access\":{\"actions\":[\"read\"],\"scope\":\"team\"}}}"
               }
             },
             {
@@ -1822,7 +1955,7 @@
                 "method": "PATCH",
                 "path": "/roles/hr/emperor",
                 "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"employee\":{\"actions\":[\"read\"],\"scope\":\"team\"},\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
+                "body": "{\"grants\":{\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
               }
             },
             {
@@ -1834,7 +1967,7 @@
                 "method": "PATCH",
                 "path": "/roles/account/viewer",
                 "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"employee\":{\"actions\":[\"read\"],\"scope\":\"team\"},\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
+                "body": "{\"grants\":{\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
               }
             }
           ]
@@ -1888,6 +2021,47 @@
                 "method": "DELETE",
                 "path": "/roles/hr/emperor",
                 "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /roles/manageable",
+          "method": "GET",
+          "path": "/roles/manageable",
+          "purpose": "Lists the modules you can edit roles in, what you may put in a role, and the APIs each permission opens.",
+          "input": "nothing",
+          "access": "role.update in at least one module",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Someone with role.update in HR",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/roles/manageable",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/roles/manageable"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/roles/manageable",
+                "as": "karim@twintrack.test"
               }
             }
           ]
@@ -1953,8 +2127,8 @@
           "id": "POST /modules/import",
           "method": "POST",
           "path": "/modules/import",
-          "purpose": "Adds a module from its manifest, or replaces one.",
-          "input": "the whole manifest, up to 256 KB",
+          "purpose": "Adds a module from its manifest, or replaces one, after confirming your password.",
+          "input": "password and the whole manifest, up to 256 KB",
           "access": "Needs module.create",
           "scenarios": [
             {
@@ -1966,7 +2140,31 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"manifestVersion\":1,\"module\":{\"key\":\"tasks\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"],\"grantable\":[\"create\"]}],\"routes\":[],\"roles\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"tasks\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[],\"roles\":[]}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Wrong password",
+              "expected": 403,
+              "code": "wrong_current_password",
+              "request": {
+                "method": "POST",
+                "path": "/modules/import",
+                "as": "arif@twintrack.test",
+                "body": "{\"password\":\"not-the-password\",\"manifest\":{}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Adding a role needs a super admin",
+              "expected": 403,
+              "code": "beyond_own_access",
+              "request": {
+                "method": "POST",
+                "path": "/modules/import",
+                "as": "arif@twintrack.test",
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"tasks\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[],\"roles\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}}"
               }
             },
             {
@@ -1999,7 +2197,7 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"manifestVersion\":1,\"module\":{\"key\":\"BAD KEY\"}}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"BAD KEY\"}}}"
               }
             },
             {
@@ -2011,7 +2209,7 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"manifestVersion\":1,\"module\":{\"key\":\"master\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"],\"grantable\":[\"create\"]}],\"routes\":[],\"roles\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"master\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"],\"grantable\":[\"create\"]}],\"routes\":[],\"roles\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}}"
               }
             },
             {
@@ -2023,7 +2221,7 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"manifestVersion\":1,\"module\":{\"key\":\"tasks\",\"name\":\"Tasks\",\"version\":\"1.0.0\",\"core\":true},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"],\"grantable\":[\"create\"]}],\"routes\":[],\"roles\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"tasks\",\"name\":\"Tasks\",\"version\":\"1.0.0\",\"core\":true},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"],\"grantable\":[\"create\"]}],\"routes\":[],\"roles\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}}"
               }
             },
             {
@@ -2035,7 +2233,59 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"manifestVersion\":1,\"module\":{\"key\":\"constructor\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"],\"grantable\":[\"create\"]}],\"routes\":[],\"roles\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"constructor\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"],\"grantable\":[\"create\"]}],\"routes\":[],\"roles\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /modules/:key/export",
+          "method": "GET",
+          "path": "/modules/:key/export",
+          "purpose": "Downloads a module's manifest as it stands, ready to import.",
+          "input": "nothing",
+          "access": "Needs module.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Exports a module",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/modules/hr/export",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/modules/hr/export"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/modules/hr/export",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Module not loaded",
+              "expected": 404,
+              "code": "unknown_module",
+              "request": {
+                "method": "GET",
+                "path": "/modules/account/export",
+                "as": "arif@twintrack.test"
               }
             }
           ]
@@ -2131,9 +2381,9 @@
               "changesData": true,
               "request": {
                 "method": "PUT",
-                "path": "/modules/hr/resources/attendance",
+                "path": "/modules/hr/resources/salary",
                 "as": "farhana@twintrack.test",
-                "body": "{\"label\":\"Attendance\",\"actions\":[\"read\",\"update\",\"approve\"]}"
+                "body": "{\"label\":\"Salaries\",\"actions\":[\"read\",\"create\",\"update\",\"approve\",\"delete\"]}"
               }
             },
             {
@@ -2252,9 +2502,9 @@
           "id": "PUT /modules/:key/resources/:resource/grantable",
           "method": "PUT",
           "path": "/modules/:key/resources/:resource/grantable",
-          "purpose": "Changes which actions can be given to one person.",
+          "purpose": "Changes which actions can be given to one person. Only a super admin can add to the list.",
           "input": "actions",
-          "access": "Needs role.update",
+          "access": "Needs module.update",
           "scenarios": [
             {
               "kind": "success",
@@ -2291,7 +2541,7 @@
             },
             {
               "kind": "fail",
-              "title": "Access Admin has no role.update",
+              "title": "Access Admin has no module.update",
               "expected": 403,
               "code": "forbidden",
               "request": {
@@ -2679,6 +2929,85 @@
                 "method": "PATCH",
                 "path": "/hr/salaries/nothing/approve",
                 "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Employee profile",
+      "routes": [
+        {
+          "id": "GET /employee/me/profile",
+          "method": "GET",
+          "path": "/employee/me/profile",
+          "purpose": "Returns your own profile and manager.",
+          "input": "nothing",
+          "access": "Needs profile.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Jack views his own profile",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/employee/me/profile",
+                "as": "jack@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/employee/me/profile"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but with no Employee access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/employee/me/profile",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /employee/me/profile",
+          "method": "PATCH",
+          "path": "/employee/me/profile",
+          "purpose": "Changes your own name, for people holding profile.update.",
+          "input": "name",
+          "access": "Needs profile.update",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Jack can view his profile but not change it",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PATCH",
+                "path": "/employee/me/profile",
+                "as": "jack@twintrack.test",
+                "body": "{\"name\":\"Jack Changed\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "PATCH",
+                "path": "/employee/me/profile",
+                "body": "{\"name\":\"Jack Changed\"}"
               }
             }
           ]

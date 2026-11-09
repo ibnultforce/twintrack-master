@@ -3,14 +3,15 @@ import { z } from 'zod';
 import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { paginationQueryFields } from '../../../lib/query.js';
 import { parseRequestBody, parseRequestQuery } from '../../../lib/validation.js';
-import { ApiError } from '../../../lib/errors.js';
-import { getActor, getCaller, getSignedActor } from '../access/caller.js';
-import { CONTRACTS, USER_STATUSES, type UserDoc } from '../models/user.js';
+import { getActor, getSignedActor } from '../access/caller.js';
+import { refuseUnless } from '../access/refuseUnless.js';
+import { CONTRACTS, USER_STATUSES } from '../models/user.js';
 import { MODULE_KEY } from '../moduleRegistry/manifest.js';
 import {
   canChangeAnyAccess,
   canReadAccessOptions,
   listAccessOptions,
+  listAddablePeople,
   listModulePeople,
   setUserPrivileges,
   setUserRole,
@@ -36,6 +37,11 @@ const listUsersQuerySchema = z.object({
   ...paginationQueryFields,
   search: z.string().trim().max(MAX_DETAIL_LENGTH).optional(),
   status: z.enum(USER_STATUSES).optional(),
+});
+
+const addablePeopleQuerySchema = z.object({
+  ...paginationQueryFields,
+  search: z.string().trim().max(MAX_DETAIL_LENGTH).optional(),
 });
 
 // Bodies are strict, so a request can't slip in other fields such as superAdmin or a password hash.
@@ -99,10 +105,8 @@ const handleListModulePeople: RequestHandler = async (req, res) => {
   res.json(await listModulePeople(getSignedActor(req), String(req.params.key)));
 };
 
-/** Runs before the body is read, so someone with no rights is refused the same way as on a private route. */
-const refuseUnless = (isAllowed: (user: UserDoc) => Promise<boolean>): RequestHandler => async (req, _res, next) => {
-  if (!(await isAllowed(getCaller(req).user))) throw new ApiError(403, 'forbidden', 'You do not have permission to do this.');
-  next();
+const handleListAddablePeople: RequestHandler = async (req, res) => {
+  res.json(await listAddablePeople(getSignedActor(req), String(req.params.key), parseRequestQuery(addablePeopleQuerySchema, req.query)));
 };
 
 const handleGetUser: RequestHandler = async (req, res) => {
@@ -146,4 +150,5 @@ export const usersRoutes: ApiRoute[] = [
   { method: 'PATCH', path: '/users/:id/roles', access: 'signed', middleware: [refuseUnless(canChangeAnyAccess)], handler: handleSetRole },
   { method: 'PUT', path: '/users/:id/privileges', access: 'signed', middleware: [refuseUnless(canChangeAnyAccess)], handler: handleSetPrivileges },
   { method: 'GET', path: '/modules/:key/people', access: 'signed', middleware: [refuseUnless(canReadAccessOptions)], handler: handleListModulePeople },
+  { method: 'GET', path: '/modules/:key/addable-people', access: 'signed', middleware: [refuseUnless(canChangeAnyAccess)], handler: handleListAddablePeople },
 ];

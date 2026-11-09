@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import type { ClientSession } from 'mongoose';
 import { runInTransaction } from '../../../db.js';
 import { ApiError } from '../../../lib/errors.js';
@@ -8,6 +9,7 @@ import type { ModuleDoc } from '../models/module.js';
 import { countUsersWithAccessIn, countUsersWithRoleOutside } from '../users/users.repository.js';
 import { validateManifest, type Manifest, type ManifestResource, type ManifestRole } from './manifest.js';
 import { deleteModule, findAllModules, findModuleByKey, saveModule } from './moduleRegistry.repository.js';
+import { canEditRolesIn, listPermissionApis } from './roleEditing.js';
 
 const EVERYTHING_LABEL = 'Everything in this module';
 
@@ -35,25 +37,50 @@ export interface RegisteredModule {
   frontendUrl: string | null;
 }
 
-/** Someone who can't edit a module's rules mustn't undo those edits by importing or removing the module. */
-function assertMayReplaceEdits(module: Pick<ModuleDoc, 'name' | 'permissionsEditedAt'> | null, canEditRules: boolean): void {
-  if (module?.permissionsEditedAt && !canEditRules) {
-    throw new ApiError(409, 'permissions_edited', `${module.name}'s permissions have been edited, so replacing or removing it needs role.update.`);
+/** Someone who can't edit a module's resources and roles mustn't undo those edits by importing or removing the module. */
+function assertMayReplaceEdits(actor: Actor, module: ModuleDoc | null): void {
+  if (!module?.permissionsEditedAt || actor.user.superAdmin) return;
+  if (!actor.permissions['module.update'] || !canEditRolesIn(actor.user, module)) {
+    throw new ApiError(409, 'permissions_edited', `${module.name}'s permissions have been edited, so replacing or removing it needs module.update and role.update in that module.`);
+  }
+}
+
+const addsOrChangesRoles = (manifest: Manifest, existing: ModuleDoc | null) =>
+  manifest.roles.some((role) => {
+    const existingRole = existing?.roles.find((candidate) => candidate.key === role.key);
+    return !existingRole || !isDeepStrictEqual(role.grants, existingRole.grants);
+  });
+
+const widensGrantable = (manifest: Manifest, existing: ModuleDoc | null) =>
+  manifest.resources.some((resource) => {
+    const existingResource = existing?.resources.find((candidate) => candidate.key === resource.key);
+    return resource.grantable?.some((action) => !existingResource?.grantable?.includes(action));
+  });
+
+/** An import mustn't do what the role and grantable routes refuse, and removing a module first mustn't get around that. */
+function assertMayImportOver(actor: Actor, manifest: Manifest, existing: ModuleDoc | null): void {
+  if (actor.user.superAdmin) return;
+  assertMayReplaceEdits(actor, existing);
+  if (addsOrChangesRoles(manifest, existing)) {
+    throw new ApiError(403, 'beyond_own_access', 'Only a super admin can import a manifest that adds or changes roles.');
+  }
+  if (widensGrantable(manifest, existing)) {
+    throw new ApiError(403, 'beyond_own_access', 'Only a super admin can import a manifest that lets more permissions be given to one person.');
   }
 }
 
 /** Saves a validated manifest. Only the seed may set up core modules, so the API can't replace Master's own rules. */
 export async function importManifest(
   manifest: Manifest,
-  options: { allowCore?: boolean; canEditRules?: boolean; session?: ClientSession } = {},
+  options: { allowCore?: boolean; assertMayReplace?: (existing: ModuleDoc | null) => void; session?: ClientSession } = {},
 ): Promise<ImportResult> {
-  const { allowCore = false, canEditRules = false, session } = options;
+  const { allowCore = false, assertMayReplace, session } = options;
   const { key, version, core: isCore = false } = manifest.module;
 
   if (!allowCore) {
     const existingModule = await findModuleByKey(key, session);
     if (isCore || existingModule?.core) throw new CoreModuleError(key, 'imported');
-    assertMayReplaceEdits(existingModule, canEditRules);
+    assertMayReplace?.(existingModule);
   }
 
   const created = await saveModule(manifest, isCore, session);
@@ -79,7 +106,7 @@ function toRegisteredModule(
 
 export async function listRegisteredModules(frontendUrls: Map<string, string>) {
   const modules = await findAllModules();
-  return modules.map((module) => ({ ...toRegisteredModule(module, frontendUrls), resources: module.resources }));
+  return modules.map((module) => ({ ...toRegisteredModule(module, frontendUrls), resources: module.resources, apis: listPermissionApis(module) }));
 }
 
 /** Checks a manifest sent to the API and saves it. Importing a module again replaces it. */
@@ -94,7 +121,7 @@ export async function importModuleFromRequest(
 
   const result = await runInTransaction(async (session) => {
     const previousVersion = (await findModuleByKey(manifest.module.key, session))?.version ?? null;
-    const imported = await importManifest(manifest, { canEditRules: Boolean(actor.permissions['role.update']), session });
+    const imported = await importManifest(manifest, { assertMayReplace: (existing) => assertMayImportOver(actor, manifest, existing), session });
     await recordAudit(
       {
         action: 'module.imported',
@@ -113,12 +140,26 @@ export async function importModuleFromRequest(
   return { ...toRegisteredModule(manifest.module, frontendUrls), ...result };
 }
 
+/** A manifest of the module as it stands, including edits made in the app, in the form an import accepts. */
+export async function exportModuleManifest(key: string) {
+  const module = await findModuleByKey(key);
+  if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
+  const { name, version, description, repository, baseUrl, core, resources, routes, roles } = module;
+  return {
+    manifestVersion: 1,
+    module: { key, name, version, description, repository, baseUrl, ...(core && { core }) },
+    resources,
+    routes,
+    roles,
+  };
+}
+
 /** People keep their role and privileges in a removed module, which grant nothing unless it's imported again. */
 export async function removeModule(actor: Actor, key: string): Promise<{ removed: true; key: string; affectedUsers: number }> {
   const module = await findModuleByKey(key);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
   if (module.core) throw new CoreModuleError(key, 'removed');
-  assertMayReplaceEdits(module, Boolean(actor.permissions['role.update']));
+  assertMayReplaceEdits(actor, module);
 
   const affectedUsers = await runInTransaction(async (session) => {
     await deleteModule(key, session);

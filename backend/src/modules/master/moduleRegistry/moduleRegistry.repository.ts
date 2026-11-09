@@ -19,6 +19,14 @@ export async function updateModulePermissionRules(
   await Module.updateOne({ key }, { $set: { ...rules, permissionsEditedAt: new Date() } }, { session });
 }
 
+/**
+ * Writes to the module inside a transaction that gives someone a role, so it collides with a transaction removing
+ * that role. The database then retries one of them, and it sees what the other did.
+ */
+export async function touchModule(key: string, session: ClientSession): Promise<void> {
+  await Module.updateOne({ key }, { $set: { updatedAt: new Date() } }, { session });
+}
+
 export async function deleteModule(key: string, session: ClientSession): Promise<void> {
   await Module.deleteOne({ key }, { session });
 }

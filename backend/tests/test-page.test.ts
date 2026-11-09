@@ -5,7 +5,7 @@ import { createApp } from '../src/app.js';
 import { ConfigError, loadConfig } from '../src/config.js';
 import { createMasterRoutes } from '../src/modules/master/master.routes.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
-import { readSeedFiles } from '../src/seed/seedFiles.js';
+import { readSeedFiles } from './helpers/testAccess.js';
 import { useTestDatabase } from './helpers/database.js';
 import { createTestConfig, TEST_ENV, TEST_ORIGIN } from './helpers/testConfig.js';
 

@@ -5,7 +5,7 @@ import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { Module } from '../src/modules/master/models/module.js';
 import { User } from '../src/modules/master/models/user.js';
 import { useTestDatabase } from './helpers/database.js';
-import { addPerson, importSeedManifests, requestsAs, signIn } from './helpers/signedIn.js';
+import { addPerson, importSeedManifests, requestsAs, signIn, TEST_PASSWORD } from './helpers/signedIn.js';
 import { createTestConfig } from './helpers/testConfig.js';
 
 const REASON = 'Covering payroll this month';
@@ -119,7 +119,7 @@ describe('what only a super admin can change', () => {
   });
 
   describe('PATCH /roles/:module/:key', () => {
-    const managerWithSalary = { grants: { employee: { actions: ['read'], scope: 'team' }, salary: { actions: ['read', 'update'], scope: 'team' } } };
+    const managerWithSalary = { grants: { salary: { actions: ['read', 'update'], scope: 'team' } } };
 
     it('changes what a role allows, on the next request of everyone who has it', async () => {
       const rahim = await as('rahim');
@@ -127,12 +127,12 @@ describe('what only a super admin can change', () => {
 
       const response = await (await as('farhana')).patch('/roles/hr/manager', { ...managerWithSalary, name: 'Team Lead' });
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({ module: 'hr', key: 'manager', name: 'Team Lead', grants: ['employee.read (team)', 'salary.read (team)', 'salary.update (team)'] });
+      expect(response.body).toMatchObject({ module: 'hr', key: 'manager', name: 'Team Lead', grants: ['salary.read (team)', 'salary.update (team)'] });
 
       const permissions = await rahim.get('/me/permissions/hr');
       expect(permissions.body.roleName).toBe('Team Lead');
       expect(permissions.body.permissions['salary.update']).toBe('team');
-      expect(permissions.body.permissions['leave.approve']).toBeUndefined();
+      expect(permissions.body.permissions['salary.approve']).toBeUndefined();
     });
 
     it('records the change, and marks the module as edited', async () => {
@@ -152,7 +152,7 @@ describe('what only a super admin can change', () => {
     it.each([
       ['an unknown resource', { grants: { ghost: { actions: ['read'] } } }, 'is not a resource'],
       ['an unknown action', { grants: { salary: { actions: ['fly'] } } }, 'grants.salary.actions'],
-      ['a narrow scope on an unscoped resource', { grants: { recruitment: { actions: ['read'], scope: 'team' } } }, "isn't scoped"],
+      ['a narrow scope on an unscoped resource', { grants: { access: { actions: ['read'], scope: 'team' } } }, "isn't scoped"],
     ])('refuses %s, and saves nothing', async (_label, body, message) => {
       const response = await (await as('farhana')).patch('/roles/hr/manager', body);
       expect(response.status).toBe(422);
@@ -216,6 +216,15 @@ describe('what only a super admin can change', () => {
       expect(entry).toMatchObject({ actorId: 'farhana', targetId: 'hr.salary', before: { grantable: ['read'] }, after: { grantable: ['read', 'update'] } });
     });
 
+    it('lets module.update narrow the list, but only a super admin widen it', async () => {
+      await User.updateOne({ _id: 'alia' }, { $set: { 'superAdminGrants.master': ['module.update'] } });
+      const alia = await as('alia');
+      const widened = await alia.put(path, { actions: ['read', 'update'] });
+      expect(widened.status).toBe(403);
+      expect(widened.body.error.code).toBe('beyond_own_access');
+      expect((await alia.put(path, { actions: [] })).status).toBe(200);
+    });
+
     it('refuses an action the resource does not have', async () => {
       expect((await (await as('farhana')).put(path, { actions: ['delete'] })).status).toBe(422);
     });
@@ -234,7 +243,7 @@ describe('what only a super admin can change', () => {
   });
 
   describe('POST and DELETE /roles/:module', () => {
-    const lead = { key: 'lead', name: 'Team Lead', grants: { employee: { actions: ['read'], scope: 'team' }, salary: { actions: ['read'], scope: 'team' } } };
+    const lead = { key: 'lead', name: 'Team Lead', grants: { salary: { actions: ['read'], scope: 'team' } } };
 
     it('adds a role that can be given straight away and takes effect', async () => {
       const farhana = await as('farhana');
@@ -260,7 +269,7 @@ describe('what only a super admin can change', () => {
       const farhana = await as('farhana');
       await farhana.post('/roles/hr', lead);
       expect((await farhana.delete('/roles/hr/lead')).status).toBe(200);
-      expect((await farhana.get('/roles')).body.roles.some((role: { key: string }) => role.key === 'lead')).toBe(false);
+      expect((await farhana.get('/roles')).body.roles.some((role: { module: string; key: string }) => role.module === 'hr' && role.key === 'lead')).toBe(false);
     });
 
     it('refuses to remove a role someone holds', async () => {
@@ -286,9 +295,9 @@ describe('what only a super admin can change', () => {
     });
 
     it('adds an action to a resource, and keeps what is grantable', async () => {
-      const response = await (await as('farhana')).put('/modules/hr/resources/attendance', { label: 'Attendance', actions: ['read', 'update', 'approve'] });
+      const response = await (await as('farhana')).put('/modules/hr/resources/salary', { label: 'Salaries', actions: ['read', 'create', 'update', 'approve', 'delete'] });
       expect(response.status).toBe(200);
-      expect(response.body.resource).toMatchObject({ scoped: true, actions: ['read', 'update', 'approve'] });
+      expect(response.body.resource).toMatchObject({ scoped: true, grantable: ['read'], actions: ['read', 'create', 'update', 'approve', 'delete'] });
     });
 
     it('refuses removing an action a role still uses', async () => {
@@ -319,13 +328,14 @@ describe('what only a super admin can change', () => {
     it('lets anyone whose role is given role.update edit the rules, and stops when it is taken away', async () => {
       const farhana = await as('farhana');
       const sabbir = await as('sabbir');
-      const grants = { user: { actions: ['read'] }, hrAccess: { actions: ['read', 'update'] } };
+      const grants = { salary: { actions: ['read'], scope: 'all' } };
+      await farhana.patch('/users/sabbir/roles', { module: 'hr', role: 'staff' });
       expect((await sabbir.patch('/roles/hr/viewer', { name: 'Reader' })).status).toBe(403);
 
-      await farhana.patch('/roles/master/hr-access', { grants: { ...grants, role: { actions: ['read', 'update'] } } });
+      await farhana.patch('/roles/hr/staff', { grants: { ...grants, role: { actions: ['update'] } } });
       expect((await sabbir.patch('/roles/hr/viewer', { name: 'Reader' })).status).toBe(200);
 
-      await farhana.patch('/roles/master/hr-access', { grants });
+      await farhana.patch('/roles/hr/staff', { grants });
       expect((await sabbir.patch('/roles/hr/viewer', { name: 'Viewer' })).status).toBe(403);
     });
 
@@ -361,7 +371,7 @@ describe('what only a super admin can change', () => {
     });
 
     it('stops an Access Admin importing over them', async () => {
-      const response = await (await as('alia')).post('/modules/import', await hrManifest());
+      const response = await (await as('alia')).post('/modules/import', { manifest: await hrManifest(), password: TEST_PASSWORD });
       expect(response.status).toBe(409);
       expect(response.body.error.code).toBe('permissions_edited');
       expect((await Module.findOne({ key: 'hr' }).lean())?.version).not.toBe('9.0.0');
@@ -374,10 +384,10 @@ describe('what only a super admin can change', () => {
     });
 
     it('lets a super admin replace them, which clears the mark', async () => {
-      const response = await (await as('farhana')).post('/modules/import', await hrManifest());
+      const response = await (await as('farhana')).post('/modules/import', { manifest: await hrManifest(), password: TEST_PASSWORD });
       expect(response.status).toBe(200);
       expect((await Module.findOne({ key: 'hr' }).lean())?.permissionsEditedAt).toBeUndefined();
-      expect((await (await as('alia')).post('/modules/import', await hrManifest())).status).toBe(200);
+      expect((await (await as('alia')).post('/modules/import', { manifest: await hrManifest(), password: TEST_PASSWORD })).status).toBe(200);
     });
 
     it('lets a super admin remove the module', async () => {

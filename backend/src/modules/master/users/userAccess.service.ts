@@ -1,13 +1,15 @@
+import type { ClientSession } from 'mongoose';
 import { runInTransaction } from '../../../db.js';
 import { ApiError } from '../../../lib/errors.js';
+import type { PageRequest } from '../../../lib/query.js';
 import { actorFields, type Actor } from '../access/caller.js';
 import { listAllPermissions, listGrantablePermissions, resolveModuleAccess, type PermissionMap } from '../access/permissions.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import type { ModuleDoc } from '../models/module.js';
 import type { UserDoc } from '../models/user.js';
 import { MASTER_MODULE_KEY } from '../moduleRegistry/manifest.js';
-import { findAllModules, findModuleByKey } from '../moduleRegistry/moduleRegistry.repository.js';
-import { findUsersWithAccessIn, updateUserPrivileges, updateUserRole } from './users.repository.js';
+import { findAllModules, findModuleByKey, touchModule } from '../moduleRegistry/moduleRegistry.repository.js';
+import { findUsersAddableTo, findUsersWithAccessIn, updateUserPrivileges, updateUserRole } from './users.repository.js';
 import { requireUser, toUserView, userTargetFields, type UserView } from './users.service.js';
 
 /** A module's resource with this key holds its own admin permissions: access.update lets someone change access in it. */
@@ -62,10 +64,17 @@ async function assertMayChangeAccess(actor: Actor, target: UserDoc, moduleKey: s
   }
 }
 
-async function requireModule(moduleKey: string) {
-  const module = await findModuleByKey(moduleKey);
+async function requireModule(moduleKey: string, session?: ClientSession) {
+  const module = await findModuleByKey(moduleKey, session);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
   return module;
+}
+
+async function assertRoleExists(moduleKey: string, roleKey: string, session?: ClientSession): Promise<void> {
+  const module = await requireModule(moduleKey, session);
+  if (!module.roles.some((role) => role.key === roleKey)) {
+    throw new ApiError(422, 'unknown_role', `"${roleKey}" is not a role in ${module.name}.`);
+  }
 }
 
 /**
@@ -108,22 +117,34 @@ export async function listModulePeople(actor: Actor, moduleKey: string) {
   };
 }
 
+/**
+ * Who this caller could add to a module. A module admin may not be able to read people in Master, so this returns
+ * only what's needed to pick someone. Leaves out super admins and the caller, whose access can't be set this way.
+ */
+export async function listAddablePeople(actor: Actor, moduleKey: string, query: PageRequest & { search?: string }) {
+  await requireModule(moduleKey);
+  if (!canChangeAccessIn(await readAccessRights(actor.user), moduleKey)) {
+    throw new ApiError(403, 'forbidden', 'You do not have permission to do this.');
+  }
+  const { users, total } = await findUsersAddableTo(moduleKey, actor.user._id, query);
+  return { total, people: users.map(({ _id, name, email, title }) => ({ id: _id, name, email, title })) };
+}
+
 /** Sets or, with null, removes one person's role. Removing also works for a module that's no longer loaded. */
 export async function setUserRole(actor: Actor, userId: string, moduleKey: string, roleKey: string | null): Promise<UserView> {
   const target = await requireUser(userId);
   await assertMayChangeAccess(actor, target, moduleKey);
 
-  if (roleKey !== null) {
-    const module = await requireModule(moduleKey);
-    if (!module.roles.some((role) => role.key === roleKey)) {
-      throw new ApiError(422, 'unknown_role', `"${roleKey}" is not a role in ${module.name}.`);
-    }
-  }
+  if (roleKey !== null) await assertRoleExists(moduleKey, roleKey);
 
   const currentRole = target.assignments[moduleKey] ?? null;
   if (currentRole === roleKey) return toUserView(target);
 
   const updated = await runInTransaction(async (session) => {
+    if (roleKey !== null) {
+      await assertRoleExists(moduleKey, roleKey, session);
+      await touchModule(moduleKey, session);
+    }
     const saved = await updateUserRole(target._id, moduleKey, roleKey, session);
     await recordAudit(
       {

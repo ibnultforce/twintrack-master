@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 
-export const MIN_PASSWORD_LENGTH = 12;
+export const MIN_PASSWORD_LENGTH = 8;
 // Hashing is slow by design, so very long input could be used to overload the server.
 export const MAX_PASSWORD_LENGTH = 256;
 

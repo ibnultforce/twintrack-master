@@ -7,7 +7,8 @@ import { User } from '../src/modules/master/models/user.js';
 import { validateManifest, type Manifest } from '../src/modules/master/moduleRegistry/manifest.js';
 import { validateUsersFile } from '../src/modules/master/users/usersFile.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
-import { readSeedFiles, type SeedFiles } from '../src/seed/seedFiles.js';
+import { readSeedFiles as readProductSeedFiles, type SeedFiles } from '../src/seed/seedFiles.js';
+import { readSeedFiles } from './helpers/testAccess.js';
 import { useTestDatabase } from './helpers/database.js';
 
 const readJson = (path: string): unknown => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
@@ -28,14 +29,14 @@ const errorsFor = (users: unknown[], modules: Manifest[] = []): string => {
 
 describe('validateUsersFile', () => {
   const hr = (() => {
-    const result = validateManifest(readJson('../../manifests/hr.manifest.json'));
+    const result = validateManifest(readSeedFiles().manifests[1]);
     if (!result.ok) throw new Error('HR manifest is invalid');
     return result.value;
   })();
 
   it('accepts the example team', () => {
     const result = validateUsersFile(readSeedFiles().users, [hr]);
-    expect(result.ok && result.value.length).toBe(10);
+    expect(result.ok && result.value.length).toBe(12);
   });
 
   it('reports every problem in the invalid sample at once', () => {
@@ -71,13 +72,30 @@ describe('validateUsersFile', () => {
   });
 });
 
+describe('what the product ships', () => {
+  const files = readProductSeedFiles();
+
+  it('has no ready-made roles in any module', () => {
+    expect((files.manifests as { roles: unknown[] }[]).flatMap((manifest) => manifest.roles)).toEqual([]);
+  });
+
+  it('gives access to nobody but the super admin', () => {
+    const { users } = files.users as { users: { superAdmin?: boolean; assignments?: object; privileges?: object }[] };
+    expect(users.filter((user) => user.superAdmin)).toHaveLength(1);
+    for (const user of users) {
+      expect(user.assignments ?? {}).toEqual({});
+      expect(user.privileges ?? {}).toEqual({});
+    }
+  });
+});
+
 describe('seedDatabase', () => {
   useTestDatabase();
 
-  it('loads Master, HR and the 10-person team', async () => {
+  it('loads Master, HR, Employee and the 12-person team', async () => {
     const result = await seed();
-    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr']);
-    expect(result.usersCreated).toBe(10);
+    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr', 'employee']);
+    expect(result.usersCreated).toBe(12);
 
     expect((await Module.findOne({ key: 'master' }).lean())?.core).toBe(true);
     expect((await Module.findOne({ key: 'hr' }).lean())?.core).toBe(false);
@@ -95,8 +113,8 @@ describe('seedDatabase', () => {
     const again = await seed();
     expect(again.usersCreated).toBe(0);
     expect(again.modules.every((module) => !module.created)).toBe(true);
-    expect(await User.countDocuments()).toBe(10);
-    expect(await Module.countDocuments()).toBe(2);
+    expect(await User.countDocuments()).toBe(12);
+    expect(await Module.countDocuments()).toBe(3);
   });
 
   it('resets access on re-run but keeps passwords already set', async () => {

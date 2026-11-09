@@ -1,0 +1,247 @@
+{
+  "roles": {
+    "master": [
+      {
+        "key": "admin",
+        "name": "Access Admin",
+        "description": "Manages people and modules, and gives people roles. Can't change what a role allows.",
+        "grants": {
+          "user": {
+            "actions": [
+              "read",
+              "create",
+              "update"
+            ]
+          },
+          "role": {
+            "actions": [
+              "read"
+            ]
+          },
+          "module": {
+            "actions": [
+              "read",
+              "create",
+              "delete"
+            ]
+          },
+          "audit": {
+            "actions": [
+              "read"
+            ]
+          },
+          "hrAccess": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          },
+          "employeeAccess": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          }
+        }
+      },
+      {
+        "key": "hr-access",
+        "name": "HR access manager",
+        "description": "HR staff who set each person's HR role and special privileges, and manage Employee app and field access from the HR panel. Cannot change role templates.",
+        "grants": {
+          "user": {
+            "actions": [
+              "read"
+            ]
+          },
+          "hrAccess": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          },
+          "employeeAccess": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          }
+        }
+      },
+      {
+        "key": "employee-access",
+        "name": "Employee access manager",
+        "description": "From the HR panel: sets who has which Employee app role, gives special privileges, and manages access to fields the modules mark as HR-managed. Cannot change collection permissions, or fields a module keeps fixed.",
+        "grants": {
+          "user": {
+            "actions": [
+              "read"
+            ]
+          },
+          "employeeAccess": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          }
+        }
+      },
+      {
+        "key": "auditor",
+        "name": "Auditor",
+        "description": "Reads the activity log and who has Employee app access.",
+        "grants": {
+          "audit": {
+            "actions": [
+              "read"
+            ]
+          },
+          "user": {
+            "actions": [
+              "read"
+            ]
+          },
+          "hrAccess": {
+            "actions": [
+              "read"
+            ]
+          },
+          "employeeAccess": {
+            "actions": [
+              "read"
+            ]
+          }
+        }
+      }
+    ],
+    "hr": [
+      {
+        "key": "admin",
+        "name": "HR Admin",
+        "description": "Full control of HR.",
+        "grants": "*"
+      },
+      {
+        "key": "manager",
+        "name": "Manager",
+        "description": "Sees their team and approves their leave.",
+        "grants": {
+          "salary": {
+            "actions": [
+              "read"
+            ],
+            "scope": "team"
+          }
+        }
+      },
+      {
+        "key": "staff",
+        "name": "HR Staff",
+        "description": "Keeps records and attendance up to date.",
+        "grants": {}
+      },
+      {
+        "key": "viewer",
+        "name": "Viewer",
+        "description": "Read-only view of employee records.",
+        "grants": {}
+      }
+    ],
+    "employee": [
+      {
+        "key": "profile-viewer",
+        "name": "Profile viewer",
+        "description": "Can view their own profile, but not change it.",
+        "grants": {
+          "profile": {
+            "actions": [
+              "read"
+            ]
+          }
+        }
+      },
+      {
+        "key": "lead",
+        "name": "Lead",
+        "description": "Assigns tasks to their team, and sees and approves their team's leave.",
+        "grants": {
+          "profile": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          }
+        }
+      },
+      {
+        "key": "member",
+        "name": "Team member",
+        "description": "Works on the tasks given to them. Own leave, profile and payslips.",
+        "grants": {
+          "profile": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          }
+        }
+      },
+      {
+        "key": "intern",
+        "name": "Intern",
+        "description": "Like a team member, but no payslips in the app.",
+        "grants": {
+          "profile": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          }
+        }
+      },
+      {
+        "key": "contractor",
+        "name": "Contractor",
+        "description": "Their own tasks and profile. Leave and pay go through the agency.",
+        "grants": {
+          "profile": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "assignments": {
+    "u_03": {
+      "hr": "staff",
+      "master": "hr-access"
+    },
+    "u_04": {
+      "hr": "manager",
+      "account": "viewer"
+    },
+    "u_05": {
+      "account": "admin",
+      "hr": "viewer",
+      "master": "auditor"
+    },
+    "u_06": {
+      "account": "accountant",
+      "hr": "admin"
+    },
+    "u_07": {
+      "master": "admin"
+    },
+    "u_12": {
+      "hr": "admin",
+      "master": "employee-access"
+    },
+    "u_13": {
+      "employee": "profile-viewer"
+    }
+  },
+  "privileges": {}
+}

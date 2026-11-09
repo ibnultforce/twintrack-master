@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=.env dist/server.js",
     "seed": "tsx --env-file-if-exists=.env src/seed/run.ts",
+    "seed:modules": "tsx --env-file-if-exists=.env src/seed/runSyncModules.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:postman": "tsx --env-file-if-exists=.env tests/run-postman.ts"

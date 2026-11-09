@@ -168,15 +168,14 @@ describe('user administration', () => {
     it('is not mistaken for a person called access-options', async () => {
       const response = await (await as('alia')).get('/users/access-options');
       expect(response.status).toBe(200);
-      expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(['hr', 'master']);
+      expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(['employee', 'hr', 'master']);
     });
 
     it('offers the fixed roles and grantable privileges, with their reach', async () => {
       const { body } = await (await as('alia')).get('/users/access-options');
       const hr = body.modules.find((module: { key: string }) => module.key === 'hr');
       expect(hr.roles).toContainEqual({ key: 'manager', name: 'Manager' });
-      expect(hr.grantable).toContainEqual({ permission: 'recruitment.read', scope: 'all' });
-      expect(hr.grantable).toContainEqual({ permission: 'leave.approve', scope: 'team' });
+      expect(hr.grantable).toContainEqual({ permission: 'salary.read', scope: 'team' });
     });
 
     it('says which modules this caller may change', async () => {
@@ -184,9 +183,9 @@ describe('user administration', () => {
         const { body } = await (await as(id)).get('/users/access-options');
         return Object.fromEntries(body.modules.map((module: { key: string; canChange: boolean }) => [module.key, module.canChange]));
       };
-      expect(await canChange('alia')).toEqual({ hr: true, master: true });
-      expect(await canChange('sabbir')).toEqual({ hr: true, master: false });
-      expect(await canChange('rumana')).toEqual({ hr: false, master: false });
+      expect(await canChange('alia')).toEqual({ employee: true, hr: true, master: true });
+      expect(await canChange('sabbir')).toEqual({ employee: true, hr: true, master: false });
+      expect(await canChange('rumana')).toEqual({ employee: false, hr: false, master: false });
     });
 
     it('returns one person, and 404 for anyone else', async () => {
@@ -392,7 +391,7 @@ describe('user administration', () => {
       const karim = await as('karim');
       expect((await karim.get('/me/permissions/hr')).body.hasAccess).toBe(false);
       await (await as('sabbir')).patch('/users/karim/roles', { module: 'hr', role: 'manager' });
-      expect((await karim.get('/me/permissions/hr')).body.permissions['leave.approve']).toBe('team');
+      expect((await karim.get('/me/permissions/hr')).body.permissions['salary.read']).toBe('team');
     });
 
     it('lets an HR access manager change HR roles only', async () => {
@@ -506,15 +505,15 @@ describe('user administration', () => {
       expect((await nadia.get('/me/modules')).body).toEqual({ modules: [] });
 
       const hrManager = await as('sabbir');
-      await hrManager.patch(`/users/${nadiaId}/roles`, { module: 'hr', role: 'manager' });
-      const asManager = await nadia.get('/me/permissions/hr');
-      expect(asManager.body.role).toBe('manager');
-      expect(asManager.body.permissions['recruitment.read']).toBeUndefined();
+      await hrManager.patch(`/users/${nadiaId}/roles`, { module: 'hr', role: 'staff' });
+      const asStaff = await nadia.get('/me/permissions/hr');
+      expect(asStaff.body.role).toBe('staff');
+      expect(asStaff.body.permissions['salary.read']).toBeUndefined();
 
-      await hrManager.put(`/users/${nadiaId}/privileges`, { module: 'hr', permissions: ['recruitment.read'], reason: 'Helping with hiring this month' });
+      await hrManager.put(`/users/${nadiaId}/privileges`, { module: 'hr', permissions: ['salary.read'], reason: 'Helping with payroll this month' });
       const withPrivilege = await nadia.get('/me/permissions/hr');
-      expect(withPrivilege.body).toMatchObject({ role: 'manager', specialPrivileges: ['recruitment.read'] });
-      expect(withPrivilege.body.permissions['recruitment.read']).toBe('all');
+      expect(withPrivilege.body).toMatchObject({ role: 'staff', specialPrivileges: ['salary.read'] });
+      expect(withPrivilege.body.permissions['salary.read']).toBe('team');
     });
   });
 });

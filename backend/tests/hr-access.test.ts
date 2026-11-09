@@ -8,7 +8,7 @@ import { Salary } from '../src/modules/hr/models/salary.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { User } from '../src/modules/master/models/user.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
-import { readSeedFiles } from '../src/seed/seedFiles.js';
+import { readSeedFiles } from './helpers/testAccess.js';
 import { useTestDatabase } from './helpers/database.js';
 import { requestsAs, signIn } from './helpers/signedIn.js';
 import { createTestConfig } from './helpers/testConfig.js';
@@ -52,9 +52,9 @@ describe('HR module', () => {
     });
 
     it('changes the privileges of someone who has access to the module', async () => {
-      const response = await (await as('kamrul')).put(`/users/${ID.SABBIR}/privileges`, { module: 'hr', permissions: ['recruitment.read'], reason: 'Helping with hiring' });
+      const response = await (await as('kamrul')).put(`/users/${ID.SABBIR}/privileges`, { module: 'hr', permissions: ['salary.read'], reason: 'Helping with hiring' });
       expect(response.status).toBe(200);
-      expect(response.body.privileges).toEqual({ hr: ['recruitment.read'] });
+      expect(response.body.privileges).toEqual({ hr: ['salary.read'] });
     });
 
     it('adds someone with no access to the module yet, which works at once', async () => {

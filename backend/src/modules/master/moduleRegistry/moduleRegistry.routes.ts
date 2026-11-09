@@ -3,9 +3,13 @@ import { z } from 'zod';
 import type { Config } from '../../../config.js';
 import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { parseRequestBody } from '../../../lib/validation.js';
-import { getActor } from '../access/caller.js';
-import { importModuleFromRequest, listRegisteredModules, listRoleTemplates, removeModule } from './moduleRegistry.service.js';
-import { addRole, removeResource, removeRole, saveResource, setGrantableActions, updateRoleTemplate } from './permissionRules.service.js';
+import { getActor, getSignedActor } from '../access/caller.js';
+import { refuseUnless } from '../access/refuseUnless.js';
+import { assertOwnPassword } from '../auth/account.service.js';
+import { createFailedAttemptLimiter } from '../auth/failedAttemptLimiter.js';
+import { MAX_PASSWORD_LENGTH } from '../auth/passwords.js';
+import { exportModuleManifest, importModuleFromRequest, listRegisteredModules, listRoleTemplates, removeModule } from './moduleRegistry.service.js';
+import { addRole, canEditRolesSomewhere, listManageableRoles, removeResource, removeRole, saveResource, setGrantableActions, updateRoleTemplate } from './permissionRules.service.js';
 
 const MAX_NAME_LENGTH = 100;
 const MAX_ROLE_DESCRIPTION_LENGTH = 500;
@@ -38,14 +42,27 @@ const saveResourceBodySchema = z.strictObject({
 
 const setGrantableBodySchema = z.strictObject({ actions: z.array(z.string()) });
 
+// The manifest is checked by the manifest rules, which give better messages than a schema here could.
+const importModuleBodySchema = z.strictObject({
+  password: z.string().min(1, 'is required').max(MAX_PASSWORD_LENGTH),
+  manifest: z.unknown(),
+});
+
 export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
   const handleListModules: RequestHandler = async (_req, res) => {
     res.json({ modules: await listRegisteredModules(config.moduleFrontendUrls) });
   };
 
   const handleImportModule: RequestHandler = async (req, res) => {
-    const imported = await importModuleFromRequest(getActor(req), req.body, config.moduleFrontendUrls);
+    const { password, manifest } = parseRequestBody(importModuleBodySchema, req.body);
+    const actor = getActor(req);
+    await assertOwnPassword(actor.user._id, password);
+    const imported = await importModuleFromRequest(actor, manifest, config.moduleFrontendUrls);
     res.status(imported.created ? 201 : 200).json(imported);
+  };
+
+  const handleExportModule: RequestHandler = async (req, res) => {
+    res.json(await exportModuleManifest(String(req.params.key)));
   };
 
   const handleRemoveModule: RequestHandler = async (req, res) => {
@@ -58,16 +75,16 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
 
   const handleAddRole: RequestHandler = async (req, res) => {
     const newRole = parseRequestBody(addRoleBodySchema, req.body);
-    res.status(201).json(await addRole(getActor(req), String(req.params.module), newRole));
+    res.status(201).json(await addRole(getSignedActor(req), String(req.params.module), newRole));
   };
 
   const handleUpdateRole: RequestHandler = async (req, res) => {
     const changes = parseRequestBody(updateRoleBodySchema, req.body);
-    res.json(await updateRoleTemplate(getActor(req), String(req.params.module), String(req.params.key), changes));
+    res.json(await updateRoleTemplate(getSignedActor(req), String(req.params.module), String(req.params.key), changes));
   };
 
   const handleRemoveRole: RequestHandler = async (req, res) => {
-    res.json(await removeRole(getActor(req), String(req.params.module), String(req.params.key)));
+    res.json(await removeRole(getSignedActor(req), String(req.params.module), String(req.params.key)));
   };
 
   const handleSaveResource: RequestHandler = async (req, res) => {
@@ -85,17 +102,32 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
     res.json(await setGrantableActions(getActor(req), String(req.params.key), String(req.params.resource), actions));
   };
 
-  const editsRules = { access: 'private', permission: 'role.update' } as const;
+  const handleListManageableRoles: RequestHandler = async (req, res) => {
+    res.json({ modules: await listManageableRoles(getSignedActor(req)) });
+  };
+
+  const editsResources = { access: 'private', permission: 'module.update' } as const;
+  // Signed, because the right to edit roles is held per module. The service decides which modules this person can edit.
+  const editsRoles = { access: 'signed' as const, middleware: [refuseUnless(canEditRolesSomewhere)] };
   return [
     { method: 'GET', path: '/modules', access: 'private', permission: 'module.read', handler: handleListModules },
-    { method: 'POST', path: '/modules/import', access: 'private', permission: 'module.create', handler: handleImportModule },
+    {
+      method: 'POST',
+      path: '/modules/import',
+      access: 'private',
+      permission: 'module.create',
+      middleware: [createFailedAttemptLimiter(config.auth, 'import-manifest')],
+      handler: handleImportModule,
+    },
+    { method: 'GET', path: '/modules/:key/export', access: 'private', permission: 'module.read', handler: handleExportModule },
     { method: 'DELETE', path: '/modules/:key', access: 'private', permission: 'module.delete', handler: handleRemoveModule },
-    { method: 'PUT', path: '/modules/:key/resources/:resource', ...editsRules, handler: handleSaveResource },
-    { method: 'DELETE', path: '/modules/:key/resources/:resource', ...editsRules, handler: handleRemoveResource },
-    { method: 'PUT', path: '/modules/:key/resources/:resource/grantable', ...editsRules, handler: handleSetGrantable },
+    { method: 'PUT', path: '/modules/:key/resources/:resource', ...editsResources, handler: handleSaveResource },
+    { method: 'DELETE', path: '/modules/:key/resources/:resource', ...editsResources, handler: handleRemoveResource },
+    { method: 'PUT', path: '/modules/:key/resources/:resource/grantable', ...editsResources, handler: handleSetGrantable },
+    { method: 'GET', path: '/roles/manageable', ...editsRoles, handler: handleListManageableRoles },
     { method: 'GET', path: '/roles', access: 'private', permission: 'role.read', handler: handleListRoles },
-    { method: 'POST', path: '/roles/:module', ...editsRules, handler: handleAddRole },
-    { method: 'PATCH', path: '/roles/:module/:key', ...editsRules, handler: handleUpdateRole },
-    { method: 'DELETE', path: '/roles/:module/:key', ...editsRules, handler: handleRemoveRole },
+    { method: 'POST', path: '/roles/:module', ...editsRoles, handler: handleAddRole },
+    { method: 'PATCH', path: '/roles/:module/:key', ...editsRoles, handler: handleUpdateRole },
+    { method: 'DELETE', path: '/roles/:module/:key', ...editsRoles, handler: handleRemoveRole },
   ];
 }

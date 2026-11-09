@@ -13,7 +13,7 @@ export interface ModuleDoc {
   resources: ManifestResource[];
   routes: ManifestRoute[];
   roles: ManifestRole[];
-  /** Set when a super admin edits roles or grantable permissions here, so only a super admin can replace those edits. */
+  /** Set when someone edits roles, resources or grantable permissions here, so an import or removal can't quietly undo that. */
   permissionsEditedAt?: Date;
   createdAt: Date;
   updatedAt: Date;

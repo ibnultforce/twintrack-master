@@ -1,7 +1,6 @@
 import type { RequestHandler, Response } from 'express';
-import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
-import type { AuthSettings, Config } from '../../../config.js';
+import type { Config } from '../../../config.js';
 import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { requireAllowedOrigin } from '../../../lib/requireAllowedOrigin.js';
 import { parseRequestBody } from '../../../lib/validation.js';
@@ -9,11 +8,9 @@ import { getCaller } from '../access/caller.js';
 import { emailField, nameField } from '../users/userFields.js';
 import { changeOwnPassword, getProfile, updateOwnName } from './account.service.js';
 import { login, logout, refresh, SessionEndedError } from './auth.service.js';
+import { createFailedAttemptLimiter } from './failedAttemptLimiter.js';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './passwords.js';
-import { MongoRateLimitStore } from './rateLimitStore.js';
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from './refreshCookie.js';
-
-const MILLISECONDS_PER_MINUTE = 60_000;
 
 const loginBodySchema = z.object({
   email: emailField,
@@ -37,18 +34,6 @@ const changePasswordBodySchema = z
     path: ['newPassword'],
     message: 'must be different from your current password',
   });
-
-function createFailedAttemptLimiter(settings: AuthSettings, counterPrefix: string): RequestHandler {
-  return rateLimit({
-    windowMs: settings.loginRateWindowMinutes * MILLISECONDS_PER_MINUTE,
-    limit: settings.loginMaxFailedAttempts,
-    skipSuccessfulRequests: true,
-    store: new MongoRateLimitStore(counterPrefix),
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    message: { error: { code: 'too_many_attempts', message: 'Too many failed attempts. Try again later.' } },
-  });
-}
 
 // Responses carrying tokens must never be stored by a browser or proxy.
 function sendTokenResponse(res: Response, body: object): void {

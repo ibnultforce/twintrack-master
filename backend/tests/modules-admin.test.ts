@@ -6,7 +6,7 @@ import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { Module } from '../src/modules/master/models/module.js';
 import { User } from '../src/modules/master/models/user.js';
 import { useTestDatabase } from './helpers/database.js';
-import { addPerson, importSeedManifests, requestsAs, signIn } from './helpers/signedIn.js';
+import { addPerson, importSeedManifests, requestsAs, signIn, TEST_PASSWORD } from './helpers/signedIn.js';
 import { createTestConfig, TEST_ORIGIN } from './helpers/testConfig.js';
 
 const HR_ORIGIN = 'http://hr.twintrack.localhost:3200';
@@ -31,6 +31,7 @@ describe('module, role and activity administration', () => {
 
   beforeEach(async () => {
     await importSeedManifests();
+    await addPerson('farhana', { superAdmin: true });
     await addPerson('alia', { name: 'Alia Access', assignments: { master: 'admin' } });
     await addPerson('sabbir', { assignments: { master: 'hr-access' } });
     await addPerson('rumana', { name: 'Rumana Akter', assignments: { master: 'auditor' } });
@@ -61,7 +62,7 @@ describe('module, role and activity administration', () => {
     it('keeps the activity log and modules from an HR access manager', async () => {
       const hrManager = await as('sabbir');
       expect((await hrManager.get('/audit')).status).toBe(403);
-      expect((await hrManager.post('/modules/import', tasksManifest())).status).toBe(403);
+      expect((await hrManager.post('/modules/import', { manifest: tasksManifest(), password: TEST_PASSWORD })).status).toBe(403);
     });
   });
 
@@ -70,6 +71,7 @@ describe('module, role and activity administration', () => {
       const response = await (await as('alia')).get('/modules');
       expect(response.status).toBe(200);
       expect(response.body.modules).toEqual([
+        expect.objectContaining({ key: 'employee', core: false, frontendUrl: null }),
         expect.objectContaining({ key: 'hr', name: 'HR', core: false, frontendUrl: HR_ORIGIN }),
         expect.objectContaining({ key: 'master', core: true, frontendUrl: null }),
       ]);
@@ -81,17 +83,64 @@ describe('module, role and activity administration', () => {
       const karim = await as('karim');
       expect((await karim.get('/me/modules')).body.modules).toEqual([]);
 
-      const response = await (await as('alia')).post('/modules/import', tasksManifest());
+      const response = await (await as('farhana')).post('/modules/import', { manifest: tasksManifest(), password: TEST_PASSWORD });
       expect(response.status).toBe(201);
       expect(response.body).toMatchObject({ key: 'tasks', version: '1.0.0', core: false, created: true, orphanedAssignments: 0 });
 
       expect((await karim.get('/me/modules')).body.modules[0]).toMatchObject({ key: 'tasks', roleName: 'Lead' });
     });
 
+    it('asks for the password of the person importing, and saves nothing without it', async () => {
+      const admin = await as('farhana');
+      const wrong = await admin.post('/modules/import', { manifest: tasksManifest(), password: 'not-the-password' });
+      expect(wrong.status).toBe(403);
+      expect(wrong.body.error.code).toBe('wrong_current_password');
+      expect((await admin.post('/modules/import', { manifest: tasksManifest() })).status).toBe(422);
+      expect(await Module.countDocuments({ key: 'tasks' })).toBe(0);
+    });
+
+    describe('for someone who is not a super admin', () => {
+      const bareManifest = (version = '1.0.0') => ({ ...tasksManifest(version, []), resources: [{ key: 'task', label: 'Tasks', actions: ['read', 'create'] }] });
+
+      it('adds a bare module, and updates one without changing its roles', async () => {
+        const admin = await as('alia');
+        expect((await admin.post('/modules/import', { manifest: bareManifest(), password: TEST_PASSWORD })).status).toBe(201);
+
+        await (await as('farhana')).post('/modules/import', { manifest: tasksManifest(), password: TEST_PASSWORD });
+        expect((await admin.post('/modules/import', { manifest: tasksManifest('1.1.0'), password: TEST_PASSWORD })).status).toBe(200);
+      });
+
+      it.each([
+        ['a new role', () => tasksManifest()],
+        ['more that can be given to one person', () => ({ ...tasksManifest('1.0.0', []) })],
+      ])('refuses a manifest with %s', async (_label, manifest) => {
+        const response = await (await as('alia')).post('/modules/import', { manifest: manifest(), password: TEST_PASSWORD });
+        expect(response.status).toBe(403);
+        expect(response.body.error.code).toBe('beyond_own_access');
+        expect(await Module.countDocuments({ key: 'tasks' })).toBe(0);
+      });
+
+      it('refuses changing what an existing role allows', async () => {
+        await (await as('farhana')).post('/modules/import', { manifest: tasksManifest('1.0.0', [{ key: 'lead', name: 'Lead', grants: { task: { actions: ['read'] } } as never }]), password: TEST_PASSWORD });
+        const response = await (await as('alia')).post('/modules/import', { manifest: tasksManifest('1.1.0'), password: TEST_PASSWORD });
+        expect(response.body.error.code).toBe('beyond_own_access');
+      });
+
+      it('needs role.update in the module as well as module.update to replace edited permissions', async () => {
+        await User.updateOne({ _id: 'alia' }, { $set: { 'superAdminGrants.master': ['module.update'] } });
+        await (await as('farhana')).post('/roles/hr', { key: 'clerk', name: 'Clerk', grants: {} });
+        const hr = (await Module.findOne({ key: 'hr' }).lean())!;
+        const manifest = { manifestVersion: 1, module: { key: 'hr', name: 'HR', version: '9.0.0' }, resources: hr.resources, routes: [], roles: hr.roles };
+        const response = await (await as('alia')).post('/modules/import', { manifest: manifest, password: TEST_PASSWORD });
+        expect(response.status).toBe(409);
+        expect(response.body.error.code).toBe('permissions_edited');
+      });
+    });
+
     it('replaces a module imported again, and counts people whose role has gone', async () => {
-      const admin = await as('alia');
-      await admin.post('/modules/import', tasksManifest());
-      const response = await admin.post('/modules/import', tasksManifest('1.1.0', [{ key: 'member', name: 'Member', grants: '*' }]));
+      const admin = await as('farhana');
+      await admin.post('/modules/import', { manifest: tasksManifest(), password: TEST_PASSWORD });
+      const response = await admin.post('/modules/import', { manifest: tasksManifest('1.1.0', [{ key: 'member', name: 'Member', grants: '*' }]), password: TEST_PASSWORD });
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({ version: '1.1.0', created: false, orphanedAssignments: 1 });
 
@@ -100,7 +149,7 @@ describe('module, role and activity administration', () => {
     });
 
     it('lists every problem in an invalid manifest and saves nothing', async () => {
-      const response = await (await as('alia')).post('/modules/import', { manifestVersion: 1, module: { key: 'BAD KEY' } });
+      const response = await (await as('alia')).post('/modules/import', { manifest: { manifestVersion: 1, module: { key: 'BAD KEY' } }, password: TEST_PASSWORD });
       expect(response.status).toBe(422);
       expect(response.body.error.code).toBe('validation_failed');
       expect(response.body.error.fields.length).toBeGreaterThan(1);
@@ -108,7 +157,7 @@ describe('module, role and activity administration', () => {
     });
 
     it('refuses a module named after a JavaScript built-in', async () => {
-      const response = await (await as('alia')).post('/modules/import', { ...tasksManifest(), module: { key: 'constructor', name: 'Bad', version: '1.0.0' } });
+      const response = await (await as('alia')).post('/modules/import', { manifest: { ...tasksManifest(), module: { key: 'constructor', name: 'Bad', version: '1.0.0' } }, password: TEST_PASSWORD });
       expect(response.status).toBe(422);
       expect(await Module.countDocuments({ key: 'constructor' })).toBe(0);
     });
@@ -124,22 +173,43 @@ describe('module, role and activity administration', () => {
       const admin = await as('alia');
       const asMaster = tasksManifest();
       asMaster.module.key = 'master';
-      const replaced = await admin.post('/modules/import', asMaster);
+      const replaced = await admin.post('/modules/import', { manifest: asMaster, password: TEST_PASSWORD });
       expect(replaced.status).toBe(403);
       expect(replaced.body.error.code).toBe('core_module');
       expect((await Module.findOne({ key: 'master' }).lean())?.core).toBe(true);
 
       const claimsCore = tasksManifest();
       (claimsCore.module as Record<string, unknown>).core = true;
-      expect((await admin.post('/modules/import', claimsCore)).status).toBe(403);
+      expect((await admin.post('/modules/import', { manifest: claimsCore, password: TEST_PASSWORD })).status).toBe(403);
       expect(await AuditLog.countDocuments({ action: 'module.imported' })).toBe(0);
+    });
+  });
+
+  describe('GET /modules/:key/export', () => {
+    it('returns a manifest that can be imported back, with roles created in the app', async () => {
+      const admin = await as('farhana');
+      await admin.post('/modules/import', { manifest: tasksManifest(), password: TEST_PASSWORD });
+      await admin.post('/roles/tasks', { key: 'clerk', name: 'Clerk', grants: { task: { actions: ['read'] } } });
+
+      const exported = await admin.get('/modules/tasks/export');
+      expect(exported.status).toBe(200);
+      expect(exported.body.module).toEqual({ key: 'tasks', name: 'Tasks', version: '1.0.0', description: 'Task tracking.' });
+      expect(exported.body.roles.map((role: { key: string }) => role.key)).toEqual(['lead', 'clerk']);
+
+      const reimported = await admin.post('/modules/import', { manifest: exported.body, password: TEST_PASSWORD });
+      expect(reimported.status).toBe(200);
+    });
+
+    it('needs module.read, and answers 404 for a module that is not loaded', async () => {
+      expect((await (await as('karim')).get('/modules/hr/export')).status).toBe(403);
+      expect((await (await as('alia')).get('/modules/tasks/export')).body.error.code).toBe('unknown_module');
     });
   });
 
   describe('DELETE /modules/:key', () => {
     it('removes a module, ending access from it until it is imported again', async () => {
-      const admin = await as('alia');
-      await admin.post('/modules/import', tasksManifest());
+      const admin = await as('farhana');
+      await admin.post('/modules/import', { manifest: tasksManifest(), password: TEST_PASSWORD });
       const karim = await as('karim');
       expect((await karim.get('/me/modules')).body.modules).toHaveLength(1);
 
@@ -150,7 +220,7 @@ describe('module, role and activity administration', () => {
       expect(await AuditLog.countDocuments({ action: 'module.removed', targetId: 'tasks' })).toBe(1);
 
       expect((await User.findById('karim').lean())?.assignments).toEqual({ tasks: 'lead' });
-      await admin.post('/modules/import', tasksManifest());
+      await admin.post('/modules/import', { manifest: tasksManifest(), password: TEST_PASSWORD });
       expect((await karim.get('/me/modules')).body.modules).toHaveLength(1);
     });
 
@@ -177,7 +247,7 @@ describe('module, role and activity administration', () => {
       expect(status).toBe(200);
       expect(findRole(body, 'hr', 'admin')).toMatchObject({ moduleName: 'HR', name: 'HR Admin', grants: ['Everything in this module'] });
       expect(findRole(body, 'hr', 'manager')).toMatchObject({
-        grants: ['employee.read (team)', 'leave.read (team)', 'leave.approve (team)', 'attendance.read (team)', 'salary.read (team)'],
+        grants: ['salary.read (team)'],
       });
       expect(findRole(body, 'master', 'auditor')).toMatchObject({ grants: expect.arrayContaining(['audit.read', 'user.read']) });
     });

@@ -8,7 +8,7 @@ import { loadConfig } from '../src/config.js';
 import { connectDatabase, disconnectDatabase } from '../src/db.js';
 import { appModels } from '../src/modules/models.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
-import { readSeedFiles } from '../src/seed/seedFiles.js';
+import { readSeedFiles } from './helpers/testAccess.js';
 
 const postmanFile = (name: string) => fileURLToPath(new URL(`../../postman/${name}`, import.meta.url));
 

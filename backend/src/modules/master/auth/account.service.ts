@@ -59,18 +59,22 @@ export async function updateOwnName(caller: Caller, name: string, ipAddress: str
 }
 
 /** Replaces the password and ends every other session, in case someone else was signed in. This one stays open. */
+/** Confirms the person at the keyboard before something sensitive. */
+export async function assertOwnPassword(userId: string, password: string): Promise<void> {
+  const userWithPassword = await findUserWithPasswordById(userId);
+  // Not a 401, because frontends answer a 401 by refreshing the token and trying again.
+  if (!(await isPasswordCorrect(password, userWithPassword?.passwordHash))) {
+    throw new ApiError(403, 'wrong_current_password', 'Your current password is not correct.');
+  }
+}
+
 export async function changeOwnPassword(
   caller: Caller,
   passwords: { currentPassword: string; newPassword: string },
   ipAddress: string | undefined,
 ): Promise<void> {
   const { user, sessionId } = caller;
-  const userWithPassword = await findUserWithPasswordById(user._id);
-
-  // Not a 401, because frontends answer a 401 by refreshing the token and trying again.
-  if (!(await isPasswordCorrect(passwords.currentPassword, userWithPassword?.passwordHash))) {
-    throw new ApiError(403, 'wrong_current_password', 'Your current password is not correct.');
-  }
+  await assertOwnPassword(user._id, passwords.currentPassword);
 
   const passwordHash = await hashPassword(passwords.newPassword);
   await runInTransaction(async (session) => {

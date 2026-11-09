@@ -16,6 +16,7 @@
     "dev:backend": "npm run dev -w @twintrack/master-backend",
     "dev:frontend": "npm run dev -w @twintrack/master-frontend",
     "seed": "npm run seed -w @twintrack/master-backend",
+    "seed:modules": "npm run seed:modules -w @twintrack/master-backend",
     "build": "npm run build -w @twintrack/master-backend && npm run build -w @twintrack/master-frontend",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",

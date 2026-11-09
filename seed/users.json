@@ -23,10 +23,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "assignments": {
-        "hr": "staff",
-        "master": "hr-access"
-      }
+      "assignments": {}
     },
     {
       "id": "u_04",
@@ -38,10 +35,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "assignments": {
-        "hr": "manager",
-        "account": "viewer"
-      }
+      "assignments": {}
     },
     {
       "id": "u_05",
@@ -53,11 +47,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "assignments": {
-        "account": "admin",
-        "hr": "viewer",
-        "master": "auditor"
-      }
+      "assignments": {}
     },
     {
       "id": "u_06",
@@ -69,10 +59,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_05",
-      "assignments": {
-        "account": "accountant",
-        "hr": "admin"
-      }
+      "assignments": {}
     },
     {
       "id": "u_07",
@@ -84,9 +71,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_04",
-      "assignments": {
-        "master": "admin"
-      }
+      "assignments": {}
     },
     {
       "id": "u_08",
@@ -134,6 +119,30 @@
       "contract": "permanent",
       "status": "inactive",
       "managerId": "u_01",
+      "assignments": {}
+    },
+    {
+      "id": "u_12",
+      "name": "Jasmin",
+      "email": "jasmin@twintrack.test",
+      "title": "HR Admin",
+      "department": "people",
+      "team": "people-ops",
+      "contract": "permanent",
+      "status": "active",
+      "managerId": "u_01",
+      "assignments": {}
+    },
+    {
+      "id": "u_13",
+      "name": "Jack",
+      "email": "jack@twintrack.test",
+      "title": "Employee",
+      "department": "people",
+      "team": "people-ops",
+      "contract": "permanent",
+      "status": "active",
+      "managerId": "u_12",
       "assignments": {}
     }
   ]

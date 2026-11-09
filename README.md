@@ -7,6 +7,8 @@ The TwinTrack Master module: login, users and permissions, and the API behind ev
 | Backend API (Express, Mongoose) | `backend` | http://api.twintrack.localhost:4100 |
 | Frontend (Next.js) | `frontend` | http://twintrack.localhost:3100 |
 
+The API reference for each module is in [docs/api/](docs/api/README.md).
+
 ## Requirements
 
 - Node.js 22 or newer
@@ -24,11 +26,29 @@ npm run seed
 npm run dev
 ```
 
-Open http://twintrack.localhost:3100. The page should say "API and database connected".
+Open http://twintrack.localhost:3100 and sign in with a sample account from `seed/users.json`. `localhost:3100` and `127.0.0.1:3100` redirect there, because the API only accepts origins in `ALLOWED_ORIGINS` and the session cookie needs that address. `NEXT_PUBLIC_APP_URL` in `frontend/.env.local` sets where they go.
+
+## Frontend
+
+The Next.js app in `frontend/` is the portal and admin console. It runs entirely in the browser against the API.
+
+| Screens | Who sees them |
+|---|---|
+| Sign in, temporary password, Your modules, Your permissions, Your profile | Anyone signed in |
+| Overview, People | `user.read` |
+| Access | Anyone who can change access in at least one module, such as a module admin |
+| Roles | `role.read`, or `role.update` in at least one module |
+| Permissions | `role.read` |
+| Modules | `module.read` |
+| Activity log | `audit.read` |
+
+- **Access is still enforced by the API.** The menu and buttons only hide what wouldn't work.
+- **Tokens:** the access token stays in memory, so a reload gets a new one through the refresh cookie.
+- **Layout:** `src/app` holds the screens, `src/lib/api` the API calls, `src/session` who is signed in, and `src/components` shared parts. Styles follow `design/master-ui.html`.
 
 ## Example data
 
-`npm run seed` loads the Master and HR modules and the 10-person example team from `seed/`. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
+`npm run seed` loads the Master, HR and Employee modules and the 12-person example team. **No role comes ready-made:** only the super admin has access until they create roles and give them to people. from `seed/`. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
 
 - **Safe to re-run:** it updates records by id and creates no duplicates. It resets each person's roles and privileges to what the files say, and keeps passwords already set.
 - **All or nothing:** every file is checked first and all problems are listed together. If anything fails, nothing is saved.
@@ -48,9 +68,11 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 
 ## Manifests
 
-`manifests/` has one file per module: `master`, `hr`, `employee` and `account`. Each lists that module's resources, routes and fixed role templates. Like `postman/`, this folder is ignored by git, so it has to be added by hand on a new machine, and `npm run seed` and `npm test` need it. The seed loads only Master and HR for now, and a test checks that every file in the folder is valid.
+`manifests/` has one file per module: `master`, `hr` and `employee`. Each lists only that module's built routes and the resources they use, and ships with no roles. Like `postman/`, this folder is ignored by git, so it has to be added by hand on a new machine, and `npm run seed` and `npm test` need it. The seed loads them, and a test checks that every file in the folder is valid.
 
-Update a module's manifest in the same change as any of its routes. A route marked `"planned": true` is designed but not built yet, so remove the flag when it's built. A module can't be named `constructor`, a permission belongs only on a `private` route, and a `team` or `own` scope belongs only on a resource marked `scoped`. Validation refuses anything else.
+To load changed manifests without touching people, run `npm run seed:modules`. It takes resources and routes from the files, keeps roles created in the app, and prints any permission it had to drop from them.
+
+Update a module's manifest in the same change as any of its routes, and add a route or resource only when it's built. A module can't be named `constructor`, a permission belongs only on a `private` route, and a `team` or `own` scope belongs only on a resource marked `scoped`. Validation refuses anything else.
 
 Each feature exports its routes, and `backend/src/modules/master/master.routes.ts` combines them. A test fails if that list and the Master manifest disagree about which routes are built or who can use them.
 
@@ -66,7 +88,7 @@ A module's `baseUrl` is the path prefix of its routes on this API, such as `/hr`
 - **Origin check:** login, refresh and logout refuse any origin not in `ALLOWED_ORIGINS`, and any request with no `Origin` header. Postman requests set the header themselves.
 - **Logout:** `/auth/logout` is `public` because it works from the refresh cookie alone, so someone with an expired access token can still sign out.
 - **Rate limit:** failed logins and failed password changes are limited per address. Counts are kept in MongoDB, so every API instance shares them and a restart doesn't clear them. While testing by hand, deleting the `ratelimitcounters` documents lifts a block straight away.
-- **Passwords:** a new password needs at least 12 characters. Changing it ends the person's other sessions.
+- **Passwords:** a new password needs at least 8 characters. Changing it ends the person's other sessions.
 
 ## Access checks
 
@@ -96,19 +118,21 @@ These routes run the admin console. Each one's permission is in `manifests/maste
 | `PATCH /users/:id/roles`, `PUT /users/:id/privileges` | Set one person's role or special privileges in one module |
 | `GET /modules`, `POST /modules/import`, `DELETE /modules/:key` | List, import and remove modules |
 | `GET /roles` | The role templates of every loaded module |
-| `POST /roles/:module`, `PATCH` and `DELETE /roles/:module/:key` | Add, edit and remove roles. Needs `role.update`. |
-| `PUT` and `DELETE /modules/:key/resources/:resource` | Add or change a resource and its actions, or remove it, which is how a module gains or loses permissions. Needs `role.update`. |
-| `PUT /modules/:key/resources/:resource/grantable` | Choose which actions can be given to one person. Needs `role.update`. |
+| `GET /roles/manageable` | The modules you can edit roles in, what you may put in a role, and the APIs each permission opens |
+| `POST /roles/:module`, `PATCH` and `DELETE /roles/:module/:key` | Add, edit and remove roles. Needs `role.update` in that module. |
+| `PUT` and `DELETE /modules/:key/resources/:resource` | Add or change a resource and its actions, or remove it, which is how a module gains or loses permissions. Needs `module.update`. |
+| `PUT /modules/:key/resources/:resource/grantable` | Choose which actions can be given to one person. Needs `module.update`. |
 | `GET /audit` | The activity log, newest first. Takes `page`, `pageSize` and `actionPrefix`. |
 
 Services enforce these rules, because they depend on the data being changed:
 
 - **Own access:** only a super admin can change their own role or privileges. Nobody can deactivate themselves or reset their own password here. To change your own password, use `POST /auth/change-password`.
 - **Super admins:** only a super admin can edit, deactivate or reset a super admin, or change their access, and no route can create one. A super admin always has everything, whatever role or privilege is on their record.
-- **Changing someone's access through Master:** `user.update` reaches every module. `hrAccess.update` reaches HR only.
-- **Module admins:** `access.update` in a module, which HR Admin has, lets someone give or change anyone's roles and privileges in that module, with no Master role. Those people can list a module with `GET /modules/:key/people`.
+- **Changing someone's access through Master:** `user.update` reaches every module. `hrAccess.update` reaches HR only, and `employeeAccess.update` reaches Employee only.
+- **Module admins:** `access.update` in a module, which HR Admin has, lets someone give or change anyone's roles and privileges in that module, with no Master role. Those people can list a module with `GET /modules/:key/people`, and search who can be added with `GET /modules/:key/addable-people`, which returns only each person's name, email and title.
 - **Special privileges:** only what the module's manifest marks `grantable`, except for a super admin, who can give any permission the module has. Those are stored in `superAdminGrants`, which nobody else can change. Giving a new one needs a `reason`, which goes in the activity log.
-- **Editing roles and permissions:** decided only by `role.update`, which only super admins have by default. Give it to a role and that role can edit them too, including its own permissions, so treat it like super admin access. Edits are saved in the database, not the manifest files, and apply on each person's next request. After an edit, re-importing or removing that module needs `role.update`. `npm run seed` still replaces edits with what the manifest files say.
+- **Editing roles:** each module has its own `role.update`, which only a super admin has at first. Give it to someone in a module and they can create and edit roles there, using only permissions they hold in that module and no wider reach. They can't change a role stronger than their own access, or make one that holds everything. Edits are saved in the database, and `npm run seed` replaces them with the manifest files, which have no roles.
+- **Changing what a module offers:** resources and what's grantable need `module.update` in Master. After an edit, re-importing or removing that module needs it too.
 - **Removing:** a role someone holds can't be removed. Neither can an action or resource that a role or route still uses. Actions come from a fixed list: `read`, `create`, `update`, `delete` and `approve`.
 - **HR access managers:** which module a Master role can change access in comes from `managesAccessOf` on a Master resource, such as `hrAccess`.
 - **Temporary passwords:** new people and password resets get one, returned once and stored only as a hash. There's no email sending yet, so the admin passes it on. The person must replace it before they can do anything else.
@@ -126,6 +150,19 @@ Services enforce these rules, because they depend on the data being changed:
 | `PATCH /hr/salaries/:id/approve` | `salary.approve` | Marks it approved and records who did it |
 
 A role's scope decides who that reaches: `own` is the person, `team` adds their direct reports, and `all` is everyone. Someone outside their reach gets `out_of_scope`. The activity log leaves out amounts, because people can read it without being allowed to see salaries. Sample salaries are in `seed/salaries.json`.
+
+## Employee profile
+
+| Route | Needs | What it does |
+|---|---|---|
+| `GET /employee/me/profile` | `profile.read` | Returns your own profile and manager |
+| `PATCH /employee/me/profile` | `profile.update` | Changes your own name |
+
+Both routes only ever reach the caller's own record.
+
+A role holding only `profile.read` lets someone view their profile but not change it here. `profile.update` is grantable, so it can be given to one person on top.
+
+`PATCH /auth/me` still lets any signed-in person change their own name, whatever their Employee permissions.
 
 ## Checks
 

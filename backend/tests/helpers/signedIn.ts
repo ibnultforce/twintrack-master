@@ -4,7 +4,7 @@ import request from 'supertest';
 import { User } from '../../src/modules/master/models/user.js';
 import { validateManifest } from '../../src/modules/master/moduleRegistry/manifest.js';
 import { importManifest } from '../../src/modules/master/moduleRegistry/moduleRegistry.service.js';
-import { readSeedFiles } from '../../src/seed/seedFiles.js';
+import { readSeedFiles } from './testAccess.js';
 import { TEST_ORIGIN } from './testConfig.js';
 
 export const TEST_PASSWORD = 'correct-password';

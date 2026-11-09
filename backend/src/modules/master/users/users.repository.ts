@@ -1,4 +1,4 @@
-import type { ClientSession } from 'mongoose';
+import type { ClientSession, QueryFilter } from 'mongoose';
 import { escapeRegex, pageOffset, type PageRequest } from '../../../lib/query.js';
 import { User, type UserDoc } from '../models/user.js';
 import type { UserRow } from './usersFile.js';
@@ -23,17 +23,22 @@ function setOrUnset(fields: Record<string, unknown>) {
   };
 }
 
-export async function findUsersPage({ search, status, ...page }: PageRequest & { search?: string; status?: UserDoc['status'] }) {
-  const searchPattern = search ? { $regex: escapeRegex(search), $options: 'i' } : undefined;
-  const filter = {
-    ...(status && { status }),
-    ...(searchPattern && { $or: SEARCHED_FIELDS.map((field) => ({ [field]: searchPattern })) }),
-  };
+function searchFilter(search: string | undefined) {
+  if (!search) return {};
+  const searchPattern = { $regex: escapeRegex(search), $options: 'i' };
+  return { $or: SEARCHED_FIELDS.map((field) => ({ [field]: searchPattern })) };
+}
+
+async function findPageOfUsers(filter: QueryFilter<UserDoc>, page: PageRequest) {
   const [users, total] = await Promise.all([
     User.find(filter).sort({ name: 1, _id: 1 }).skip(pageOffset(page)).limit(page.pageSize).lean(),
     User.countDocuments(filter),
   ]);
   return { users, total };
+}
+
+export function findUsersPage({ search, status, ...page }: PageRequest & { search?: string; status?: UserDoc['status'] }) {
+  return findPageOfUsers({ ...(status && { status }), ...searchFilter(search) }, page);
 }
 
 export async function insertUser(record: NewUserRecord, session: ClientSession): Promise<UserDoc> {
@@ -84,21 +89,30 @@ export function updateUserPrivileges(
   ).lean();
 }
 
+const holdsAccessIn = (moduleKey: string) => [
+  { [`assignments.${moduleKey}`]: { $exists: true } },
+  { [`privileges.${moduleKey}`]: { $exists: true } },
+  { [`superAdminGrants.${moduleKey}`]: { $exists: true } },
+];
+
 /** The module key must already be validated, because it becomes part of a field path. */
 export function findUsersWithAccessIn(moduleKey: string) {
-  return User.find({
-    $or: [
-      { [`assignments.${moduleKey}`]: { $exists: true } },
-      { [`privileges.${moduleKey}`]: { $exists: true } },
-      { [`superAdminGrants.${moduleKey}`]: { $exists: true } },
-    ],
-  })
-    .sort({ name: 1 })
-    .lean();
+  return User.find({ $or: holdsAccessIn(moduleKey) }).sort({ name: 1 }).lean();
 }
 
-export function countUsersWithRole(moduleKey: string, roleKey: string) {
-  return User.countDocuments({ [`assignments.${moduleKey}`]: roleKey });
+/** Active people who could be given a role in a module. The module key must already be validated, as it becomes part of a field path. */
+export function findUsersAddableTo(moduleKey: string, excludedUserId: string, { search, ...page }: PageRequest & { search?: string }) {
+  return findPageOfUsers({
+    _id: { $ne: excludedUserId },
+    status: 'active',
+    superAdmin: { $ne: true },
+    $nor: holdsAccessIn(moduleKey),
+    ...searchFilter(search),
+  }, page);
+}
+
+export function countUsersWithRole(moduleKey: string, roleKey: string, session: ClientSession) {
+  return User.countDocuments({ [`assignments.${moduleKey}`]: roleKey }).session(session);
 }
 
 export function countUsersWithAccessIn(moduleKey: string, session: ClientSession) {
