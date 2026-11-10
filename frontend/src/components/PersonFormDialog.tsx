@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { describeError } from '@/lib/api/http';
 import type { Contract, User, UserDetails } from '@/lib/api/types';
+import { listOrgRoles } from '@/lib/api/modules';
 import { listAllUsers } from '@/lib/api/users';
 import { useLoad } from '@/lib/useLoad';
 import { Dialog } from './Dialog';
@@ -25,9 +26,11 @@ export function PersonFormDialog({ title, submitLabel, person, onSubmit, onClose
   const [team, setTeam] = useState(person?.team ?? '');
   const [contract, setContract] = useState<Contract>(person?.contract ?? 'permanent');
   const [managerId, setManagerId] = useState(person?.managerId ?? '');
+  const [orgRoleId, setOrgRoleId] = useState(person?.orgRoleId ?? '');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const everyone = useLoad(listAllUsers, []);
+  const orgRoles = useLoad(listOrgRoles, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -42,6 +45,7 @@ export function PersonFormDialog({ title, submitLabel, person, onSubmit, onClose
         team: team.trim() || null,
         contract,
         managerId: managerId || null,
+        orgRoleId,
       });
       onClose();
     } catch (failure) {
@@ -71,10 +75,18 @@ export function PersonFormDialog({ title, submitLabel, person, onSubmit, onClose
             {(everyone.data ?? []).filter((candidate) => candidate.id !== person?.id).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}
           </select>
         </div>
+        <div className="field">
+          <label htmlFor="person-org-role">Place in the org tree</label>
+          <select className="input" id="person-org-role" required value={orgRoleId} onChange={(event) => setOrgRoleId(event.target.value)}>
+            <option value="" disabled>Choose an org role</option>
+            {(orgRoles.data ?? []).map((orgRole) => <option key={orgRole.id} value={orgRole.id}>{`${'— '.repeat(orgRole.depth)}${orgRole.name}`}</option>)}
+          </select>
+          {orgRoles.error ? <p className="meta">The org tree could not be read, which needs orgRole.read.</p> : null}
+        </div>
         {error ? <Notice tone="danger">{error}</Notice> : null}
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={isBusy}>{submitLabel}</button>
+          <button type="submit" className="btn btn-primary" disabled={isBusy || !orgRoleId}>{submitLabel}</button>
         </div>
       </form>
     </Dialog>

@@ -3,15 +3,13 @@ import type { ClientSession } from 'mongoose';
 import { runInTransaction } from '../../../db.js';
 import { ApiError } from '../../../lib/errors.js';
 import { actorFields, type Actor } from '../access/caller.js';
-import { listRolePermissions } from '../access/permissions.js';
+import { findAllProfiles } from '../accessProfiles/accessProfiles.repository.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import type { ModuleDoc } from '../models/module.js';
-import { countUsersWithAccessIn, countUsersWithRoleOutside } from '../users/users.repository.js';
-import { validateManifest, type Manifest, type ManifestResource, type ManifestRole } from './manifest.js';
+import { countUsersWithPermissionSetsIn, countUsersWithPermissionSetOutside } from '../users/users.repository.js';
+import { validateManifest, type Manifest } from './manifest.js';
 import { deleteModule, findAllModules, findModuleByKey, saveModule } from './moduleRegistry.repository.js';
-import { canEditRolesIn, listPermissionApis } from './roleEditing.js';
-
-const EVERYTHING_LABEL = 'Everything in this module';
+import { canDoToPermissionSetsIn, listPermissionApis, listPermissionUsers } from './permissionSetEditing.js';
 
 export class CoreModuleError extends ApiError {
   constructor(key: string, problem: string) {
@@ -23,8 +21,8 @@ export interface ImportResult {
   key: string;
   version: string;
   created: boolean;
-  /** People whose role no longer exists in this module. They keep no access from it until reassigned. */
-  orphanedAssignments: number;
+  /** People holding a permission set this module no longer has. It gives them nothing until it's added again. */
+  orphanedPermissionSets: number;
 }
 
 export interface RegisteredModule {
@@ -37,35 +35,26 @@ export interface RegisteredModule {
   frontendUrl: string | null;
 }
 
-/** Someone who can't edit a module's resources and roles mustn't undo those edits by importing or removing the module. */
+/** Someone who can't edit a module's resources and permission sets mustn't undo those edits by importing or removing the module. */
 function assertMayReplaceEdits(actor: Actor, module: ModuleDoc | null): void {
   if (!module?.permissionsEditedAt || actor.user.superAdmin) return;
-  if (!actor.permissions['module.update'] || !canEditRolesIn(actor.user, module)) {
-    throw new ApiError(409, 'permissions_edited', `${module.name}'s permissions have been edited, so replacing or removing it needs module.update and role.update in that module.`);
+  if (!actor.permissions['module.update'] || !canDoToPermissionSetsIn(actor, module, 'update')) {
+    throw new ApiError(409, 'permissions_edited', `${module.name}'s permissions have been edited, so replacing or removing it needs module.update and permissionSet.update in that module.`);
   }
 }
 
-const addsOrChangesRoles = (manifest: Manifest, existing: ModuleDoc | null) =>
-  manifest.roles.some((role) => {
-    const existingRole = existing?.roles.find((candidate) => candidate.key === role.key);
-    return !existingRole || !isDeepStrictEqual(role.grants, existingRole.grants);
+const addsOrChangesPermissionSets = (manifest: Manifest, existing: ModuleDoc | null) =>
+  manifest.permissionSets.some((permissionSet) => {
+    const existingSet = existing?.permissionSets.find((candidate) => candidate.key === permissionSet.key);
+    return !existingSet || !isDeepStrictEqual(permissionSet.grants, existingSet.grants);
   });
 
-const widensGrantable = (manifest: Manifest, existing: ModuleDoc | null) =>
-  manifest.resources.some((resource) => {
-    const existingResource = existing?.resources.find((candidate) => candidate.key === resource.key);
-    return resource.grantable?.some((action) => !existingResource?.grantable?.includes(action));
-  });
-
-/** An import mustn't do what the role and grantable routes refuse, and removing a module first mustn't get around that. */
+/** An import mustn't do what the permission set routes refuse, and removing a module first mustn't get around that. */
 function assertMayImportOver(actor: Actor, manifest: Manifest, existing: ModuleDoc | null): void {
   if (actor.user.superAdmin) return;
   assertMayReplaceEdits(actor, existing);
-  if (addsOrChangesRoles(manifest, existing)) {
-    throw new ApiError(403, 'beyond_own_access', 'Only a super admin can import a manifest that adds or changes roles.');
-  }
-  if (widensGrantable(manifest, existing)) {
-    throw new ApiError(403, 'beyond_own_access', 'Only a super admin can import a manifest that lets more permissions be given to one person.');
+  if (addsOrChangesPermissionSets(manifest, existing)) {
+    throw new ApiError(403, 'beyond_own_access', 'Only a super admin can import a manifest that adds or changes permission sets.');
   }
 }
 
@@ -83,11 +72,15 @@ export async function importManifest(
     assertMayReplace?.(existingModule);
   }
 
-  const created = await saveModule(manifest, isCore, session);
-  const roleKeys = manifest.roles.map((role) => role.key);
-  const orphanedAssignments = await countUsersWithRoleOutside(key, roleKeys, session);
+  // Custom objects are built in the app, so a manifest never lists them. Keeping them means an import can't orphan their records.
+  const existing = await findModuleByKey(key, session);
+  const fileResourceKeys = new Set(manifest.resources.map((resource) => resource.key));
+  const customResources = (existing?.resources ?? []).filter((resource) => resource.custom === true && !fileResourceKeys.has(resource.key));
+  const created = await saveModule({ ...manifest, resources: [...manifest.resources, ...customResources] }, isCore, session);
+  const setKeys = manifest.permissionSets.map((permissionSet) => permissionSet.key);
+  const orphanedPermissionSets = await countUsersWithPermissionSetOutside(key, setKeys, session);
 
-  return { key, version, created, orphanedAssignments };
+  return { key, version, created, orphanedPermissionSets };
 }
 
 function toRegisteredModule(
@@ -105,8 +98,13 @@ function toRegisteredModule(
 }
 
 export async function listRegisteredModules(frontendUrls: Map<string, string>) {
-  const modules = await findAllModules();
-  return modules.map((module) => ({ ...toRegisteredModule(module, frontendUrls), resources: module.resources, apis: listPermissionApis(module) }));
+  const [modules, profiles] = await Promise.all([findAllModules(), findAllProfiles()]);
+  return modules.map((module) => ({
+    ...toRegisteredModule(module, frontendUrls),
+    resources: module.resources,
+    apis: listPermissionApis(module),
+    usedBy: listPermissionUsers(module, profiles),
+  }));
 }
 
 /** Checks a manifest sent to the API and saves it. Importing a module again replaces it. */
@@ -144,17 +142,17 @@ export async function importModuleFromRequest(
 export async function exportModuleManifest(key: string) {
   const module = await findModuleByKey(key);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
-  const { name, version, description, repository, baseUrl, core, resources, routes, roles } = module;
+  const { name, version, description, repository, baseUrl, core, resources, routes, permissionSets } = module;
   return {
     manifestVersion: 1,
     module: { key, name, version, description, repository, baseUrl, ...(core && { core }) },
     resources,
     routes,
-    roles,
+    permissionSets,
   };
 }
 
-/** People keep their role and privileges in a removed module, which grant nothing unless it's imported again. */
+/** People keep their permission sets in a removed module, and profiles keep their part for it. Neither grants anything unless it's imported again. */
 export async function removeModule(actor: Actor, key: string): Promise<{ removed: true; key: string; affectedUsers: number }> {
   const module = await findModuleByKey(key);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
@@ -175,30 +173,7 @@ export async function removeModule(actor: Actor, key: string): Promise<{ removed
       },
       session,
     );
-    return countUsersWithAccessIn(key, session);
+    return countUsersWithPermissionSetsIn(key, session);
   });
   return { removed: true, key, affectedUsers };
-}
-
-export function describeRoleGrants(role: ManifestRole, resources: ManifestResource[]): string[] {
-  if (role.grants === '*') return [EVERYTHING_LABEL];
-  return Object.entries(listRolePermissions(role, resources)).map(([permission, scope]) =>
-    scope === 'all' ? permission : `${permission} (${scope})`,
-  );
-}
-
-/** The fixed role templates of every loaded module. */
-export async function listRoleTemplates() {
-  const modules = await findAllModules();
-  return modules.flatMap((module) =>
-    module.roles.map((role) => ({
-      module: module.key,
-      moduleName: module.name,
-      key: role.key,
-      name: role.name,
-      description: role.description ?? '',
-      grants: describeRoleGrants(role, module.resources),
-      permissions: listRolePermissions(role, module.resources),
-    })),
-  );
 }

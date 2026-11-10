@@ -5,84 +5,84 @@
       "id": "u_01",
       "name": "Farhana Kabir",
       "email": "farhana@twintrack.test",
-      "role": "Super admin",
-      "canDo": "Everything, including editing role templates and giving anyone any permission."
+      "access": "Super admin",
+      "canDo": "Everything, including building profiles and permission sets, and giving anyone any access."
     },
     {
       "id": "u_06",
       "name": "Kamrul Islam",
       "email": "kamrul@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_03",
       "name": "Sabbir Alam",
       "email": "sabbir@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_05",
       "name": "Rumana Akter",
       "email": "rumana@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_04",
       "name": "Rahim Uddin",
       "email": "rahim@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_08",
       "name": "Karim Ahmed",
       "email": "karim@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_07",
       "name": "Arif Chowdhury",
       "email": "arif@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_09",
       "name": "Mehedi Hasan",
       "email": "mehedi@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_10",
       "name": "Sumaiya Islam",
       "email": "sumaiya@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_11",
       "name": "Jahid Rana",
       "email": "jahid@twintrack.test",
-      "role": "Deactivated",
+      "access": "Deactivated",
       "canDo": "Can't sign in until someone reactivates him."
     },
     {
       "id": "u_12",
       "name": "Jasmin",
       "email": "jasmin@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     },
     {
       "id": "u_13",
       "name": "Jack",
       "email": "jack@twintrack.test",
-      "role": "No roles",
+      "access": "No access",
       "canDo": "Only their own account, until a super admin gives them access."
     }
   ]

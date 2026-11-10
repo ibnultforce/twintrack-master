@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import type { AuthSettings } from '../../../config.js';
 import type { AccessMiddlewareFor, ApiRoute } from '../../../lib/apiRoute.js';
 import { ApiError } from '../../../lib/errors.js';
+import { findProfileOf } from '../accessProfiles/accessProfiles.repository.js';
 import { hasSessionExpired } from '../auth/auth.service.js';
 import { findSessionById } from '../auth/session.repository.js';
 import { verifyAccessToken } from '../auth/tokens.js';
@@ -27,7 +28,7 @@ function createSessionCheck(settings: AuthSettings): RequestHandler {
       throw new ApiError(401, 'account_inactive', 'This account has been deactivated. Contact HR.');
     }
 
-    req.caller = { user, sessionId };
+    req.caller = { user, profile: await findProfileOf(user), sessionId };
     next();
   };
 }
@@ -39,19 +40,21 @@ const requirePasswordChanged: RequestHandler = (req, _res, next) => {
   next();
 };
 
-/** Roles and privileges are read from the database on each call, so a change applies on the next request. */
+/** Profiles and permission sets are read from the database on each call, so a change applies on the next request. */
 function createPermissionCheck(route: ApiRoute, moduleKey: string): RequestHandler {
   const acceptedPermissions = route.permission ? [route.permission] : (route.anyPermission ?? []);
 
   return async (req, _res, next) => {
     const module = await findModuleByKey(moduleKey);
-    const permissions = module ? resolveModuleAccess(getCaller(req).user, module).permissions : {};
+    const access = module ? resolveModuleAccess(getCaller(req), module) : null;
+    const permissions = access?.permissions ?? {};
     const heldPermission = acceptedPermissions.find((permission) => permissions[permission]);
 
     if (!heldPermission) throw new ApiError(403, 'forbidden', 'You do not have permission to do this.');
 
     req.permissionScope = permissions[heldPermission];
     req.callerPermissions = permissions;
+    req.callerFieldAccess = access?.fieldAccess ?? {};
     next();
   };
 }

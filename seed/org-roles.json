@@ -1,0 +1,58 @@
+{
+  "type": "orgRoles",
+  "orgRoles": [
+    {
+      "id": "or_founder",
+      "name": "Founder",
+      "description": "Runs the company. The root of the tree."
+    },
+    {
+      "id": "or_people",
+      "name": "People",
+      "description": "HR executives who report to the founder.",
+      "parentId": "or_founder"
+    },
+    {
+      "id": "or_hr_admin",
+      "name": "HR Admin",
+      "description": "Leads HR administration.",
+      "parentId": "or_founder"
+    },
+    {
+      "id": "or_hr_staff",
+      "name": "HR Staff",
+      "description": "People who report to the HR Admin.",
+      "parentId": "or_hr_admin"
+    },
+    {
+      "id": "or_engineering_lead",
+      "name": "Engineering Lead",
+      "description": "Leads engineering.",
+      "parentId": "or_founder"
+    },
+    {
+      "id": "or_engineering",
+      "name": "Engineering",
+      "description": "Developers, designers and interns.",
+      "parentId": "or_engineering_lead"
+    },
+    {
+      "id": "or_finance_lead",
+      "name": "Finance Lead",
+      "description": "Leads finance.",
+      "parentId": "or_founder"
+    },
+    {
+      "id": "or_finance",
+      "name": "Finance",
+      "description": "Accountants.",
+      "parentId": "or_finance_lead"
+    },
+    {
+      "id": "or_operations",
+      "name": "Operations",
+      "description": "Support and operations staff.",
+      "parentId": "or_founder"
+    }
+  ]
+}

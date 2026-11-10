@@ -10,8 +10,9 @@
       "team": "leadership",
       "contract": "permanent",
       "status": "active",
+      "orgRoleId": "or_founder",
       "superAdmin": true,
-      "assignments": {}
+      "permissionSets": {}
     },
     {
       "id": "u_03",
@@ -23,7 +24,8 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "assignments": {}
+      "orgRoleId": "or_people",
+      "permissionSets": {}
     },
     {
       "id": "u_04",
@@ -35,7 +37,8 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "assignments": {}
+      "orgRoleId": "or_engineering_lead",
+      "permissionSets": {}
     },
     {
       "id": "u_05",
@@ -47,7 +50,8 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "assignments": {}
+      "orgRoleId": "or_finance_lead",
+      "permissionSets": {}
     },
     {
       "id": "u_06",
@@ -59,7 +63,8 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_05",
-      "assignments": {}
+      "orgRoleId": "or_finance",
+      "permissionSets": {}
     },
     {
       "id": "u_07",
@@ -71,7 +76,8 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_04",
-      "assignments": {}
+      "orgRoleId": "or_engineering",
+      "permissionSets": {}
     },
     {
       "id": "u_08",
@@ -83,7 +89,8 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_04",
-      "assignments": {}
+      "orgRoleId": "or_engineering",
+      "permissionSets": {}
     },
     {
       "id": "u_09",
@@ -95,7 +102,8 @@
       "contract": "intern",
       "status": "active",
       "managerId": "u_04",
-      "assignments": {}
+      "orgRoleId": "or_engineering",
+      "permissionSets": {}
     },
     {
       "id": "u_10",
@@ -107,7 +115,8 @@
       "contract": "contractor",
       "status": "active",
       "managerId": "u_04",
-      "assignments": {}
+      "orgRoleId": "or_engineering",
+      "permissionSets": {}
     },
     {
       "id": "u_11",
@@ -119,7 +128,8 @@
       "contract": "permanent",
       "status": "inactive",
       "managerId": "u_01",
-      "assignments": {}
+      "orgRoleId": "or_operations",
+      "permissionSets": {}
     },
     {
       "id": "u_12",
@@ -131,7 +141,8 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "assignments": {}
+      "orgRoleId": "or_hr_admin",
+      "permissionSets": {}
     },
     {
       "id": "u_13",
@@ -143,7 +154,8 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_12",
-      "assignments": {}
+      "orgRoleId": "or_hr_staff",
+      "permissionSets": {}
     }
   ]
 }

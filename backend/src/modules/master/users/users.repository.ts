@@ -5,12 +5,12 @@ import type { UserRow } from './usersFile.js';
 
 const SEARCHED_FIELDS = ['name', 'email', 'title'] as const;
 
-export type NewUserRecord = Pick<UserDoc, '_id' | 'name' | 'email' | 'contract' | 'passwordHash' | 'mustChangePassword'> &
-  Partial<Pick<UserDoc, 'title' | 'department' | 'team' | 'managerId'>>;
+export type NewUserRecord = Pick<UserDoc, '_id' | 'name' | 'email' | 'contract' | 'passwordHash' | 'mustChangePassword' | 'orgRoleId'> &
+  Partial<Pick<UserDoc, 'title' | 'department' | 'team' | 'managerId' | 'profileId'>>;
 
 /** Fields an admin can edit. For the optional ones, null clears the value. */
-export type UserDetailChanges = Partial<Pick<UserDoc, 'name' | 'email' | 'contract'>> &
-  Partial<Record<'title' | 'department' | 'team' | 'managerId', string | null>>;
+export type UserDetailChanges = Partial<Pick<UserDoc, 'name' | 'email' | 'contract' | 'orgRoleId'>> &
+  Partial<Record<'title' | 'department' | 'team' | 'managerId' | 'profileId', string | null>>;
 
 /** Turns a value of null into removing that field, because no field stores null. */
 function setOrUnset(fields: Record<string, unknown>) {
@@ -64,61 +64,46 @@ export function setTemporaryPassword(userId: string, passwordHash: string, sessi
 }
 
 /** The module key must already be validated, because it becomes part of a field path. */
-export function updateUserRole(userId: string, moduleKey: string, roleKey: string | null, session: ClientSession) {
-  return User.findByIdAndUpdate(userId, setOrUnset({ [`assignments.${moduleKey}`]: roleKey }), {
+export function updateUserPermissionSets(userId: string, moduleKey: string, setKeys: string[], session: ClientSession) {
+  return User.findByIdAndUpdate(userId, setOrUnset({ [`permissionSets.${moduleKey}`]: setKeys.length > 0 ? setKeys : null }), {
     returnDocument: 'after',
     session,
   }).lean();
 }
 
-/** The module key must already be validated, because it becomes part of a field path. */
-export function updateUserPrivileges(
-  userId: string,
-  moduleKey: string,
-  change: { privileges: string[]; superAdminGrants?: string[] },
-  session: ClientSession,
-) {
-  const valueFor = (permissions: string[] | undefined) => (permissions && permissions.length === 0 ? null : permissions);
-  return User.findByIdAndUpdate(
-    userId,
-    setOrUnset({
-      [`privileges.${moduleKey}`]: valueFor(change.privileges),
-      [`superAdminGrants.${moduleKey}`]: valueFor(change.superAdminGrants),
-    }),
-    { returnDocument: 'after', session },
-  ).lean();
-}
-
-const holdsAccessIn = (moduleKey: string) => [
-  { [`assignments.${moduleKey}`]: { $exists: true } },
-  { [`privileges.${moduleKey}`]: { $exists: true } },
-  { [`superAdminGrants.${moduleKey}`]: { $exists: true } },
+/** People with access in a module: a permission set there, or a profile that gives some. The module key must already be validated. */
+const holdsAccessIn = (moduleKey: string, profileIdsWithAccess: string[]) => [
+  { [`permissionSets.${moduleKey}`]: { $exists: true } },
+  ...(profileIdsWithAccess.length > 0 ? [{ profileId: { $in: profileIdsWithAccess } }] : []),
 ];
 
 /** The module key must already be validated, because it becomes part of a field path. */
-export function findUsersWithAccessIn(moduleKey: string) {
-  return User.find({ $or: holdsAccessIn(moduleKey) }).sort({ name: 1 }).lean();
+export function findUsersWithAccessIn(moduleKey: string, profileIdsWithAccess: string[]) {
+  return User.find({ $or: holdsAccessIn(moduleKey, profileIdsWithAccess) }).sort({ name: 1 }).lean();
 }
 
-/** Active people who could be given a role in a module. The module key must already be validated, as it becomes part of a field path. */
-export function findUsersAddableTo(moduleKey: string, excludedUserId: string, { search, ...page }: PageRequest & { search?: string }) {
+/** Active people who could be given a permission set in a module. The module key must already be validated, as it becomes part of a field path. */
+export function findUsersAddableTo(
+  moduleKey: string,
+  profileIdsWithAccess: string[],
+  excludedUserId: string,
+  { search, ...page }: PageRequest & { search?: string },
+) {
   return findPageOfUsers({
     _id: { $ne: excludedUserId },
     status: 'active',
     superAdmin: { $ne: true },
-    $nor: holdsAccessIn(moduleKey),
+    $nor: holdsAccessIn(moduleKey, profileIdsWithAccess),
     ...searchFilter(search),
   }, page);
 }
 
-export function countUsersWithRole(moduleKey: string, roleKey: string, session: ClientSession) {
-  return User.countDocuments({ [`assignments.${moduleKey}`]: roleKey }).session(session);
+export function countUsersWithPermissionSet(moduleKey: string, setKey: string, session: ClientSession) {
+  return User.countDocuments({ [`permissionSets.${moduleKey}`]: setKey }).session(session);
 }
 
-export function countUsersWithAccessIn(moduleKey: string, session: ClientSession) {
-  return User.countDocuments({
-    $or: [{ [`assignments.${moduleKey}`]: { $exists: true } }, { [`privileges.${moduleKey}`]: { $exists: true } }],
-  }).session(session);
+export function countUsersWithPermissionSetsIn(moduleKey: string, session: ClientSession) {
+  return User.countDocuments({ [`permissionSets.${moduleKey}`]: { $exists: true } }).session(session);
 }
 
 /** Includes the password hash, which other queries leave out. Use it only to check a login. */
@@ -144,9 +129,10 @@ export async function updateUserPassword(userId: string, passwordHash: string, s
   await User.updateOne({ _id: userId }, { $set: { passwordHash, mustChangePassword: false } }, { session });
 }
 
-export function countUsersWithRoleOutside(moduleKey: string, roleKeys: string[], session?: ClientSession) {
+/** People holding a set that isn't among these keys, such as after an import drops one. */
+export function countUsersWithPermissionSetOutside(moduleKey: string, setKeys: string[], session?: ClientSession) {
   return User.countDocuments({
-    [`assignments.${moduleKey}`]: { $exists: true, $nin: roleKeys },
+    [`permissionSets.${moduleKey}`]: { $elemMatch: { $nin: setKeys } },
   }).session(session ?? null);
 }
 
@@ -156,7 +142,12 @@ export async function upsertUsers(rows: UserRow[], passwordHash: string, session
     rows.map(({ id, ...row }) => ({
       updateOne: {
         filter: { _id: id },
-        update: { $set: { ...row, superAdminGrants: {} }, $setOnInsert: { passwordHash, mustChangePassword: false } },
+        // The file decides access, so a profile it no longer lists is taken away.
+        update: {
+          $set: row,
+          $setOnInsert: { passwordHash, mustChangePassword: false },
+          ...(row.profileId === undefined && { $unset: { profileId: 1 } }),
+        },
         upsert: true,
       },
     })),

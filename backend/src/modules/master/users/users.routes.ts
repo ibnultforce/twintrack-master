@@ -13,8 +13,7 @@ import {
   listAccessOptions,
   listAddablePeople,
   listModulePeople,
-  setUserPrivileges,
-  setUserRole,
+  setUserPermissionSets,
 } from './userAccess.service.js';
 import { emailField, nameField } from './userFields.js';
 import {
@@ -53,6 +52,9 @@ const createUserBodySchema = z.strictObject({
   team: detailField.optional(),
   contract: z.enum(CONTRACTS).default('permanent'),
   managerId: detailField.optional(),
+  // Everyone has a place in the organisation tree, which decides whose records they see.
+  orgRoleId: detailField,
+  profileId: detailField.optional(),
 });
 
 // In an update, null clears an optional detail.
@@ -65,19 +67,16 @@ const updateUserBodySchema = z
     team: detailField.nullable().optional(),
     contract: z.enum(CONTRACTS).optional(),
     managerId: detailField.nullable().optional(),
+    orgRoleId: detailField.optional(),
+    profileId: detailField.nullable().optional(),
   })
   .refine((details) => Object.keys(details).length > 0, { message: 'send at least one field to change' });
 
 const setStatusBodySchema = z.strictObject({ status: z.enum(USER_STATUSES) });
 
-const setRoleBodySchema = z.strictObject({
+const setPermissionSetsBodySchema = z.strictObject({
   module: moduleKeyField,
-  role: z.string().min(1, 'is required').nullable(),
-});
-
-const setPrivilegesBodySchema = z.strictObject({
-  module: moduleKeyField,
-  permissions: z.array(z.string().min(1)),
+  permissionSets: z.array(z.string().min(1)),
   reason: z.string().trim().min(1).max(MAX_REASON_LENGTH).optional(),
 });
 
@@ -127,14 +126,9 @@ const handleResetPassword: RequestHandler = async (req, res) => {
   sendTemporaryPassword(res, 200, await resetUserPassword(getActor(req), userIdFrom(req.params)));
 };
 
-const handleSetRole: RequestHandler = async (req, res) => {
-  const { module, role } = parseRequestBody(setRoleBodySchema, req.body);
-  res.json(await setUserRole(getSignedActor(req), userIdFrom(req.params), module, role));
-};
-
-const handleSetPrivileges: RequestHandler = async (req, res) => {
-  const { module, ...change } = parseRequestBody(setPrivilegesBodySchema, req.body);
-  res.json(await setUserPrivileges(getSignedActor(req), userIdFrom(req.params), module, change));
+const handleSetPermissionSets: RequestHandler = async (req, res) => {
+  const { module, ...change } = parseRequestBody(setPermissionSetsBodySchema, req.body);
+  res.json(await setUserPermissionSets(getSignedActor(req), userIdFrom(req.params), module, change));
 };
 
 export const usersRoutes: ApiRoute[] = [
@@ -146,9 +140,8 @@ export const usersRoutes: ApiRoute[] = [
   { method: 'PATCH', path: '/users/:id', access: 'private', permission: 'user.update', handler: handleUpdateUser },
   { method: 'PATCH', path: '/users/:id/status', access: 'private', permission: 'user.update', handler: handleSetStatus },
   { method: 'POST', path: '/users/:id/reset-password', access: 'private', permission: 'user.update', handler: handleResetPassword },
-  // These are signed, because a module admin may have no Master role. The services decide who can change what.
-  { method: 'PATCH', path: '/users/:id/roles', access: 'signed', middleware: [refuseUnless(canChangeAnyAccess)], handler: handleSetRole },
-  { method: 'PUT', path: '/users/:id/privileges', access: 'signed', middleware: [refuseUnless(canChangeAnyAccess)], handler: handleSetPrivileges },
+  // These are signed, because a module admin may have no Master access. The services decide who can change what.
+  { method: 'PUT', path: '/users/:id/permission-sets', access: 'signed', middleware: [refuseUnless(canChangeAnyAccess)], handler: handleSetPermissionSets },
   { method: 'GET', path: '/modules/:key/people', access: 'signed', middleware: [refuseUnless(canReadAccessOptions)], handler: handleListModulePeople },
   { method: 'GET', path: '/modules/:key/addable-people', access: 'signed', middleware: [refuseUnless(canChangeAnyAccess)], handler: handleListAddablePeople },
 ];

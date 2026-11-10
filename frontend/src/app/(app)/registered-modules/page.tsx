@@ -1,24 +1,26 @@
 'use client';
 
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { CustomObjectDialog } from '@/components/CustomObjectDialog';
 import { ConfirmDialog, Dialog } from '@/components/Dialog';
 import { Card, Loaded, Notice, PageHead, Pill, TextField } from '@/components/ui';
 import { describeError } from '@/lib/api/http';
-import { exportModule, importModule, listModules, removeModule, removeResource, saveResource, setGrantableActions } from '@/lib/api/modules';
+import { exportModule, importModule, listModules, removeModule, removeResource, saveResource } from '@/lib/api/modules';
 import type { ModuleResource, RegisteredModule, ResourceAction } from '@/lib/api/types';
+import { removeCustomObject } from '@/lib/api/records';
 import { humanize } from '@/lib/format';
-import { ALL_ACTIONS } from '@/lib/roleGrants';
+import { ALL_ACTIONS } from '@/lib/grants';
 import { useLoad } from '@/lib/useLoad';
 import { useSession } from '@/session/SessionProvider';
 
-function ActionChecks({ legend, options, selected, onChange }: { legend: string; options: ResourceAction[]; selected: ResourceAction[]; onChange: (actions: ResourceAction[]) => void }) {
+function ActionChecks({ legend, options, selected, locked = [], onChange }: { legend: string; options: ResourceAction[]; selected: ResourceAction[]; locked?: ResourceAction[]; onChange: (actions: ResourceAction[]) => void }) {
   const toggle = (action: ResourceAction) => onChange(selected.includes(action) ? selected.filter((held) => held !== action) : [...selected, action]);
   return (
     <fieldset>
       <legend>{legend}</legend>
       <div className="check-grid">
         {options.map((action) => (
-          <label className="check" key={action}><input type="checkbox" checked={selected.includes(action)} onChange={() => toggle(action)} />{humanize(action)}</label>
+          <label className="check" key={action}><input type="checkbox" checked={selected.includes(action)} disabled={locked.includes(action)} onChange={() => toggle(action)} />{humanize(action)}</label>
         ))}
       </div>
     </fieldset>
@@ -31,6 +33,13 @@ function ResourceDialog({ module, resource, onSaved, onClose }: { module: Regist
   const [actions, setActions] = useState<ResourceAction[]>(resource?.actions ?? []);
   const [scoped, setScoped] = useState(resource?.scoped ?? false);
   const [error, setError] = useState('');
+  const { profile } = useSession();
+  const isSuperAdmin = profile?.superAdmin ?? false;
+  const usersOf = (action: ResourceAction) => module.usedBy[`${resource?.key}.${action}`] ?? [];
+  const actionsInUse = (resource?.actions ?? []).filter((action) => usersOf(action).length > 0);
+  // A super admin may remove an action in use. Everyone else sees it locked.
+  const lockedActions = isSuperAdmin ? [] : actionsInUse;
+  const removedInUse = actionsInUse.filter((action) => !actions.includes(action));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -49,7 +58,19 @@ function ResourceDialog({ module, resource, onSaved, onClose }: { module: Regist
       <form className="form" onSubmit={(event) => void submit(event)}>
         {resource ? null : <TextField id="resource-key" label="Key" hint="Letters and numbers, starting with a lowercase letter, such as bonus." required value={key} onChange={setKey} />}
         <TextField id="resource-label" label="Label" required value={label} onChange={setLabel} />
-        <ActionChecks legend="Actions" options={ALL_ACTIONS} selected={actions} onChange={setActions} />
+        <ActionChecks legend="Actions" options={ALL_ACTIONS} selected={actions} locked={lockedActions} onChange={setActions} />
+        {lockedActions.length > 0 ? (
+          <div className="note">
+            <p>Locked because they&apos;re in use. To stop one person doing something, change their profile or permission sets instead.</p>
+            <ul>{lockedActions.map((action) => <li key={action}>{humanize(action)}: {usersOf(action).join(', ')}</li>)}</ul>
+          </div>
+        ) : null}
+        {isSuperAdmin && removedInUse.length > 0 ? (
+          <Notice tone="danger">
+            <p>These are in use. Saving takes them out of every permission set and profile, and the APIs listed can then be used only by super admins.</p>
+            <ul>{removedInUse.map((action) => <li key={action}>{humanize(action)}: {usersOf(action).join(', ')}</li>)}</ul>
+          </Notice>
+        ) : null}
         <label className="check"><input type="checkbox" checked={scoped} onChange={(event) => setScoped(event.target.checked)} />Can be limited to own records or a team</label>
         {error ? <Notice tone="danger">{error}</Notice> : null}
         <div className="dialog-actions">
@@ -57,33 +78,6 @@ function ResourceDialog({ module, resource, onSaved, onClose }: { module: Regist
           <button type="submit" className="btn btn-primary" disabled={actions.length === 0}>Save</button>
         </div>
       </form>
-    </Dialog>
-  );
-}
-
-function GrantableDialog({ module, resource, onSaved, onClose }: { module: RegisteredModule; resource: ModuleResource; onSaved: () => void; onClose: () => void }) {
-  const [actions, setActions] = useState<ResourceAction[]>(resource.grantable ?? []);
-  const [error, setError] = useState('');
-
-  const save = async () => {
-    setError('');
-    try {
-      await setGrantableActions(module.key, resource.key, actions);
-      onSaved();
-      onClose();
-    } catch (failure) {
-      setError(describeError(failure));
-    }
-  };
-
-  return (
-    <Dialog title={`What can be given for ${resource.label}`} onClose={onClose}>
-      <ActionChecks legend="Can be given to one person" options={resource.actions} selected={actions} onChange={setActions} />
-      {error ? <div className="spaced"><Notice tone="danger">{error}</Notice></div> : null}
-      <div className="dialog-actions">
-        <button type="button" className="btn" onClick={onClose}>Cancel</button>
-        <button type="button" className="btn btn-primary" onClick={() => void save()}>Save</button>
-      </div>
     </Dialog>
   );
 }
@@ -132,14 +126,18 @@ type ModulesDialog =
   | { kind: 'import-manifest'; manifest: unknown; fileName: string }
   | { kind: 'remove-module' }
   | { kind: 'add-resource' }
-  | { kind: 'edit-resource' | 'grantable' | 'remove-resource'; resource: ModuleResource }
+  | { kind: 'edit-resource' | 'remove-resource' | 'edit-object' | 'remove-object'; resource: ModuleResource }
+  | { kind: 'add-object' }
   | null;
 
 const permissionTotal = (module: RegisteredModule) => module.resources.reduce((total, resource) => total + resource.actions.length, 0);
 
 export default function RegisteredModulesPage() {
   const { can } = useSession();
-  const canEditRules = can('module.update');
+  const canAddResources = can('module.create');
+  const canEditResources = can('module.update');
+  const canRemoveResources = can('module.delete');
+  const canChangeAnyResource = canEditResources || canRemoveResources;
   const modules = useLoad(listModules, []);
   const [chosenKey, setChosenKey] = useState('');
   const [dialog, setDialog] = useState<ModulesDialog>(null);
@@ -213,11 +211,11 @@ export default function RegisteredModulesPage() {
                     </div>
                     <div className="role-meta">{module.core ? <Pill tone="accent">Core</Pill> : <Pill tone="neutral">Add-on</Pill>}<span>Frontend: {module.frontendUrl ?? 'not set'}</span></div>
                   </section>
-                  <Card title="Permissions" aside={canEditRules ? <button type="button" className="link" onClick={() => setDialog({ kind: 'add-resource' })}>+ Add resource</button> : <span className="note">{permissionTotal(module)} total</span>}>
+                  <Card title="Permissions" aside={canAddResources ? <button type="button" className="link" onClick={() => setDialog({ kind: 'add-resource' })}>+ Add resource</button> : <span className="note">{permissionTotal(module)} total</span>}>
                     <div className="table-box">
                       <table>
                         <thead>
-                          <tr><th scope="col">Resource</th><th scope="col">Actions</th><th scope="col">Whose records</th><th scope="col">Can be given to one person</th>{canEditRules ? <th scope="col"><span className="visually-hidden">Change</span></th> : null}</tr>
+                          <tr><th scope="col">Resource</th><th scope="col">Actions</th><th scope="col">Whose records</th>{canChangeAnyResource ? <th scope="col"><span className="visually-hidden">Change</span></th> : null}</tr>
                         </thead>
                         <tbody>
                           {module.resources.map((resource) => (
@@ -225,13 +223,11 @@ export default function RegisteredModulesPage() {
                               <td><div className="strong">{resource.label}</div><div className="meta">{module.key}.{resource.key}</div></td>
                               <td><div className="pills">{resource.actions.map((action) => <Pill tone="neutral" key={action}>{humanize(action)}</Pill>)}</div></td>
                               <td>{resource.scoped ? 'Own, team or everyone' : 'Everyone'}</td>
-                              <td>{resource.grantable?.length ? resource.grantable.map(humanize).join(', ') : <span className="muted">·</span>}</td>
-                              {canEditRules ? (
+                              {canChangeAnyResource ? (
                                 <td>
                                   <div className="resource-actions">
-                                    <button type="button" className="link" aria-label={`Edit ${resource.label}`} onClick={() => setDialog({ kind: 'edit-resource', resource })}>Edit</button>
-                                    <button type="button" className="link" aria-label={`Choose what can be given for ${resource.label}`} onClick={() => setDialog({ kind: 'grantable', resource })}>Grantable</button>
-                                    <button type="button" className="link" aria-label={`Remove ${resource.label}`} onClick={() => setDialog({ kind: 'remove-resource', resource })}>Remove</button>
+                                    {canEditResources ? <button type="button" className="link" aria-label={`Edit ${resource.label}`} onClick={() => setDialog({ kind: 'edit-resource', resource })}>Edit</button> : null}
+                                    {canRemoveResources ? <button type="button" className="link" aria-label={`Remove ${resource.label}`} onClick={() => setDialog({ kind: 'remove-resource', resource })}>Remove</button> : null}
                                   </div>
                                 </td>
                               ) : null}
@@ -241,14 +237,42 @@ export default function RegisteredModulesPage() {
                       </table>
                     </div>
                   </Card>
+                  <Card title="Custom objects" aside={canAddResources ? <button type="button" className="link" onClick={() => setDialog({ kind: 'add-object' })}>+ New object</button> : undefined}>
+                    {module.resources.filter((resource) => resource.custom).length === 0 ? <p className="empty">No custom objects in {module.name} yet. People reach their records from the Records screen.</p> : (
+                      <div className="table-box">
+                        <table>
+                          <thead><tr><th scope="col">Object</th><th scope="col">Fields</th><th scope="col">Sharing</th>{canChangeAnyResource ? <th scope="col"><span className="visually-hidden">Change</span></th> : null}</tr></thead>
+                          <tbody>
+                            {module.resources.filter((resource) => resource.custom).map((resource) => (
+                              <tr key={resource.key}>
+                                <td><div className="strong">{resource.label}</div><div className="meta">{module.key}.{resource.key}</div></td>
+                                <td>{(resource.fields ?? []).map((field) => `${field.label}${field.protected ? ' (protected)' : ''}`).join(', ')}</td>
+                                <td>{humanize(resource.sharingModel ?? 'private')}</td>
+                                {canChangeAnyResource ? (
+                                  <td>
+                                    <div className="resource-actions">
+                                      {canEditResources ? <button type="button" className="link" aria-label={`Edit ${resource.label}`} onClick={() => setDialog({ kind: 'edit-object', resource })}>Edit</button> : null}
+                                      {canRemoveResources ? <button type="button" className="link" aria-label={`Remove ${resource.label}`} onClick={() => setDialog({ kind: 'remove-object', resource })}>Remove</button> : null}
+                                    </div>
+                                  </td>
+                                ) : null}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
                 </div>
               </div>
 
-              {dialog?.kind === 'remove-module' ? <ConfirmDialog title={`Remove ${module.name}?`} text="People keep the role on their record, but it grants nothing unless the module is imported again." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeModule(module.key); setChosenKey(''); modules.reload(); }} /> : null}
+              {dialog?.kind === 'add-object' ? <CustomObjectDialog moduleKey={module.key} onSaved={modules.reload} onClose={closeDialog} /> : null}
+              {dialog?.kind === 'edit-object' ? <CustomObjectDialog moduleKey={module.key} existing={dialog.resource} onSaved={modules.reload} onClose={closeDialog} /> : null}
+              {dialog?.kind === 'remove-object' ? <ConfirmDialog title={`Remove ${dialog.resource.label}?`} text="It can't be removed while it has records, even in the recycle bin." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeCustomObject(module.key, dialog.resource.key); modules.reload(); }} /> : null}
+              {dialog?.kind === 'remove-module' ? <ConfirmDialog title={`Remove ${module.name}?`} text="People keep their permission sets, and profiles keep their part for it, but neither grants anything unless the module is imported again." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeModule(module.key); setChosenKey(''); modules.reload(); }} /> : null}
               {dialog?.kind === 'add-resource' ? <ResourceDialog module={module} onSaved={modules.reload} onClose={closeDialog} /> : null}
               {dialog?.kind === 'edit-resource' ? <ResourceDialog module={module} resource={dialog.resource} onSaved={modules.reload} onClose={closeDialog} /> : null}
-              {dialog?.kind === 'grantable' ? <GrantableDialog module={module} resource={dialog.resource} onSaved={modules.reload} onClose={closeDialog} /> : null}
-              {dialog?.kind === 'remove-resource' ? <ConfirmDialog title={`Remove ${dialog.resource.label}?`} text="It can't be removed while a role or route still uses it." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeResource(module.key, dialog.resource.key); modules.reload(); }} /> : null}
+              {dialog?.kind === 'remove-resource' ? <ConfirmDialog title={`Remove ${dialog.resource.label}?`} text="It can't be removed while a permission set, profile or route still uses it." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeResource(module.key, dialog.resource.key); modules.reload(); }} /> : null}
             </>
           );
         }}

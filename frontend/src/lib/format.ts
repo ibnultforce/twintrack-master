@@ -22,4 +22,4 @@ export const longDate = () => new Date().toLocaleDateString('en-GB', { weekday: 
 
 export const SCOPE_LABELS: Record<Scope, string> = { own: 'Their own', team: 'Their team', all: 'Everyone' };
 
-export const SCOPE_LEGEND = 'Their own means only that person. Their team adds their direct reports. Everyone means all people.';
+export const SCOPE_LEGEND = 'Their own means only that person. Their team adds their direct reports and everyone in the org roles below theirs. Everyone means all people.';

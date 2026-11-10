@@ -5,7 +5,7 @@ import { describeError } from '@/lib/api/http';
 import { Notice } from './ui';
 
 /** A modal built on the native dialog element, which handles focus and the Escape key. */
-export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Dialog({ title, onClose, children, isWide = false }: { title: string; onClose: () => void; children: ReactNode; isWide?: boolean }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export function Dialog({ title, onClose, children }: { title: string; onClose: (
   }, []);
 
   return (
-    <dialog ref={dialogRef} aria-labelledby="dialog-title" onCancel={onClose}>
+    <dialog ref={dialogRef} className={isWide ? 'dialog-wide' : undefined} aria-labelledby="dialog-title" onCancel={onClose}>
       <h2 id="dialog-title">{title}</h2>
       {children}
     </dialog>

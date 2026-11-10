@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { ActivityTable } from '@/components/ActivityTable';
 import { Card, Loaded, PageHead } from '@/components/ui';
-import { listActivity } from '@/lib/api/modules';
-import type { AccessOption, AuditEntry, User } from '@/lib/api/types';
+import { listActivity, listProfiles } from '@/lib/api/modules';
+import type { AccessOption, AccessProfile, AuditEntry, User } from '@/lib/api/types';
 import { getAccessOptions, listAllUsers } from '@/lib/api/users';
 import { longDate, peopleCount } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
@@ -15,24 +15,25 @@ const RECENT_ACTIVITY_SIZE = 6;
 interface OverviewData {
   people: User[];
   modules: AccessOption[];
+  profiles: AccessProfile[];
   activity: AuditEntry[];
 }
 
-function hasAccessIn(person: User, moduleKey: string, modules: AccessOption[]): boolean {
-  const module = modules.find((candidate) => candidate.key === moduleKey);
-  const hasRole = module?.roles.some((role) => role.key === person.assignments[moduleKey]) ?? false;
-  return hasRole || (person.privileges[moduleKey]?.length ?? 0) > 0 || (person.superAdminGrants[moduleKey]?.length ?? 0) > 0;
+/** Access through a permission set, or through a profile that gives something in the module. */
+function hasAccessIn(person: User, moduleKey: string, profiles: AccessProfile[]): boolean {
+  const profile = profiles.find((candidate) => candidate.id === person.profileId);
+  return (person.permissionSets[moduleKey]?.length ?? 0) > 0 || Boolean(profile?.modules.some((module) => module.key === moduleKey));
 }
 
-function listAttentionItems({ people, modules }: OverviewData): { tone: 'danger' | 'warning'; text: string }[] {
-  const holdsAnything = (person: User) => modules.some((module) => hasAccessIn(person, module.key, modules));
+function listAttentionItems({ people, modules, profiles }: OverviewData): { tone: 'danger' | 'warning'; text: string }[] {
+  const holdsAnything = (person: User) => modules.some((module) => hasAccessIn(person, module.key, profiles));
   const active = people.filter((person) => person.status === 'active');
   const deactivatedWithRoles = people.filter((person) => person.status === 'inactive' && holdsAnything(person)).length;
   const noAccess = active.filter((person) => !person.superAdmin && !holdsAnything(person)).length;
   const temporary = active.filter((person) => person.mustChangePassword).length;
 
   const items: { tone: 'danger' | 'warning'; text: string }[] = [];
-  if (deactivatedWithRoles) items.push({ tone: 'danger', text: `${peopleCount(deactivatedWithRoles)} deactivated but still holding roles` });
+  if (deactivatedWithRoles) items.push({ tone: 'danger', text: `${peopleCount(deactivatedWithRoles)} deactivated but still holding access` });
   if (temporary) items.push({ tone: 'warning', text: `${peopleCount(temporary)} still on a temporary password` });
   if (noAccess) items.push({ tone: 'warning', text: `${peopleCount(noAccess)} with no access to any module` });
   return items;
@@ -41,15 +42,17 @@ function listAttentionItems({ people, modules }: OverviewData): { tone: 'danger'
 export default function OverviewPage() {
   const { can } = useSession();
   const canReadActivity = can('audit.read');
+  const canReadProfiles = can('accessProfile.read');
 
   const overview = useLoad<OverviewData>(async () => {
-    const [people, modules, activity] = await Promise.all([
+    const [people, modules, profiles, activity] = await Promise.all([
       listAllUsers(),
       getAccessOptions(),
+      canReadProfiles ? listProfiles() : Promise.resolve<AccessProfile[]>([]),
       canReadActivity ? listActivity({ page: 1, pageSize: RECENT_ACTIVITY_SIZE }) : Promise.resolve({ entries: [], total: 0 }),
     ]);
-    return { people, modules, activity: activity.entries };
-  }, [canReadActivity]);
+    return { people, modules, profiles, activity: activity.entries };
+  }, [canReadActivity, canReadProfiles]);
 
   return (
     <>
@@ -71,7 +74,7 @@ export default function OverviewPage() {
                 {canReadActivity ? (
                   <Card title="Recent activity" aside={<Link className="link" href="/activity">View all</Link>}><ActivityTable entries={data.activity} /></Card>
                 ) : (
-                  <Card title="Recent activity"><p className="empty">Your role doesn&apos;t include the activity log.</p></Card>
+                  <Card title="Recent activity"><p className="empty">Your access doesn&apos;t include the activity log.</p></Card>
                 )}
                 <div className="stack">
                   <Card title="Needs attention">
@@ -83,7 +86,7 @@ export default function OverviewPage() {
                   </Card>
                   <Card title="Active people with access, by module">
                     {data.modules.map((module) => {
-                      const count = active.filter((person) => person.superAdmin || hasAccessIn(person, module.key, data.modules)).length;
+                      const count = active.filter((person) => person.superAdmin || hasAccessIn(person, module.key, data.profiles)).length;
                       return (
                         <div className="meter" key={module.key}>
                           <div className="meter-text"><span>{module.name}</span><b>{count}</b></div>

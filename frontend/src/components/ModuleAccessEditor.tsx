@@ -3,41 +3,34 @@
 import { useState } from 'react';
 import { describeError } from '@/lib/api/http';
 import type { AccessOption } from '@/lib/api/types';
-import { setUserPrivileges, setUserRole } from '@/lib/api/users';
-import { PermissionPicker } from './PermissionPicker';
+import { setUserPermissionSets } from '@/lib/api/users';
 import { Notice } from './ui';
 
-export interface ModuleAccessHolding {
-  role: string | null;
-  privileges: string[];
-  superAdminGrants: string[];
-}
-
-/** One person's role and special privileges in one module. The API enforces every rule, and this only hides what can't work. */
-export function ModuleAccessEditor({ option, userId, holding, canEdit, isViewerSuperAdmin, onChanged }: {
+/** The permission sets one person holds in one module. The API enforces every rule, and this only hides what can't work. */
+export function ModuleAccessEditor({ option, userId, heldSets, profileGrants, canEdit, onChanged }: {
   option: AccessOption;
   userId: string;
-  holding: ModuleAccessHolding;
+  heldSets: string[];
+  /** What the person's profile already gives here, shown so nobody adds a set for what they have. */
+  profileGrants: string[];
   canEdit: boolean;
-  isViewerSuperAdmin: boolean;
   onChanged: () => void;
 }) {
-  const [selectedRole, setSelectedRole] = useState(holding.role ?? '');
-  const [newPermissions, setNewPermissions] = useState<string[]>([]);
+  const [toGive, setToGive] = useState('');
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
 
-  // Only a super admin's request replaces what a super admin gave, so anyone else sends just the module's own privileges.
-  const replaceablePermissions = isViewerSuperAdmin ? [...holding.privileges, ...holding.superAdminGrants] : holding.privileges;
-  const offered = option.grantable.filter(({ permission }) => !replaceablePermissions.includes(permission));
-  const roleLabel = `${option.name} role`;
+  const nameOf = (setKey: string) => option.permissionSets.find((permissionSet) => permissionSet.key === setKey)?.name ?? setKey;
+  const offered = option.permissionSets.filter((permissionSet) => !heldSets.includes(permissionSet.key));
 
-  const run = async (change: () => Promise<unknown>) => {
+  const save = async (permissionSets: string[], withReason?: string) => {
     setIsBusy(true);
     setError('');
     try {
-      await change();
+      await setUserPermissionSets(userId, option.key, permissionSets, withReason);
+      setToGive('');
+      setReason('');
       onChanged();
     } catch (failure) {
       setError(describeError(failure));
@@ -46,60 +39,47 @@ export function ModuleAccessEditor({ option, userId, holding, canEdit, isViewerS
     }
   };
 
-  const giveSelectedPrivileges = () => {
-    if (newPermissions.length === 0) return;
+  const give = () => {
+    if (!toGive) return;
     if (!reason.trim()) {
-      setError('Say why this person needs these privileges. It goes in the activity log.');
+      setError('Say why this person needs the permission set. It goes in the activity log.');
       return;
     }
-    void run(() => setUserPrivileges(userId, option.key, [...replaceablePermissions, ...newPermissions], reason.trim()));
+    void save([...heldSets, toGive], reason.trim());
   };
-
-  const removePrivilege = (permission: string) =>
-    void run(() => setUserPrivileges(userId, option.key, replaceablePermissions.filter((held) => held !== permission)));
 
   return (
     <div className="access-module">
       <h3>{option.name}</h3>
-      <div className="role-assign">
-        <div className="field">
-          <label htmlFor={`role-${option.key}`}>{roleLabel}</label>
-          <select className="input" id={`role-${option.key}`} value={selectedRole} disabled={!canEdit || isBusy} onChange={(event) => setSelectedRole(event.target.value)}>
-            <option value="">No role</option>
-            {option.roles.map((role) => <option key={role.key} value={role.key}>{role.name}</option>)}
-          </select>
-        </div>
-        {canEdit ? (
-          <button type="button" className="btn" aria-label={`Save ${roleLabel}`} disabled={isBusy || selectedRole === (holding.role ?? '')} onClick={() => void run(() => setUserRole(userId, option.key, selectedRole || null))}>
-            Save
-          </button>
-        ) : null}
-      </div>
-
-      {replaceablePermissions.length === 0 && holding.superAdminGrants.length === 0 ? <p className="muted">No special privileges.</p> : null}
-      {[...holding.privileges, ...holding.superAdminGrants].map((permission) => (
-        <div className="privilege" key={permission}>
+      {profileGrants.length > 0 ? <p className="meta">From their profile: {profileGrants.join(', ')}</p> : null}
+      {heldSets.length === 0 ? <p className="muted">No permission sets.</p> : null}
+      {heldSets.map((setKey) => (
+        <div className="privilege" key={setKey}>
           <div>
-            <code>{permission}</code>
-            {holding.superAdminGrants.includes(permission) ? <div className="meta">Given by a super admin</div> : null}
+            <span className="strong">{nameOf(setKey)}</span>
+            <div className="meta">{option.permissionSets.find((permissionSet) => permissionSet.key === setKey)?.grants.join(', ') || 'Gives nothing yet'}</div>
           </div>
-          {canEdit && replaceablePermissions.includes(permission) ? (
-            <button type="button" className="link" aria-label={`Remove ${permission}`} disabled={isBusy} onClick={() => removePrivilege(permission)}>Remove</button>
+          {canEdit ? (
+            <button type="button" className="link" aria-label={`Take away ${nameOf(setKey)}`} disabled={isBusy} onClick={() => void save(heldSets.filter((held) => held !== setKey))}>Take away</button>
           ) : null}
         </div>
       ))}
 
       {canEdit && offered.length > 0 ? (
         <div className="privilege-form-compact">
-          <PermissionPicker id={`privilege-${option.key}`} label="Give special privileges" options={offered} selected={newPermissions} onChange={setNewPermissions} />
+          <div className="field">
+            <label htmlFor={`set-${option.key}`}>Give a permission set</label>
+            <select className="input" id={`set-${option.key}`} value={toGive} disabled={isBusy} onChange={(event) => setToGive(event.target.value)}>
+              <option value="">Choose a set</option>
+              {offered.map((permissionSet) => <option key={permissionSet.key} value={permissionSet.key}>{permissionSet.name}</option>)}
+            </select>
+          </div>
           <div className="field">
             <label htmlFor={`reason-${option.key}`}>Reason (kept in the activity log)</label>
             <input className="input" id={`reason-${option.key}`} autoComplete="off" value={reason} onChange={(event) => setReason(event.target.value)} />
           </div>
           <div>
-            <button type="button" className="btn btn-primary" disabled={isBusy || newPermissions.length === 0} onClick={giveSelectedPrivileges}>
-              {newPermissions.length > 1 ? `Give ${newPermissions.length} privileges` : 'Give privilege'}
-            </button>
+            <button type="button" className="btn btn-primary" disabled={isBusy || !toGive} onClick={give}>Give permission set</button>
           </div>
         </div>
       ) : null}

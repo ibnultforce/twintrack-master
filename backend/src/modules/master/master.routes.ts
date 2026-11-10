@@ -1,10 +1,13 @@
 import type { Config } from '../../config.js';
 import type { ApiRoute } from '../../lib/apiRoute.js';
+import { accessProfilesRoutes } from './accessProfiles/accessProfiles.routes.js';
 import { createAccessRoutes } from './access/access.routes.js';
 import { auditRoutes } from './audit/audit.routes.js';
+import { customObjectsRoutes } from './customObjects/customObjects.routes.js';
 import { createAuthRoutes } from './auth/auth.routes.js';
 import { healthRoutes } from './health/health.routes.js';
 import { createModuleRegistryRoutes } from './moduleRegistry/moduleRegistry.routes.js';
+import { orgRolesRoutes } from './orgRoles/orgRoles.routes.js';
 import { usersRoutes } from './users/users.routes.js';
 
 export { MASTER_MODULE_KEY } from './moduleRegistry/manifest.js';
@@ -16,7 +19,10 @@ export function createMasterRoutes(config: Config): ApiRoute[] {
     ...createAuthRoutes(config),
     ...createAccessRoutes(config),
     ...usersRoutes,
+    ...orgRolesRoutes,
+    ...accessProfilesRoutes,
     ...createModuleRegistryRoutes(config),
     ...auditRoutes,
+    ...customObjectsRoutes,
   ];
 }

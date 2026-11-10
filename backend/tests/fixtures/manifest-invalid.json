@@ -33,7 +33,7 @@
       "path": "/runs/:id"
     }
   ],
-  "roles": [
+  "permissionSets": [
     {
       "key": "admin",
       "name": "Admin",

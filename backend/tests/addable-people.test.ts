@@ -53,7 +53,7 @@ describe('GET /modules/:key/addable-people', () => {
 
   it('stops listing someone once they are added', async () => {
     const kamrul = await as('kamrul');
-    await kamrul.patch(`/users/${ID.KARIM}/roles`, { module: 'hr', role: 'staff' });
+    await kamrul.put(`/users/${ID.KARIM}/permission-sets`, { module: 'hr', permissionSets: ['staff'], reason: 'Testing' });
     expect(idsIn((await kamrul.get('/modules/hr/addable-people')).body)).not.toContain(ID.KARIM);
   });
 
@@ -74,7 +74,7 @@ describe('GET /modules/:key/addable-people', () => {
   });
 
   it('follows managesAccessOf for a Master role', async () => {
-    expect((await (await as('jasmin')).get('/modules/employee/addable-people')).status).toBe(200);
+    expect((await (await as('sabbir')).get('/modules/hr/addable-people')).status).toBe(200);
   });
 
   it('answers 404 for a module that is not loaded', async () => {

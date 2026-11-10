@@ -17,6 +17,8 @@ export interface Profile {
   contract: UserDoc['contract'];
   superAdmin: boolean;
   mustChangePassword: boolean;
+  /** The person's place in the organisation tree. */
+  orgRoleId?: string;
   manager: { id: string; name: string } | null;
 }
 
@@ -32,6 +34,7 @@ export async function getProfile(user: UserDoc): Promise<Profile> {
     contract: user.contract,
     superAdmin: user.superAdmin,
     mustChangePassword: user.mustChangePassword,
+    orgRoleId: user.orgRoleId,
     manager: manager ? { id: manager._id, name: manager.name } : null,
   };
 }

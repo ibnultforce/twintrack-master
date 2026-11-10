@@ -4,6 +4,8 @@ import { ApiError } from '../../../lib/errors.js';
 import type { PageRequest } from '../../../lib/query.js';
 import { actorFields, type Actor } from '../access/caller.js';
 import { recordAudit } from '../audit/audit.repository.js';
+import { assertProfileExists } from '../accessProfiles/accessProfiles.service.js';
+import { assertOrgRoleExists } from '../orgRoles/orgRoles.service.js';
 import { generateTemporaryPassword, hashPassword } from '../auth/passwords.js';
 import { revokeAllUserSessions } from '../auth/session.repository.js';
 import type { UserDoc } from '../models/user.js';
@@ -27,11 +29,12 @@ export type UserView = Pick<
   | 'contract'
   | 'status'
   | 'managerId'
+  | 'orgRoleId'
   | 'superAdmin'
   | 'mustChangePassword'
-  | 'assignments'
-  | 'privileges'
-> & { id: string; superAdminGrants: Record<string, string[]> };
+  | 'profileId'
+  | 'permissionSets'
+> & { id: string };
 
 /** The only time a temporary password is available. Only its hash is stored. */
 export interface TemporaryPasswordResult {
@@ -39,8 +42,8 @@ export interface TemporaryPasswordResult {
   temporaryPassword: string;
 }
 
-export type NewUserDetails = Pick<UserDoc, 'name' | 'email' | 'contract'> &
-  Partial<Pick<UserDoc, 'title' | 'department' | 'team' | 'managerId'>>;
+export type NewUserDetails = Pick<UserDoc, 'name' | 'email' | 'contract'> & { orgRoleId: string } &
+  Partial<Pick<UserDoc, 'title' | 'department' | 'team' | 'managerId' | 'profileId'>>;
 
 /** Lists each field explicitly, so the password hash can never reach a response. */
 export function toUserView(user: UserDoc): UserView {
@@ -54,11 +57,11 @@ export function toUserView(user: UserDoc): UserView {
     contract: user.contract,
     status: user.status,
     managerId: user.managerId,
+    orgRoleId: user.orgRoleId,
     superAdmin: user.superAdmin,
     mustChangePassword: user.mustChangePassword,
-    assignments: user.assignments,
-    privileges: user.privileges,
-    superAdminGrants: user.superAdminGrants ?? {},
+    profileId: user.profileId,
+    permissionSets: user.permissionSets ?? {},
   };
 }
 
@@ -127,6 +130,8 @@ export async function getUser(userId: string): Promise<UserView> {
 /** Adds a person with a one-time temporary password, which they must replace at first login. */
 export async function createUser(actor: Actor, details: NewUserDetails): Promise<TemporaryPasswordResult> {
   if (details.managerId) await assertValidManager(details.managerId);
+  await assertOrgRoleExists(details.orgRoleId);
+  if (details.profileId) await assertProfileExists(details.profileId);
 
   const temporaryPassword = generateTemporaryPassword();
   const passwordHash = await hashPassword(temporaryPassword);
@@ -154,6 +159,10 @@ export async function updateUserDetails(actor: Actor, userId: string, requested:
   const changedFields = Object.keys(changes) as (keyof UserDetailChanges)[];
   if (changedFields.length === 0) return toUserView(target);
   if (changes.managerId) await assertValidManager(changes.managerId, target._id);
+  // A place in the tree and a profile both widen or narrow someone's access, so only a super admin may change their own.
+  if ((changes.orgRoleId || changes.profileId !== undefined) && !actor.user.superAdmin) assertNotOwnAccount(actor, target);
+  if (changes.orgRoleId) await assertOrgRoleExists(changes.orgRoleId);
+  if (changes.profileId) await assertProfileExists(changes.profileId);
 
   const before = Object.fromEntries(changedFields.map((field) => [field, target[field] ?? null]));
   const updated = await withUniqueEmail(() =>

@@ -1,9 +1,10 @@
 import { apiRequest } from './http';
-import type { AuditEntry, ManageableModule, RegisteredModule, ResourceAction, RoleGrants, RoleTemplate } from './types';
+import type { AccessProfile, AuditEntry, Grants, ManageableModule, OrgRole, RegisteredModule, ResourceAction } from './types';
 
 const segment = encodeURIComponent;
 const resourcePath = (moduleKey: string, resourceKey: string) => `/modules/${segment(moduleKey)}/resources/${segment(resourceKey)}`;
-const rolePath = (moduleKey: string, roleKey: string) => `/roles/${segment(moduleKey)}/${segment(roleKey)}`;
+const permissionSetPath = (moduleKey: string, setKey: string) => `/permission-sets/${segment(moduleKey)}/${segment(setKey)}`;
+const profilePath = (profileId: string) => `/access-profiles/${segment(profileId)}`;
 
 export async function listModules(): Promise<RegisteredModule[]> {
   return (await apiRequest<{ modules: RegisteredModule[] }>('/modules')).modules;
@@ -28,31 +29,61 @@ export const saveResource = (moduleKey: string, resourceKey: string, details: Re
 export const removeResource = (moduleKey: string, resourceKey: string) =>
   apiRequest(resourcePath(moduleKey, resourceKey), { method: 'DELETE' });
 
-export const setGrantableActions = (moduleKey: string, resourceKey: string, actions: ResourceAction[]) =>
-  apiRequest(`${resourcePath(moduleKey, resourceKey)}/grantable`, { method: 'PUT', body: { actions } });
-
-export async function listRoles(): Promise<RoleTemplate[]> {
-  return (await apiRequest<{ roles: RoleTemplate[] }>('/roles')).roles;
+/** The modules whose permission sets this person can reach, with what they may put in a set. */
+export async function getManageablePermissionSets(): Promise<ManageableModule[]> {
+  return (await apiRequest<{ modules: ManageableModule[] }>('/permission-sets')).modules;
 }
 
-export async function getManageableRoles(): Promise<ManageableModule[]> {
-  return (await apiRequest<{ modules: ManageableModule[] }>('/roles/manageable')).modules;
-}
-
-export interface NewRole {
+export interface NewPermissionSet {
   key: string;
   name: string;
   description?: string;
-  grants: RoleGrants;
+  grants: Grants;
 }
 
-export const addRole = (moduleKey: string, role: NewRole) =>
-  apiRequest(`/roles/${segment(moduleKey)}`, { method: 'POST', body: role });
+export const addPermissionSet = (moduleKey: string, permissionSet: NewPermissionSet) =>
+  apiRequest(`/permission-sets/${segment(moduleKey)}`, { method: 'POST', body: permissionSet });
 
-export const updateRole = (moduleKey: string, roleKey: string, changes: Partial<Omit<NewRole, 'key'>>) =>
-  apiRequest(rolePath(moduleKey, roleKey), { method: 'PATCH', body: changes });
+export const updatePermissionSet = (moduleKey: string, setKey: string, changes: Partial<Omit<NewPermissionSet, 'key'>>) =>
+  apiRequest(permissionSetPath(moduleKey, setKey), { method: 'PATCH', body: changes });
 
-export const removeRole = (moduleKey: string, roleKey: string) => apiRequest(rolePath(moduleKey, roleKey), { method: 'DELETE' });
+export const removePermissionSet = (moduleKey: string, setKey: string) => apiRequest(permissionSetPath(moduleKey, setKey), { method: 'DELETE' });
+
+export async function listProfiles(): Promise<AccessProfile[]> {
+  return (await apiRequest<{ profiles: AccessProfile[] }>('/access-profiles')).profiles;
+}
+
+export interface ProfileDetails {
+  name: string;
+  description?: string | null;
+  grants: Record<string, Grants | '*'>;
+}
+
+export const createProfile = (details: ProfileDetails) => apiRequest<AccessProfile>('/access-profiles', { method: 'POST', body: details });
+
+export const updateProfile = (profileId: string, changes: Partial<ProfileDetails>) =>
+  apiRequest<AccessProfile>(profilePath(profileId), { method: 'PATCH', body: changes });
+
+export const removeProfile = (profileId: string) => apiRequest(profilePath(profileId), { method: 'DELETE' });
+
+export async function listOrgRoles(): Promise<OrgRole[]> {
+  return (await apiRequest<{ orgRoles: OrgRole[] }>('/org-roles')).orgRoles;
+}
+
+export interface OrgRoleDetails {
+  name: string;
+  description?: string | null;
+  /** Leave it out only for the root, while the tree is empty. */
+  parentId?: string;
+}
+
+export const createOrgRole = (details: OrgRoleDetails) => apiRequest<OrgRole>('/org-roles', { method: 'POST', body: details });
+
+/** A new parentId moves the role and everything below it. */
+export const updateOrgRole = (orgRoleId: string, changes: Partial<OrgRoleDetails>) =>
+  apiRequest<OrgRole>(`/org-roles/${segment(orgRoleId)}`, { method: 'PATCH', body: changes });
+
+export const removeOrgRole = (orgRoleId: string) => apiRequest(`/org-roles/${segment(orgRoleId)}`, { method: 'DELETE' });
 
 export const listActivity = (query: { page: number; pageSize: number; actionPrefix?: string }) =>
   apiRequest<{ total: number; entries: AuditEntry[] }>('/audit', { query: { ...query } });

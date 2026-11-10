@@ -12,9 +12,9 @@ import { useSession } from '@/session/SessionProvider';
 const MASTER_MODULE_KEY = 'master';
 
 export default function YourModulesPage() {
-  const { can, canChangeAccess, canEditRoles } = useSession();
+  const { can, canChangeAccess, canEditPermissionSets } = useSession();
   const modules = useLoad(getMyModules, []);
-  const consoleHref = firstConsoleHref({ can, canChangeAccess, canEditRoles });
+  const consoleHref = firstConsoleHref({ can, canChangeAccess, canEditPermissionSets });
 
   const openAction = (module: MyModule) => {
     if (module.key === MASTER_MODULE_KEY) return consoleHref ? <Link className="btn btn-primary" href={consoleHref}>Open</Link> : null;
@@ -27,14 +27,14 @@ export default function YourModulesPage() {
       <PageHead title="Your modules" subtitle={longDate()} />
       <Loaded state={modules}>
         {(list) => (list.length === 0
-          ? <section className="card"><p className="empty">You don&apos;t have access to any modules yet. Ask HR to give you a role.</p></section>
+          ? <section className="card"><p className="empty">You don&apos;t have access to any modules yet. Ask HR to give you access.</p></section>
           : (
             <div className="grid-cards">
               {list.map((module) => (
                 <article className="card module-card" key={module.key}>
                   <div className="card-head">
                     <h2>{module.name}</h2>
-                    <Pill tone={module.roleName ? 'accent' : 'neutral'}>{module.roleName ?? 'Special privileges'}</Pill>
+                    <Pill tone={module.profileName ? 'accent' : 'neutral'}>{module.profileName ?? 'Permission sets'}</Pill>
                   </div>
                   <p>{module.description}</p>
                   <div className="bottom">{openAction(module)}</div>

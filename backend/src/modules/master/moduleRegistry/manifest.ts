@@ -3,7 +3,7 @@ import { asArray, asRecord, fieldErrors, type FieldError, type Validated } from 
 
 // People's access is stored in plain objects keyed by module, where "constructor" would find a JavaScript built-in.
 export const MODULE_KEY = /^(?!constructor$)[a-z][a-z0-9-]*$/;
-const ROLE_KEY = /^[a-z][a-z0-9-]*$/;
+const PERMISSION_SET_KEY = /^[a-z][a-z0-9-]*$/;
 // Field resources are named after their collection, such as payslip.net.
 const RESOURCE_KEY = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9]+)*$/;
 const SEMVER = /^\d+\.\d+\.\d+$/;
@@ -13,7 +13,13 @@ export const MASTER_MODULE_KEY = 'master';
 export const SCOPES = ['all', 'team', 'own'] as const;
 export type Scope = (typeof SCOPES)[number];
 
-const action = z.enum(['read', 'create', 'update', 'delete', 'approve']);
+const action = z.enum(['read', 'create', 'update', 'delete', 'approve', 'share']);
+
+export const SHARING_MODELS = ['private', 'publicRead', 'publicReadWrite'] as const;
+export const FIELD_ACCESS = ['read', 'edit'] as const;
+export type FieldAccessLevel = (typeof FIELD_ACCESS)[number];
+const FIELD_NAME = /^[a-zA-Z][a-zA-Z0-9]*$/;
+export type SharingModel = (typeof SHARING_MODELS)[number];
 const method = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 
 const resourceSchema = z.looseObject({
@@ -21,7 +27,15 @@ const resourceSchema = z.looseObject({
   label: z.string().min(1),
   actions: z.array(action).min(1),
   scoped: z.boolean().optional(),
-  grantable: z.array(action).optional(),
+  /** Fields whose changes go in each record's history, such as amount. */
+  trackedFields: z.array(z.string().regex(FIELD_NAME, 'must be a field name')).optional(),
+  /** Fields hidden from anyone not given read or edit access to them through fieldAccess, such as amount. */
+  protectedFields: z.array(z.string().regex(FIELD_NAME, 'must be a field name')).optional(),
+  /** Who sees a record nobody has shared: only those whose scope reaches it, everyone who can read, or everyone who can edit. */
+  sharingModel: z.enum(SHARING_MODELS).optional(),
+  /** Set on objects an admin defined in the app. Their records are in custom_records, and their fields are below. */
+  custom: z.boolean().optional(),
+  fields: z.array(z.looseObject({ key: z.string(), label: z.string(), type: z.string() })).optional(),
   /** In Master: this resource's update permission lets someone change access in the named module. */
   managesAccessOf: z.string().optional(),
 });
@@ -35,15 +49,17 @@ const routeSchema = z.object({
   planned: z.boolean().optional(),
 });
 
-const grantSchema = z.object({
+export const grantSchema = z.object({
   actions: z.array(action).min(1),
   scope: z.enum(SCOPES).optional(),
+  /** Access to the resource's protected fields. A protected field not listed here stays hidden. */
+  fieldAccess: z.record(z.string(), z.enum(FIELD_ACCESS)).optional(),
 });
 
 const grantsRecordSchema = z.record(z.string(), grantSchema);
 
 // A plain union would report only "Invalid input" here, without saying which grant is wrong.
-const grantsSchema = z
+export const grantsSchema = z
   .unknown()
   .superRefine((value, context) => {
     if (value === '*') return;
@@ -55,8 +71,9 @@ const grantsSchema = z
   })
   .transform((value) => value as '*' | z.infer<typeof grantsRecordSchema>);
 
-const roleSchema = z.object({
-  key: z.string().regex(ROLE_KEY, 'must be lowercase letters, numbers and hyphens'),
+/** A named bundle of permissions in one module, which people are given on top of their profile. */
+const permissionSetSchema = z.object({
+  key: z.string().regex(PERMISSION_SET_KEY, 'must be lowercase letters, numbers and hyphens'),
   name: z.string().min(1),
   description: z.string().optional(),
   grants: grantsSchema,
@@ -75,13 +92,14 @@ const manifestSchema = z.looseObject({
   }),
   resources: z.array(resourceSchema),
   routes: z.array(routeSchema).default([]),
-  roles: z.array(roleSchema),
+  permissionSets: z.array(permissionSetSchema).default([]),
 });
 
 export type Manifest = z.infer<typeof manifestSchema>;
 export type ManifestResource = z.infer<typeof resourceSchema>;
 export type ManifestRoute = z.infer<typeof routeSchema>;
-export type ManifestRole = z.infer<typeof roleSchema>;
+export type ManifestPermissionSet = z.infer<typeof permissionSetSchema>;
+export type Grants = ManifestPermissionSet['grants'];
 
 type ActionsByResource = Map<string, unknown[]>;
 
@@ -104,20 +122,6 @@ function readActionsByResource(resources: unknown[]): ActionsByResource {
       return [String(resource.key), asArray(resource.actions)];
     }),
   );
-}
-
-function checkGrantableActions(resources: unknown[]): FieldError[] {
-  const errors: FieldError[] = [];
-  resources.forEach((item, index) => {
-    const resource = asRecord(item);
-    const actions = asArray(resource.actions);
-    for (const grantableAction of asArray(resource.grantable)) {
-      if (!actions.includes(grantableAction)) {
-        errors.push({ path: `resources.${index}.grantable`, message: `"${String(grantableAction)}" is not an action of this resource` });
-      }
-    }
-  });
-  return errors;
 }
 
 function checkPermissionExists(permission: unknown, path: string, actionsByResource: ActionsByResource): FieldError[] {
@@ -157,26 +161,30 @@ function readScopedResourceKeys(resources: unknown[]): Set<unknown> {
   return new Set(resources.map(asRecord).filter((resource) => resource.scoped === true).map((resource) => resource.key));
 }
 
-function checkRoleGrants(roles: unknown[], actionsByResource: ActionsByResource, scopedResourceKeys: Set<unknown>): FieldError[] {
+/** Checks that grants name only the resources, actions and scopes a module offers. Shared with profiles. */
+export function checkGrants(rawGrants: unknown, resources: unknown[], pathPrefix: string): FieldError[] {
+  const actionsByResource = readActionsByResource(resources);
+  const scopedResourceKeys = readScopedResourceKeys(resources);
   const errors: FieldError[] = [];
-  roles.forEach((item, index) => {
-    const grants = asRecord(asRecord(item).grants);
-    for (const [resourceKey, grant] of Object.entries(grants)) {
-      const path = `roles.${index}.grants.${resourceKey}`;
-      const actions = actionsByResource.get(resourceKey);
-      if (!actions) {
-        errors.push({ path, message: `"${resourceKey}" is not a resource of this module` });
-        continue;
-      }
-      for (const grantedAction of asArray(asRecord(grant).actions)) {
-        if (!actions.includes(grantedAction)) errors.push({ path, message: `"${String(grantedAction)}" is not an action of "${resourceKey}"` });
-      }
-      const { scope } = asRecord(grant);
-      if (scope !== undefined && scope !== 'all' && !scopedResourceKeys.has(resourceKey)) {
-        errors.push({ path, message: `"${resourceKey}" isn't scoped, so it can't have the scope "${String(scope)}"` });
-      }
+  for (const [resourceKey, grant] of Object.entries(asRecord(rawGrants))) {
+    const path = `${pathPrefix}.${resourceKey}`;
+    const actions = actionsByResource.get(resourceKey);
+    if (!actions) {
+      errors.push({ path, message: `"${resourceKey}" is not a resource of this module` });
+      continue;
     }
-  });
+    for (const grantedAction of asArray(asRecord(grant).actions)) {
+      if (!actions.includes(grantedAction)) errors.push({ path, message: `"${String(grantedAction)}" is not an action of "${resourceKey}"` });
+    }
+    const { scope } = asRecord(grant);
+    if (scope !== undefined && scope !== 'all' && !scopedResourceKeys.has(resourceKey)) {
+      errors.push({ path, message: `"${resourceKey}" isn't scoped, so it can't have the scope "${String(scope)}"` });
+    }
+    const protectedFields = asArray(asRecord(resources.map(asRecord).find((resource) => resource.key === resourceKey)).protectedFields);
+    for (const field of Object.keys(asRecord(asRecord(grant).fieldAccess))) {
+      if (!protectedFields.includes(field)) errors.push({ path: `${path}.fieldAccess.${field}`, message: `"${field}" is not a protected field of "${resourceKey}"` });
+    }
+  }
   return errors;
 }
 
@@ -185,15 +193,17 @@ function crossChecks(raw: unknown): FieldError[] {
   const manifest = asRecord(raw);
   const resources = asArray(manifest.resources);
   const routes = asArray(manifest.routes);
-  const roles = asArray(manifest.roles);
-  const actionsByResource = readActionsByResource(resources);
+  const permissionSets = asArray(manifest.permissionSets);
 
   return [
     ...findDuplicateKeys(resources, 'resources', 'Resource'),
-    ...findDuplicateKeys(roles, 'roles', 'Role'),
-    ...checkGrantableActions(resources),
-    ...checkRoutes(routes, actionsByResource),
-    ...checkRoleGrants(roles, actionsByResource, readScopedResourceKeys(resources)),
+    ...findDuplicateKeys(permissionSets, 'permissionSets', 'Permission set'),
+    ...checkRoutes(routes, readActionsByResource(resources)),
+    ...permissionSets.flatMap((item, index) => checkGrants(asRecord(item).grants, resources, `permissionSets.${index}.grants`)),
+    ...resources.flatMap((item, index) =>
+      asRecord(item).grantable !== undefined ? [{ path: `resources.${index}.grantable`, message: 'grantable was removed: people get extra access through permission sets' }] : [],
+    ),
+    ...(manifest.roles !== undefined ? [{ path: 'roles', message: 'roles were replaced by permissionSets, and people get access through profiles' }] : []),
   ];
 }
 

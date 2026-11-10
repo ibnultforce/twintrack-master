@@ -6,13 +6,13 @@ import { getCaller } from './caller.js';
 
 export function createAccessRoutes(config: Config): ApiRoute[] {
   const getMyModules: RequestHandler = async (req, res) => {
-    const modules = await listModulesForUser(getCaller(req).user, config.moduleFrontendUrls);
+    const modules = await listModulesForUser(getCaller(req), config.moduleFrontendUrls);
     res.json({ modules });
   };
 
   const getMyPermissions: RequestHandler = async (req, res) => {
     const moduleKey = String(req.params.module);
-    const access = await getModuleAccessForUser(getCaller(req).user, moduleKey);
+    const access = await getModuleAccessForUser(getCaller(req), moduleKey);
     res.json({ module: moduleKey, ...access });
   };
 

@@ -7,14 +7,15 @@ import { PersonPicker } from '@/components/PersonPicker';
 import { Card, Chips, Loaded, Notice, PageHead, StatusPill } from '@/components/ui';
 import { describeError } from '@/lib/api/http';
 import type { AccessOption, AddablePerson, ModulePerson } from '@/lib/api/types';
-import { getAccessOptions, listModulePeople, setUserRole } from '@/lib/api/users';
-import { humanize, peopleCount } from '@/lib/format';
+import { getAccessOptions, listModulePeople, setUserPermissionSets } from '@/lib/api/users';
+import { peopleCount } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useProfile } from '@/session/SessionProvider';
 
 function AddPersonForm({ option, onAdded }: { option: AccessOption; onAdded: () => void }) {
   const [person, setPerson] = useState<AddablePerson | null>(null);
-  const [role, setRole] = useState(option.roles[0]?.key ?? '');
+  const [setKey, setSetKey] = useState(option.permissionSets[0]?.key ?? '');
+  const [reason, setReason] = useState('');
   const [error, setError] = useState('');
 
   const submit = async (event: FormEvent) => {
@@ -22,24 +23,30 @@ function AddPersonForm({ option, onAdded }: { option: AccessOption; onAdded: () 
     if (!person) return;
     setError('');
     try {
-      await setUserRole(person.id, option.key, role);
+      await setUserPermissionSets(person.id, option.key, [setKey], reason.trim());
       onAdded();
     } catch (failure) {
       setError(describeError(failure));
     }
   };
 
+  if (option.permissionSets.length === 0) return <p className="empty">{option.name} has no permission sets yet, so there is nothing to give.</p>;
+
   return (
     <form className="form" onSubmit={(event) => void submit(event)}>
       <div className="inline-form">
         <PersonPicker id="add-person" label="Person" moduleKey={option.key} selected={person} onChange={setPerson} />
         <div className="field">
-          <label htmlFor="add-role">Role</label>
-          <select className="input" id="add-role" value={role} onChange={(event) => setRole(event.target.value)}>
-            {option.roles.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.name}</option>)}
+          <label htmlFor="add-set">Permission set</label>
+          <select className="input" id="add-set" value={setKey} onChange={(event) => setSetKey(event.target.value)}>
+            {option.permissionSets.map((candidate) => <option key={candidate.key} value={candidate.key}>{candidate.name}</option>)}
           </select>
         </div>
-        <button type="submit" className="btn btn-primary" disabled={!person || !role}>Add</button>
+        <div className="field">
+          <label htmlFor="add-reason">Reason</label>
+          <input className="input" id="add-reason" autoComplete="off" required value={reason} onChange={(event) => setReason(event.target.value)} />
+        </div>
+        <button type="submit" className="btn btn-primary" disabled={!person || !setKey || !reason.trim()}>Add</button>
       </div>
       {error ? <Notice tone="danger">{error}</Notice> : null}
     </form>
@@ -56,7 +63,8 @@ export default function AccessPage() {
   const option = options.data?.find((candidate) => candidate.key === chosenKey) ?? options.data?.[0];
   const people = useLoad(async () => (option ? listModulePeople(option.key) : []), [option?.key], option?.key);
 
-  const roleName = (person: ModulePerson) => option?.roles.find((role) => role.key === person.role)?.name ?? humanize(person.role);
+  const setNames = (person: ModulePerson) =>
+    person.permissionSets.map((setKey) => option?.permissionSets.find((permissionSet) => permissionSet.key === setKey)?.name ?? setKey).join(', ');
   const editing = people.data?.find((person) => person.id === editingId);
 
   return (
@@ -72,13 +80,13 @@ export default function AccessPage() {
                   {moduleList.length === 0 ? <p className="empty">Nobody has access to this module yet.</p> : (
                     <div className="table-box">
                       <table>
-                        <thead><tr><th scope="col">Person</th><th scope="col">Role</th><th scope="col">Special privileges</th><th scope="col">Status</th><th scope="col"><span className="visually-hidden">Change</span></th></tr></thead>
+                        <thead><tr><th scope="col">Person</th><th scope="col">Profile</th><th scope="col">Permission sets</th><th scope="col">Status</th><th scope="col"><span className="visually-hidden">Change</span></th></tr></thead>
                         <tbody>
                           {moduleList.map((person) => (
                             <tr key={person.id}>
                               <td><div className="strong">{person.name}</div><div className="meta">{person.email}</div></td>
-                              <td>{person.role ? roleName(person) : <span className="muted">No role</span>}</td>
-                              <td>{[...person.privileges, ...person.superAdminGrants].join(', ') || <span className="muted">None</span>}</td>
+                              <td>{person.profile ? person.profile.name : <span className="muted">None</span>}</td>
+                              <td>{setNames(person) || <span className="muted">None</span>}</td>
                               <td><StatusPill status={person.status} /></td>
                               <td>{person.id !== viewer.id || viewer.superAdmin ? <button type="button" className="link" aria-label={`Change access for ${person.name}`} onClick={() => setEditingId(person.id)}>Change</button> : null}</td>
                             </tr>
@@ -100,12 +108,12 @@ export default function AccessPage() {
       {editing && option ? (
         <Dialog title={`${editing.name} in ${option.name}`} onClose={() => setEditingId(null)}>
           <ModuleAccessEditor
-            key={`${editing.role ?? ''}:${editing.privileges.join()}:${editing.superAdminGrants.join()}`}
+            key={editing.permissionSets.join()}
             option={option}
             userId={editing.id}
-            holding={editing}
+            heldSets={editing.permissionSets}
+            profileGrants={Object.entries(editing.profilePermissions).map(([permission, scope]) => (scope === 'all' ? permission : `${permission} (${scope})`))}
             canEdit
-            isViewerSuperAdmin={viewer.superAdmin}
             onChanged={people.reload}
           />
           <div className="dialog-actions"><button type="button" className="btn" onClick={() => setEditingId(null)}>Done</button></div>

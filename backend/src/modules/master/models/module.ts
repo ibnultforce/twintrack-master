@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
-import type { ManifestResource, ManifestRole, ManifestRoute } from '../moduleRegistry/manifest.js';
+import type { ManifestPermissionSet, ManifestResource, ManifestRoute } from '../moduleRegistry/manifest.js';
 
-/** An imported module manifest. Role templates here are the fixed permission layer. */
+/** An imported module manifest, with the permission sets built for it in the app. */
 export interface ModuleDoc {
   key: string;
   name: string;
@@ -12,8 +12,9 @@ export interface ModuleDoc {
   core: boolean;
   resources: ManifestResource[];
   routes: ManifestRoute[];
-  roles: ManifestRole[];
-  /** Set when someone edits roles, resources or grantable permissions here, so an import or removal can't quietly undo that. */
+  /** Named bundles of this module's permissions, which people are given on top of their profile. */
+  permissionSets: ManifestPermissionSet[];
+  /** Set when someone edits permission sets or resources here, so an import or removal can't quietly undo that. */
   permissionsEditedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -30,7 +31,7 @@ const moduleSchema = new Schema<ModuleDoc>(
     core: { type: Boolean, default: false },
     resources: { type: Schema.Types.Mixed, default: [] },
     routes: { type: Schema.Types.Mixed, default: [] },
-    roles: { type: Schema.Types.Mixed, default: [] },
+    permissionSets: { type: Schema.Types.Mixed, default: [] },
     permissionsEditedAt: Date,
   },
   { timestamps: true },

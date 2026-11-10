@@ -87,6 +87,8 @@ function renderRoute(route) {
       const tags = [
         scenario.changesData ? '<span class="tag warn">Changes data</span>' : '',
         request.as ? `<span class="tag">As ${escapeHtml(personName(request.as))}</span>` : '',
+        scenario.setup?.length ? `<span class="tag">${scenario.setup.length} setup ${scenario.setup.length === 1 ? 'step' : 'steps'} first</span>` : '',
+        request.origin ? '<span class="tag">Automated replay only</span>' : '',
       ].join('');
       const result = resultHtml(results.get(`${route.id}:${index}`));
       return `<tr><td>${escapeHtml(scenario.title)}<span class="request">${escapeHtml(`${request.method} ${request.path}`)}</span>${tags}</td>
@@ -135,10 +137,13 @@ async function sendFromForm(route) {
     });
     results.set(key, { status, shown: body ? JSON.stringify(body, null, 2) : text });
   } catch (error) {
-    results.set(key, { error: describeFailure(error) });
+    results.set(key, { error: error instanceof SetupFailed ? `A setup step failed: ${error.message} Someone may have changed the test data.` : describeFailure(error) });
   }
   render();
 }
+
+/** A request a scenario needs first, such as creating the record it reads, didn't work. */
+class SetupFailed extends Error {}
 
 async function runScenario(button) {
   const route = currentRoute();
@@ -146,19 +151,35 @@ async function runScenario(button) {
   const scenario = route.scenarios[index];
   const key = `${route.id}:${index}`;
   const { request } = scenario;
+  const setup = scenario.setup ?? [];
 
-  if (!signedInEmail() && (request.as || request.cookie || request.body?.includes('YOUR_PASSWORD'))) {
+  // Browsers set the Origin header themselves, so only the automated replay can send another one.
+  if (request.origin) {
+    results.set(key, { error: `Browsers won't send Origin: ${request.origin}, so only the automated replay runs this one.` });
+    render();
+    return;
+  }
+  if (!signedInEmail() && [request, ...setup].some((step) => step.as || step.cookie || step.body?.includes('YOUR_PASSWORD'))) {
     results.set(key, { error: 'Sign in first, because this scenario uses your password.' });
     render();
     return;
   }
-  if (scenario.changesData && !confirm(`This really changes the shared test data:\n\n${scenario.title}\n\nRun it?`)) return;
+  if ((scenario.changesData || setup.length > 0) && !confirm(`This really changes the shared test data:\n\n${scenario.title}\n\nRun it?`)) return;
 
   button.disabled = true;
   button.textContent = 'Running';
   try {
+    const saved = {};
+    const fillIn = (text) => text?.replace(/\{\{(\w+)\}\}/g, (match, name) => saved[name] ?? match);
+    const filled = (step) => ({ ...step, path: fillIn(step.path), body: fillIn(step.body) });
+    for (const step of setup) {
+      if (step.cookie) await signIn(COOKIE_HOLDER_EMAIL);
+      const answer = await send(filled(step), 200);
+      if (answer.status >= 300) throw new SetupFailed(`${step.method} ${step.path} answered ${answer.status}${answer.body?.error ? ` ${answer.body.error.code}` : ''}.`);
+      for (const [name, field] of Object.entries(step.save ?? {})) saved[name] = String(answer.body[field]);
+    }
     if (request.cookie) await signIn(COOKIE_HOLDER_EMAIL);
-    const { status, body, text } = await send(request, scenario.expected);
+    const { status, body, text } = await send(filled(request), scenario.expected);
     results.set(key, {
       status,
       isExpected: status === scenario.expected && (!scenario.code || body?.error?.code === scenario.code),
@@ -191,7 +212,7 @@ view.addEventListener('input', (event) => {
   if (field) tryFormFor(currentRoute())[field] = event.target.value;
 });
 view.addEventListener('change', (event) => {
-  if (event.target.dataset.change || event.target.dataset.roleEdit) handleAccountsChange(view, event.target);
+  if (event.target.dataset.change || event.target.dataset.setEdit) handleAccountsChange(view, event.target);
 });
 search.addEventListener('input', renderList);
 window.addEventListener('hashchange', () => {

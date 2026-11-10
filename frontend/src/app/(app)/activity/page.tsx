@@ -11,7 +11,9 @@ const FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'auth.', label: 'Sign-in' },
   { value: 'user.', label: 'People' },
-  { value: 'role.', label: 'Roles' },
+  { value: 'access_profile.', label: 'Profiles' },
+  { value: 'permission_set.', label: 'Permission sets' },
+  { value: 'org_role.', label: 'Org roles' },
   { value: 'module.', label: 'Modules' },
   { value: 'salary.', label: 'Salaries' },
 ];

@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { TemporaryPasswordDialog } from '@/components/Dialog';
 import { PersonFormDialog } from '@/components/PersonFormDialog';
 import { Avatar, Chips, ContractPill, Loaded, PageHead, Pagination, Pill, StatusPill } from '@/components/ui';
-import type { AccessOption, TemporaryPasswordResult, User, UserStatus } from '@/lib/api/types';
+import { listProfiles } from '@/lib/api/modules';
+import type { AccessOption, AccessProfile, TemporaryPasswordResult, User, UserStatus } from '@/lib/api/types';
 import { createUser, getAccessOptions, listUsers } from '@/lib/api/users';
 import { humanize, peopleCount } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
@@ -16,24 +17,24 @@ const SEARCH_DELAY_MS = 250;
 
 type StatusFilter = 'all' | UserStatus;
 
-function AccessPills({ person, modules }: { person: User; modules: AccessOption[] }) {
+function AccessPills({ person, modules, profiles }: { person: User; modules: AccessOption[]; profiles: AccessProfile[] }) {
   if (person.superAdmin) return <Pill tone="accent">Super admin</Pill>;
-  const roles = modules.flatMap((module) => {
-    const role = module.roles.find((candidate) => candidate.key === person.assignments[module.key]);
-    return role ? [`${module.name}: ${role.name}`] : [];
-  });
-  const extras = [...Object.values(person.privileges), ...Object.values(person.superAdminGrants)].reduce((total, list) => total + list.length, 0);
-  if (roles.length === 0 && extras === 0) return <span className="muted">No access</span>;
+  const profile = profiles.find((candidate) => candidate.id === person.profileId);
+  const sets = modules.flatMap((module) =>
+    (person.permissionSets[module.key] ?? []).map((setKey) => `${module.name}: ${module.permissionSets.find((permissionSet) => permissionSet.key === setKey)?.name ?? setKey}`),
+  );
+  if (!person.profileId && sets.length === 0) return <span className="muted">No access</span>;
   return (
     <div className="pills">
-      {roles.map((role) => <Pill tone="neutral" key={role}>{role}</Pill>)}
-      {extras > 0 ? <Pill tone="accent">+{extras} special</Pill> : null}
+      {person.profileId ? <Pill tone="accent">{profile?.name ?? 'Profile'}</Pill> : null}
+      {sets.map((label) => <Pill tone="neutral" key={label}>{label}</Pill>)}
     </div>
   );
 }
 
 export default function PeoplePage() {
   const { can } = useSession();
+  const canReadProfiles = can('accessProfile.read');
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
@@ -50,12 +51,13 @@ export default function PeoplePage() {
   }, [searchText]);
 
   const people = useLoad(async () => {
-    const [list, modules] = await Promise.all([
+    const [list, modules, profiles] = await Promise.all([
       listUsers({ page, pageSize: PAGE_SIZE, search, status: status === 'all' ? undefined : status }),
       getAccessOptions(),
+      canReadProfiles ? listProfiles() : Promise.resolve<AccessProfile[]>([]),
     ]);
-    return { ...list, modules };
-  }, [page, search, status]);
+    return { ...list, modules, profiles };
+  }, [page, search, status, canReadProfiles]);
 
   const changeStatus = (next: StatusFilter) => {
     setStatus(next);
@@ -78,7 +80,7 @@ export default function PeoplePage() {
         <Chips label="Filter by status" value={status} onChange={changeStatus} options={[{ value: 'all', label: 'All' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Deactivated' }]} />
       </div>
       <Loaded state={people}>
-        {({ users, total, modules }) => (
+        {({ users, total, modules, profiles }) => (
           <section className="card">
             {users.length === 0 ? <p className="empty">Nobody matches this search.</p> : (
               <>
@@ -94,7 +96,7 @@ export default function PeoplePage() {
                           <td>{person.title ?? '·'}</td>
                           <td>{humanize(person.department)}</td>
                           <td><ContractPill contract={person.contract} /></td>
-                          <td><AccessPills person={person} modules={modules} /></td>
+                          <td><AccessPills person={person} modules={modules} profiles={profiles} /></td>
                           <td><StatusPill status={person.status} /></td>
                           <td><Link className="link" href={`/people/${encodeURIComponent(person.id)}`} aria-label={`Details for ${person.name}`}>Details</Link></td>
                         </tr>

@@ -15,13 +15,13 @@ export interface UserDoc {
   contract: (typeof CONTRACTS)[number];
   status: (typeof USER_STATUSES)[number];
   managerId?: string;
+  /** The person's place in the organisation tree, which decides whose records they see. */
+  orgRoleId?: string;
   superAdmin: boolean;
-  /** Module key to role key, for example { hr: 'manager' }. */
-  assignments: Record<string, string>;
-  /** Module key to extra permissions, for example { hr: ['salary.read'] }. */
-  privileges: Record<string, string[]>;
-  /** Module key to permissions only a super admin can give, because the module doesn't mark them grantable. */
-  superAdminGrants?: Record<string, string[]>;
+  /** The person's one access profile, which sets their baseline permissions across every module. */
+  profileId?: string;
+  /** Module key to the keys of permission sets given on top of the profile, for example { hr: ['salary-approver'] }. */
+  permissionSets: Record<string, string[]>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,10 +39,10 @@ const userSchema = new Schema<UserDoc>(
     contract: { type: String, enum: CONTRACTS, default: 'permanent' },
     status: { type: String, enum: USER_STATUSES, default: 'active' },
     managerId: { type: String, index: true },
+    orgRoleId: { type: String, index: true },
     superAdmin: { type: Boolean, default: false },
-    assignments: { type: Schema.Types.Mixed, default: {} },
-    privileges: { type: Schema.Types.Mixed, default: {} },
-    superAdminGrants: { type: Schema.Types.Mixed, default: {} },
+    profileId: { type: String, index: true },
+    permissionSets: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true, minimize: false },
 );

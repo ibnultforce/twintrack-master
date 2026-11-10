@@ -40,11 +40,12 @@ export const setUserStatus = (userId: string, status: UserStatus) =>
 export const resetUserPassword = (userId: string) =>
   apiRequest<TemporaryPasswordResult>(`${userPath(userId)}/reset-password`, { method: 'POST' });
 
-export const setUserRole = (userId: string, moduleKey: string, role: string | null) =>
-  apiRequest<User>(`${userPath(userId)}/roles`, { method: 'PATCH', body: { module: moduleKey, role } });
+/** Replaces the permission sets a person holds in one module. Giving a new one needs a reason. */
+export const setUserPermissionSets = (userId: string, moduleKey: string, permissionSets: string[], reason?: string) =>
+  apiRequest<User>(`${userPath(userId)}/permission-sets`, { method: 'PUT', body: { module: moduleKey, permissionSets, reason } });
 
-export const setUserPrivileges = (userId: string, moduleKey: string, permissions: string[], reason?: string) =>
-  apiRequest<User>(`${userPath(userId)}/privileges`, { method: 'PUT', body: { module: moduleKey, permissions, reason } });
+export const setUserProfile = (userId: string, profileId: string | null) =>
+  apiRequest<User>(userPath(userId), { method: 'PATCH', body: { profileId } });
 
 export async function getAccessOptions(): Promise<AccessOption[]> {
   return (await apiRequest<{ modules: AccessOption[] }>('/users/access-options')).modules;

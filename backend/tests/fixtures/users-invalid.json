@@ -47,9 +47,9 @@
     },
     {
       "id": "b9",
-      "name": "Bad Assignments",
+      "name": "Bad Permission Sets",
       "email": "b9@twintrack.test",
-      "assignments": [
+      "permissionSets": [
         "hr",
         "admin"
       ]

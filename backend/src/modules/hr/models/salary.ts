@@ -1,9 +1,10 @@
 import { Schema, model } from 'mongoose';
+import { addRecordFields, type RecordFields } from '../../../lib/records/recordFields.js';
 
 export const SALARY_STATUSES = ['pending', 'approved'] as const;
 
 /** One person's salary from a given date. Changing the amount sends it back to pending, so it's approved again. */
-export interface SalaryDoc {
+export interface SalaryDoc extends RecordFields {
   _id: string;
   employeeId: string;
   amount: number;
@@ -12,8 +13,6 @@ export interface SalaryDoc {
   status: (typeof SALARY_STATUSES)[number];
   approvedBy?: string;
   approvedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 const salarySchema = new Schema<SalaryDoc>(
@@ -29,5 +28,7 @@ const salarySchema = new Schema<SalaryDoc>(
   },
   { timestamps: true },
 );
+
+addRecordFields(salarySchema);
 
 export const Salary = model<SalaryDoc>('Salary', salarySchema);

@@ -6,7 +6,7 @@ Every module's API is served by the one Master backend. This guide covers what a
 |---|---|---|---|
 | Master | 33 | none | [master.md](master.md) |
 | HR | 4 | `/hr` | [hr.md](hr.md) |
-| Employee | 2 | `/employee` | [employee.md](employee.md) |
+| Tasks | 23 | `/tasks` | [tasks.md](tasks.md) |
 
 The local address is `http://api.twintrack.localhost:4100`. The examples below call it `$API`.
 
@@ -32,7 +32,7 @@ The response also sets the `twintrack_refresh` cookie.
 **2. Send the token on each call.**
 
 ```sh
-curl "$API/employee/me/profile" -H "Authorization: Bearer eyJ..."
+curl "$API/auth/me" -H "Authorization: Bearer eyJ..."
 ```
 
 **3. When the token expires, refresh it.** Call `POST /auth/refresh` with the cookie and the same `Origin` header. You get a new access token and a new cookie.
@@ -49,17 +49,17 @@ Each route declares one of three access levels:
 | `signed` | A valid token, an open session and an active account, then that no temporary password is waiting to be changed |
 | `private` | The same as `signed`, then the named permission in that route's module |
 
-A few `signed` routes in Master also work out the caller's rights from their roles. [master.md](master.md) notes which ones.
+A few `signed` routes in Master also work out the caller's rights from their profile and permission sets. [master.md](master.md) notes which ones.
 
 ### How someone gets a permission
 
 A permission is written `resource.action`, such as `salary.read`. A person holds one through any of these:
 
 - **Super admin:** every permission in every module.
-- **Role:** one role per module, set with `PATCH /users/:id/roles`.
-- **Special privilege:** one extra permission, set with `PUT /users/:id/privileges`, limited to what the module marks `grantable`. Only a super admin can give others.
+- **Profile:** one per person, org-wide, setting their baseline in every module. Given with `PATCH /users/:id` and `profileId`. `GET /access-profiles` lists them.
+- **Permission set:** a named bundle in one module, added on top of the profile. Given with `PUT /users/:id/permission-sets`, with a reason. `GET /permission-sets` lists the ones you can reach.
 
-Changes apply on the person's next request, because the token holds only their identity. No roles ship with the product, so only a super admin has access until they create some. `GET /roles` shows the roles that exist.
+Changes apply on the person's next request, because the token holds only their identity. No profiles or permission sets ship with the product, so only a super admin has access until they create some.
 
 ### Scope
 
@@ -68,7 +68,7 @@ Some permissions reach only certain people. If someone has the same permission m
 | Scope | Reaches |
 |---|---|
 | `own` | The caller |
-| `team` | The caller and their direct reports |
+| `team` | The caller, their direct reports, and everyone in the org roles below theirs |
 | `all` | Everyone |
 
 ## Tokens and sessions

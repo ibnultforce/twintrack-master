@@ -5,6 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { hrRoutes } from '../src/modules/hr/hr.routes.js';
 import { Salary } from '../src/modules/hr/models/salary.js';
+import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { User } from '../src/modules/master/models/user.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
@@ -43,68 +44,79 @@ describe('HR module', () => {
   });
 
   describe('a module admin changing access', () => {
-    it('changes the role of someone who has access to the module, with no Master role', async () => {
+    it('changes the permission sets of someone who has access to the module, with no Master access', async () => {
       const kamrul = await as('kamrul');
-      const response = await kamrul.patch(`/users/${ID.RAHIM}/roles`, { module: 'hr', role: 'staff' });
+      const response = await kamrul.put(`/users/${ID.RAHIM}/permission-sets`, { module: 'hr', permissionSets: ['staff'], reason: 'Testing' });
       expect(response.status).toBe(200);
-      expect(response.body.assignments.hr).toBe('staff');
-      expect((await (await as('rahim')).get('/me/permissions/hr')).body.role).toBe('staff');
+      expect(response.body.permissionSets.hr).toEqual(['staff']);
+      expect((await (await as('rahim')).get('/me/permissions/hr')).body.permissionSets).toEqual(['staff']);
     });
 
-    it('changes the privileges of someone who has access to the module', async () => {
-      const response = await (await as('kamrul')).put(`/users/${ID.SABBIR}/privileges`, { module: 'hr', permissions: ['salary.read'], reason: 'Helping with hiring' });
+    it('gives several permission sets at once, with a reason for the activity log', async () => {
+      const response = await (await as('kamrul')).put(`/users/${ID.SABBIR}/permission-sets`, { module: 'hr', permissionSets: ['staff', 'manager'], reason: 'Helping with hiring' });
       expect(response.status).toBe(200);
-      expect(response.body.privileges).toEqual({ hr: ['salary.read'] });
+      expect(response.body.permissionSets.hr).toEqual(['staff', 'manager']);
+      expect(await AuditLog.findOne({ action: 'user.permission_sets_changed' }).lean()).toMatchObject({ reason: 'Helping with hiring', after: { permissionSets: ['staff', 'manager'] } });
+    });
+
+    it('needs a reason to give a new permission set, but not to take one away', async () => {
+      const kamrul = await as('kamrul');
+      const missing = await kamrul.put(`/users/${ID.SABBIR}/permission-sets`, { module: 'hr', permissionSets: ['staff', 'manager'] });
+      expect(missing.status).toBe(422);
+      expect(missing.body.error.fields[0].path).toBe('reason');
+      expect((await kamrul.put(`/users/${ID.SABBIR}/permission-sets`, { module: 'hr', permissionSets: [] })).status).toBe(200);
     });
 
     it('adds someone with no access to the module yet, which works at once', async () => {
       const karim = await as('karim');
       expect((await karim.get('/me/permissions/hr')).body.hasAccess).toBe(false);
 
-      const response = await (await as('kamrul')).patch(`/users/${ID.KARIM}/roles`, { module: 'hr', role: 'staff' });
+      const response = await (await as('kamrul')).put(`/users/${ID.KARIM}/permission-sets`, { module: 'hr', permissionSets: ['staff'], reason: 'Testing' });
       expect(response.status).toBe(200);
-      expect((await karim.get('/me/permissions/hr')).body.role).toBe('staff');
+      expect((await karim.get('/me/permissions/hr')).body.permissionSets).toEqual(['staff']);
       expect((await (await as('kamrul')).get('/modules/hr/people')).body.people.map((person: { id: string }) => person.id)).toContain(ID.KARIM);
     });
 
-    it('can give another module admin their role, and take it away', async () => {
+    it('can give another module admin their permission set, and take it away', async () => {
       const kamrul = await as('kamrul');
-      await kamrul.patch(`/users/${ID.SABBIR}/roles`, { module: 'hr', role: 'admin' });
+      await kamrul.put(`/users/${ID.SABBIR}/permission-sets`, { module: 'hr', permissionSets: ['admin'], reason: 'Testing' });
       const sabbir = await as('sabbir');
-      expect((await sabbir.patch(`/users/${ID.RAHIM}/roles`, { module: 'hr', role: 'viewer' })).status).toBe(200);
-      await kamrul.patch(`/users/${ID.SABBIR}/roles`, { module: 'hr', role: 'staff' });
+      expect((await sabbir.put(`/users/${ID.RAHIM}/permission-sets`, { module: 'hr', permissionSets: ['viewer'], reason: 'Testing' })).status).toBe(200);
+      await kamrul.put(`/users/${ID.SABBIR}/permission-sets`, { module: 'hr', permissionSets: ['staff'], reason: 'Testing' });
       expect((await (await as('sabbir')).get('/me/permissions/hr')).body.permissions['access.update']).toBeUndefined();
     });
 
     it('stays inside the module', async () => {
-      const response = await (await as('kamrul')).patch(`/users/${ID.RUMANA}/roles`, { module: 'master', role: 'admin' });
+      const response = await (await as('kamrul')).put(`/users/${ID.RUMANA}/permission-sets`, { module: 'master', permissionSets: ['admin'], reason: 'Testing' });
       expect(response.status).toBe(403);
-      expect(response.body.error.code).toBe('hr_roles_only');
+      expect(response.body.error.code).toBe('module_access_only');
     });
 
     it('can not change their own access, or a super admin\'s', async () => {
       const kamrul = await as('kamrul');
-      expect((await kamrul.patch(`/users/${ID.KAMRUL}/roles`, { module: 'hr', role: 'viewer' })).body.error.code).toBe('own_access');
-      expect((await kamrul.patch(`/users/${ID.FARHANA}/roles`, { module: 'hr', role: 'viewer' })).body.error.code).toBe('super_admin');
+      expect((await kamrul.put(`/users/${ID.KAMRUL}/permission-sets`, { module: 'hr', permissionSets: ['viewer'], reason: 'Testing' })).body.error.code).toBe('own_access');
+      expect((await kamrul.put(`/users/${ID.FARHANA}/permission-sets`, { module: 'hr', permissionSets: ['viewer'], reason: 'Testing' })).body.error.code).toBe('super_admin');
     });
 
-    it('can not give a permission the module does not mark grantable', async () => {
-      const response = await (await as('kamrul')).put(`/users/${ID.SABBIR}/privileges`, { module: 'hr', permissions: ['salary.update'], reason: 'No' });
-      expect(response.body.error.code).toBe('not_grantable');
+    it('can not give a permission set the module does not have', async () => {
+      const response = await (await as('kamrul')).put(`/users/${ID.SABBIR}/permission-sets`, { module: 'hr', permissionSets: ['ghost'], reason: 'No' });
+      expect(response.status).toBe(422);
+      expect(response.body.error.code).toBe('unknown_permission_set');
     });
 
-    it('comes from the role, so it stops when the role loses it', async () => {
+    it('comes from the permission set, so it stops when the set loses it', async () => {
       const kamrul = await as('kamrul');
-      await (await as('farhana')).patch('/roles/hr/admin', { grants: { salary: { actions: ['read'], scope: 'all' } } });
-      expect((await kamrul.patch(`/users/${ID.RAHIM}/roles`, { module: 'hr', role: 'staff' })).body.error.code).toBe('forbidden');
+      await (await as('farhana')).patch('/permission-sets/hr/admin', { grants: { salary: { actions: ['read'], scope: 'all' } } });
+      expect((await kamrul.put(`/users/${ID.RAHIM}/permission-sets`, { module: 'hr', permissionSets: ['staff'], reason: 'Testing' })).body.error.code).toBe('forbidden');
     });
 
-    it('can be given to any role', async () => {
+    it('can be put in any permission set', async () => {
       const farhana = await as('farhana');
-      const manager = (await farhana.get('/roles')).body.roles.find((role: { module: string; key: string }) => role.module === 'hr' && role.key === 'manager');
+      const hr = (await farhana.get('/permission-sets')).body.modules.find((module: { key: string }) => module.key === 'hr');
+      const manager = hr.permissionSets.find((permissionSet: { key: string }) => permissionSet.key === 'manager');
       expect(manager).toBeDefined();
-      await farhana.patch('/roles/hr/manager', { grants: { access: { actions: ['read', 'update'] } } });
-      expect((await (await as('rahim')).patch(`/users/${ID.SABBIR}/roles`, { module: 'hr', role: 'viewer' })).status).toBe(200);
+      await farhana.patch('/permission-sets/hr/manager', { grants: { access: { actions: ['read', 'update'] } } });
+      expect((await (await as('rahim')).put(`/users/${ID.SABBIR}/permission-sets`, { module: 'hr', permissionSets: ['viewer'], reason: 'Testing' })).status).toBe(200);
     });
 
     it('sees only their own module in the access options, and only its people', async () => {
@@ -122,7 +134,7 @@ describe('HR module', () => {
 
     it('refuses everyone else before reading the request', async () => {
       const rahim = await as('rahim');
-      expect((await rahim.patch(`/users/${ID.KARIM}/roles`, {})).body.error.code).toBe('forbidden');
+      expect((await rahim.put(`/users/${ID.KARIM}/permission-sets`, {})).body.error.code).toBe('forbidden');
       expect((await rahim.get('/modules/hr/people')).body.error.code).toBe('forbidden');
       expect((await request(app).get('/modules/hr/people')).status).toBe(401);
     });
@@ -145,17 +157,17 @@ describe('HR module', () => {
 
     it('widens when the role\'s reach is changed, on the next request', async () => {
       const rahim = await as('rahim');
-      await (await as('farhana')).patch('/roles/hr/manager', { grants: { salary: { actions: ['read'], scope: 'all' } } });
+      await (await as('farhana')).patch('/permission-sets/hr/manager', { grants: { salary: { actions: ['read'], scope: 'all' } } });
       expect((await rahim.get('/hr/salaries')).body.total).toBe(6);
     });
 
     it('can narrow to a person\'s own salary', async () => {
       const rahim = await as('rahim');
-      await (await as('farhana')).patch('/roles/hr/manager', { grants: { salary: { actions: ['read'], scope: 'own' } } });
+      await (await as('farhana')).patch('/permission-sets/hr/manager', { grants: { salary: { actions: ['read'], scope: 'own' } } });
       expect(employeesIn((await rahim.get('/hr/salaries')).body)).toEqual([ID.RAHIM]);
     });
 
-    it.each(['sabbir', 'karim'])('refuses %s, whose role has no salary.read', async (name) => {
+    it.each(['sabbir', 'karim'])('refuses %s, who holds no salary.read', async (name) => {
       const response = await (await as(name)).get('/hr/salaries');
       expect(response.status).toBe(403);
       expect(response.body.error.code).toBe('forbidden');
@@ -165,10 +177,25 @@ describe('HR module', () => {
       expect((await request(app).get('/hr/salaries')).status).toBe(401);
     });
 
-    it('follows a privilege given to one person, within their team', async () => {
+    it('follows a permission set given to one person, within their team', async () => {
       const karim = await as('karim');
-      await (await as('farhana')).put(`/users/${ID.KARIM}/privileges`, { module: 'hr', permissions: ['salary.read'], reason: 'Testing' });
+      const farhana = await as('farhana');
+      await farhana.post('/permission-sets/hr', { key: 'salary-reader', name: 'Salary reader', grants: { salary: { actions: ['read'], scope: 'team' } } });
+      await farhana.put(`/users/${ID.KARIM}/permission-sets`, { module: 'hr', permissionSets: ['salary-reader'], reason: 'Testing' });
       expect(employeesIn((await karim.get('/hr/salaries')).body)).toEqual([ID.KARIM]);
+    });
+
+    it('follows a profile, and takes the wider scope from a permission set on top of it', async () => {
+      await AccessProfile.create({ _id: 'ap_staff', name: 'Staff', grants: { hr: { salary: { actions: ['read'], scope: 'own' } } } });
+      await User.updateOne({ _id: ID.ARIF }, { $set: { profileId: 'ap_staff' } });
+      const arif = await as('arif');
+      expect(employeesIn((await arif.get('/hr/salaries')).body)).toEqual([ID.ARIF]);
+
+      await User.updateOne({ _id: ID.RAHIM }, { $set: { profileId: 'ap_staff', permissionSets: {} } });
+      const rahim = await as('rahim');
+      expect(employeesIn((await rahim.get('/hr/salaries')).body)).toEqual([ID.RAHIM]);
+      await (await as('farhana')).put(`/users/${ID.RAHIM}/permission-sets`, { module: 'hr', permissionSets: ['manager'], reason: 'Leads a team' });
+      expect(employeesIn((await rahim.get('/hr/salaries')).body)).toEqual([ID.RAHIM, ID.ARIF, ID.KARIM].sort());
     });
   });
 
@@ -202,9 +229,9 @@ describe('HR module', () => {
       expect(response.body.error.code).toBe('forbidden');
     });
 
-    it('lets a Manager change salaries when the role allows it, inside their team only', async () => {
+    it('lets a Manager change salaries when their permission set allows it, inside their team only', async () => {
       const rahim = await as('rahim');
-      await (await as('farhana')).patch('/roles/hr/manager', { grants: { salary: { actions: ['read', 'update'], scope: 'team' } } });
+      await (await as('farhana')).patch('/permission-sets/hr/manager', { grants: { salary: { actions: ['read', 'update'], scope: 'team', fieldAccess: { amount: 'edit' } } } });
       expect((await rahim.patch('/hr/salaries/s_08', { amount: 96000 })).status).toBe(200);
 
       const outside = await rahim.patch('/hr/salaries/s_05', { amount: 1 });

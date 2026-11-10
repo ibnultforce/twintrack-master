@@ -8,39 +8,45 @@ import { refuseUnless } from '../access/refuseUnless.js';
 import { assertOwnPassword } from '../auth/account.service.js';
 import { createFailedAttemptLimiter } from '../auth/failedAttemptLimiter.js';
 import { MAX_PASSWORD_LENGTH } from '../auth/passwords.js';
-import { exportModuleManifest, importModuleFromRequest, listRegisteredModules, listRoleTemplates, removeModule } from './moduleRegistry.service.js';
-import { addRole, canEditRolesSomewhere, listManageableRoles, removeResource, removeRole, saveResource, setGrantableActions, updateRoleTemplate } from './permissionRules.service.js';
+import { exportModuleManifest, importModuleFromRequest, listRegisteredModules, removeModule } from './moduleRegistry.service.js';
+import {
+  addPermissionSet,
+  canReachPermissionSetsSomewhere,
+  listManageablePermissionSets,
+  removePermissionSet,
+  removeResource,
+  saveResource,
+  updatePermissionSet,
+} from './permissionRules.service.js';
 
 const MAX_NAME_LENGTH = 100;
-const MAX_ROLE_DESCRIPTION_LENGTH = 500;
+const MAX_DESCRIPTION_LENGTH = 500;
 
-const roleNameField = z.string().trim().min(1, 'is required').max(MAX_NAME_LENGTH);
-const roleDescriptionField = z.string().trim().max(MAX_ROLE_DESCRIPTION_LENGTH);
+const nameField = z.string().trim().min(1, 'is required').max(MAX_NAME_LENGTH);
+const descriptionField = z.string().trim().max(MAX_DESCRIPTION_LENGTH);
 // The grants themselves are checked by the manifest rules, which give better messages than a schema here could.
-const roleGrantsField = z.union([z.literal('*'), z.record(z.string(), z.unknown())]);
+const grantsField = z.union([z.literal('*'), z.record(z.string(), z.unknown())]);
 
-const addRoleBodySchema = z.strictObject({
+const addPermissionSetBodySchema = z.strictObject({
   key: z.string().min(1, 'is required'),
-  name: roleNameField,
-  description: roleDescriptionField.optional(),
-  grants: roleGrantsField,
+  name: nameField,
+  description: descriptionField.optional(),
+  grants: grantsField,
 });
 
-const updateRoleBodySchema = z
+const updatePermissionSetBodySchema = z
   .strictObject({
-    name: roleNameField.optional(),
-    description: roleDescriptionField.optional(),
-    grants: roleGrantsField.optional(),
+    name: nameField.optional(),
+    description: descriptionField.optional(),
+    grants: grantsField.optional(),
   })
   .refine((changes) => Object.keys(changes).length > 0, { message: 'send at least one field to change' });
 
 const saveResourceBodySchema = z.strictObject({
-  label: roleNameField,
+  label: nameField,
   actions: z.array(z.string()).min(1, 'needs at least one action'),
   scoped: z.boolean().optional(),
 });
-
-const setGrantableBodySchema = z.strictObject({ actions: z.array(z.string()) });
 
 // The manifest is checked by the manifest rules, which give better messages than a schema here could.
 const importModuleBodySchema = z.strictObject({
@@ -69,22 +75,18 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
     res.json(await removeModule(getActor(req), String(req.params.key)));
   };
 
-  const handleListRoles: RequestHandler = async (_req, res) => {
-    res.json({ roles: await listRoleTemplates() });
+  const handleAddPermissionSet: RequestHandler = async (req, res) => {
+    const newSet = parseRequestBody(addPermissionSetBodySchema, req.body);
+    res.status(201).json(await addPermissionSet(getSignedActor(req), String(req.params.module), newSet));
   };
 
-  const handleAddRole: RequestHandler = async (req, res) => {
-    const newRole = parseRequestBody(addRoleBodySchema, req.body);
-    res.status(201).json(await addRole(getSignedActor(req), String(req.params.module), newRole));
+  const handleUpdatePermissionSet: RequestHandler = async (req, res) => {
+    const changes = parseRequestBody(updatePermissionSetBodySchema, req.body);
+    res.json(await updatePermissionSet(getSignedActor(req), String(req.params.module), String(req.params.key), changes));
   };
 
-  const handleUpdateRole: RequestHandler = async (req, res) => {
-    const changes = parseRequestBody(updateRoleBodySchema, req.body);
-    res.json(await updateRoleTemplate(getSignedActor(req), String(req.params.module), String(req.params.key), changes));
-  };
-
-  const handleRemoveRole: RequestHandler = async (req, res) => {
-    res.json(await removeRole(getSignedActor(req), String(req.params.module), String(req.params.key)));
+  const handleRemovePermissionSet: RequestHandler = async (req, res) => {
+    res.json(await removePermissionSet(getSignedActor(req), String(req.params.module), String(req.params.key)));
   };
 
   const handleSaveResource: RequestHandler = async (req, res) => {
@@ -97,18 +99,12 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
     res.json(await removeResource(getActor(req), String(req.params.key), String(req.params.resource)));
   };
 
-  const handleSetGrantable: RequestHandler = async (req, res) => {
-    const { actions } = parseRequestBody(setGrantableBodySchema, req.body);
-    res.json(await setGrantableActions(getActor(req), String(req.params.key), String(req.params.resource), actions));
+  const handleListPermissionSets: RequestHandler = async (req, res) => {
+    res.json({ modules: await listManageablePermissionSets(getSignedActor(req)) });
   };
 
-  const handleListManageableRoles: RequestHandler = async (req, res) => {
-    res.json({ modules: await listManageableRoles(getSignedActor(req)) });
-  };
-
-  const editsResources = { access: 'private', permission: 'module.update' } as const;
-  // Signed, because the right to edit roles is held per module. The service decides which modules this person can edit.
-  const editsRoles = { access: 'signed' as const, middleware: [refuseUnless(canEditRolesSomewhere)] };
+  // Signed, because the right to edit permission sets is held per module. The service decides which modules this person can edit.
+  const editsPermissionSets = { access: 'signed' as const, middleware: [refuseUnless(canReachPermissionSetsSomewhere)] };
   return [
     { method: 'GET', path: '/modules', access: 'private', permission: 'module.read', handler: handleListModules },
     {
@@ -121,13 +117,12 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
     },
     { method: 'GET', path: '/modules/:key/export', access: 'private', permission: 'module.read', handler: handleExportModule },
     { method: 'DELETE', path: '/modules/:key', access: 'private', permission: 'module.delete', handler: handleRemoveModule },
-    { method: 'PUT', path: '/modules/:key/resources/:resource', ...editsResources, handler: handleSaveResource },
-    { method: 'DELETE', path: '/modules/:key/resources/:resource', ...editsResources, handler: handleRemoveResource },
-    { method: 'PUT', path: '/modules/:key/resources/:resource/grantable', ...editsResources, handler: handleSetGrantable },
-    { method: 'GET', path: '/roles/manageable', ...editsRoles, handler: handleListManageableRoles },
-    { method: 'GET', path: '/roles', access: 'private', permission: 'role.read', handler: handleListRoles },
-    { method: 'POST', path: '/roles/:module', ...editsRoles, handler: handleAddRole },
-    { method: 'PATCH', path: '/roles/:module/:key', ...editsRoles, handler: handleUpdateRole },
-    { method: 'DELETE', path: '/roles/:module/:key', ...editsRoles, handler: handleRemoveRole },
+    // One route both adds and changes a resource. The service picks the permission once it knows whether the resource exists.
+    { method: 'PUT', path: '/modules/:key/resources/:resource', access: 'private', anyPermission: ['module.create', 'module.update'], handler: handleSaveResource },
+    { method: 'DELETE', path: '/modules/:key/resources/:resource', access: 'private', permission: 'module.delete', handler: handleRemoveResource },
+    { method: 'GET', path: '/permission-sets', ...editsPermissionSets, handler: handleListPermissionSets },
+    { method: 'POST', path: '/permission-sets/:module', ...editsPermissionSets, handler: handleAddPermissionSet },
+    { method: 'PATCH', path: '/permission-sets/:module/:key', ...editsPermissionSets, handler: handleUpdatePermissionSet },
+    { method: 'DELETE', path: '/permission-sets/:module/:key', ...editsPermissionSets, handler: handleRemovePermissionSet },
   ];
 }

@@ -101,7 +101,11 @@ export function refreshAccessToken(): Promise<boolean> {
   return refreshInFlight;
 }
 
+const NO_CONTENT = 204;
+
+/** Some routes, such as deleting an org role, answer 204 with no body, which isn't JSON to read. */
 async function parseSuccess<Result>(response: Response): Promise<Result> {
+  if (response.status === NO_CONTENT) return undefined as Result;
   return (await response.json()) as Result;
 }
 

@@ -51,7 +51,7 @@ describe('validateUsersFile', () => {
     expect(text).toMatch(/id "b1" is used twice/);
     expect(text).toMatch(/users\.6\.email/);
     expect(text).toMatch(/users\.7\.name/);
-    expect(text).toMatch(/users\.8\.assignments/);
+    expect(text).toMatch(/users\.8\.permissionSets/);
   });
 
   it('rejects a reporting line that goes round in a circle', () => {
@@ -59,11 +59,15 @@ describe('validateUsersFile', () => {
     expect(text).toMatch(/goes round in a circle/);
   });
 
-  it('checks roles and privileges only against registered modules', () => {
-    expect(errorsFor([row('a', { assignments: { hr: 'nope' } })], [hr])).toMatch(/"nope" is not a role in hr/);
-    expect(errorsFor([row('a', { privileges: { hr: ['employee.delete'] } })], [hr])).toMatch(/can't be granted/);
-    expect(errorsFor([row('a', { privileges: { hr: ['salary.read'] } })], [hr])).toBe('');
-    expect(errorsFor([row('a', { assignments: { account: 'viewer' } })], [hr])).toBe('');
+  it('checks permission sets only against registered modules', () => {
+    expect(errorsFor([row('a', { permissionSets: { hr: ['nope'] } })], [hr])).toMatch(/"nope" is not a permission set in hr/);
+    expect(errorsFor([row('a', { permissionSets: { hr: ['manager'] } })], [hr])).toBe('');
+    expect(errorsFor([row('a', { permissionSets: { account: ['viewer'] } })], [hr])).toBe('');
+  });
+
+  it('checks profiles against the profiles loaded with the people', () => {
+    const result = validateUsersFile({ type: 'users', users: [row('a', { profileId: 'ap_ghost' })] }, [], { profileIds: new Set(['ap_staff']) });
+    expect(result.ok ? '' : result.errors[0]?.message).toMatch(/profile "ap_ghost" is not in the profiles file/);
   });
 
   it('rejects a file of the wrong type', () => {
@@ -75,16 +79,17 @@ describe('validateUsersFile', () => {
 describe('what the product ships', () => {
   const files = readProductSeedFiles();
 
-  it('has no ready-made roles in any module', () => {
-    expect((files.manifests as { roles: unknown[] }[]).flatMap((manifest) => manifest.roles)).toEqual([]);
+  it('has no ready-made permission sets in any module, and no profiles', () => {
+    expect((files.manifests as { permissionSets: unknown[] }[]).flatMap((manifest) => manifest.permissionSets)).toEqual([]);
+    expect(files.profiles).toBeUndefined();
   });
 
   it('gives access to nobody but the super admin', () => {
-    const { users } = files.users as { users: { superAdmin?: boolean; assignments?: object; privileges?: object }[] };
+    const { users } = files.users as { users: { superAdmin?: boolean; profileId?: string; permissionSets?: object }[] };
     expect(users.filter((user) => user.superAdmin)).toHaveLength(1);
     for (const user of users) {
-      expect(user.assignments ?? {}).toEqual({});
-      expect(user.privileges ?? {}).toEqual({});
+      expect(user.profileId).toBeUndefined();
+      expect(user.permissionSets ?? {}).toEqual({});
     }
   });
 });
@@ -92,20 +97,20 @@ describe('what the product ships', () => {
 describe('seedDatabase', () => {
   useTestDatabase();
 
-  it('loads Master, HR, Employee and the 12-person team', async () => {
+  it('loads Master, HR, Tasks and the 12-person team', async () => {
     const result = await seed();
-    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr', 'employee']);
+    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr', 'tasks']);
     expect(result.usersCreated).toBe(12);
 
     expect((await Module.findOne({ key: 'master' }).lean())?.core).toBe(true);
     expect((await Module.findOne({ key: 'hr' }).lean())?.core).toBe(false);
 
     const rahim = await User.findById('u_04').lean();
-    expect(rahim).toMatchObject({ name: 'Rahim Uddin', managerId: 'u_01', assignments: { hr: 'manager' } });
-    expect((await User.findById('u_03').lean())?.assignments.master).toBe('hr-access');
+    expect(rahim).toMatchObject({ name: 'Rahim Uddin', managerId: 'u_01', permissionSets: { hr: ['manager'] } });
+    expect((await User.findById('u_03').lean())?.permissionSets.master).toEqual(['hr-access']);
     expect((await User.findById('u_01').lean())?.superAdmin).toBe(true);
     expect((await User.findById('u_11').lean())?.status).toBe('inactive');
-    expect((await User.findById('u_08').lean())?.assignments).toEqual({});
+    expect((await User.findById('u_08').lean())?.permissionSets).toEqual({});
   });
 
   it('can be re-run without duplicating anything', async () => {
@@ -120,12 +125,12 @@ describe('seedDatabase', () => {
   it('resets access on re-run but keeps passwords already set', async () => {
     await seed();
     const original = await User.findById('u_08').select('+passwordHash').lean();
-    await User.updateOne({ _id: 'u_08' }, { $set: { 'assignments.hr': 'admin' } });
+    await User.updateOne({ _id: 'u_08' }, { $set: { 'permissionSets.hr': ['admin'] } });
 
     await seed(readSeedFiles(), 'a-different-password');
 
     const after = await User.findById('u_08').select('+passwordHash').lean();
-    expect(after?.assignments).toEqual({});
+    expect(after?.permissionSets).toEqual({});
     expect(after?.passwordHash).toBe(original?.passwordHash);
   });
 
@@ -139,7 +144,7 @@ describe('seedDatabase', () => {
 
   it('writes nothing when any file is invalid', async () => {
     const badUsers = clone(readSeedFiles());
-    (badUsers.users as { users: { assignments: object }[] }).users[1]!.assignments = { hr: 'not-a-role' };
+    (badUsers.users as { users: { permissionSets: object }[] }).users[1]!.permissionSets = { hr: ['not-a-set'] };
     await expect(seed(badUsers)).rejects.toThrow(ValidationFailure);
 
     const badManifest = clone(readSeedFiles());

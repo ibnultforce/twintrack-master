@@ -1,19 +1,25 @@
 import type { Request } from 'express';
+import type { AccessProfileDoc } from '../models/accessProfile.js';
 import type { UserDoc } from '../models/user.js';
 import type { Scope } from '../moduleRegistry/manifest.js';
-import type { PermissionMap } from './permissions.js';
+import type { FieldAccessMap, PermissionMap } from './permissions.js';
 
 export interface Caller {
   user: UserDoc;
+  /** The profile the person holds, read with them on each request. */
+  profile: AccessProfileDoc | null;
   sessionId: string;
 }
 
 /** Who is making an admin change: what services need for their own rules and for the activity log. */
 export interface Actor {
   user: UserDoc;
+  profile: AccessProfileDoc | null;
   ipAddress: string | undefined;
   /** Everything this person can do in the route's module, as read from the database for this request. */
   permissions: PermissionMap;
+  /** Their access to protected fields in the route's module. */
+  fieldAccess: FieldAccessMap;
 }
 
 declare module 'express-serve-static-core' {
@@ -24,6 +30,8 @@ declare module 'express-serve-static-core' {
     permissionScope?: Scope;
     /** Set by the permission check on private routes. */
     callerPermissions?: PermissionMap;
+    /** Set by the permission check on private routes. */
+    callerFieldAccess?: FieldAccessMap;
   }
 }
 
@@ -34,12 +42,14 @@ export function getCaller(req: Request): Caller {
 
 export function getActor(req: Request): Actor {
   if (!req.callerPermissions) throw new Error(`${req.method} ${req.path} used the actor without a permission check.`);
-  return { user: getCaller(req).user, ipAddress: req.ip, permissions: req.callerPermissions };
+  const { user, profile } = getCaller(req);
+  return { user, profile, ipAddress: req.ip, permissions: req.callerPermissions, fieldAccess: req.callerFieldAccess ?? {} };
 }
 
 /** For signed routes whose services work out the caller's rights themselves, because they span several modules. */
 export function getSignedActor(req: Request): Actor {
-  return { user: getCaller(req).user, ipAddress: req.ip, permissions: {} };
+  const { user, profile } = getCaller(req);
+  return { user, profile, ipAddress: req.ip, permissions: {}, fieldAccess: {} };
 }
 
 export const actorFields =({ user, ipAddress }: Actor) => ({ actorId: user._id, actorName: user.name, ip: ipAddress });

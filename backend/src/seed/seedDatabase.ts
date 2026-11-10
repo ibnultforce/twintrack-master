@@ -6,6 +6,10 @@ import { upsertSalaries } from '../modules/hr/salary/salary.repository.js';
 import { appModels } from '../modules/models.js';
 import { validateManifest, type Manifest } from '../modules/master/moduleRegistry/manifest.js';
 import { importManifest, type ImportResult } from '../modules/master/moduleRegistry/moduleRegistry.service.js';
+import { upsertProfiles } from '../modules/master/accessProfiles/accessProfiles.repository.js';
+import { validateProfilesFile } from '../modules/master/accessProfiles/accessProfilesFile.js';
+import { validateOrgRolesFile } from '../modules/master/orgRoles/orgRolesFile.js';
+import { upsertOrgRoles } from '../modules/master/orgRoles/orgRoles.repository.js';
 import { upsertUsers } from '../modules/master/users/users.repository.js';
 import { validateUsersFile } from '../modules/master/users/usersFile.js';
 import type { SeedFiles } from './seedFiles.js';
@@ -38,7 +42,13 @@ export async function seedDatabase(options: {
   }
 
   const manifests = readValidManifests(options.files.manifests);
-  const users = validateUsersFile(options.files.users, manifests);
+  const orgRoles = options.files.orgRoles === undefined ? { ok: true as const, value: [] } : validateOrgRolesFile(options.files.orgRoles);
+  if (!orgRoles.ok) throw new ValidationFailure('Seed org roles file is invalid', orgRoles.errors);
+  const orgRoleIds = options.files.orgRoles === undefined ? undefined : new Set(orgRoles.value.map((orgRole) => orgRole._id));
+  const profiles = options.files.profiles === undefined ? { ok: true as const, value: [] } : validateProfilesFile(options.files.profiles, manifests);
+  if (!profiles.ok) throw new ValidationFailure('Seed profiles file is invalid', profiles.errors);
+  const profileIds = new Set(profiles.value.map((profile) => profile._id));
+  const users = validateUsersFile(options.files.users, manifests, { orgRoleIds, profileIds });
   if (!users.ok) throw new ValidationFailure('Seed users file is invalid', users.errors);
   const salaries = options.files.salaries === undefined
     ? { ok: true as const, value: [] }
@@ -52,6 +62,8 @@ export async function seedDatabase(options: {
     const modules: ImportResult[] = [];
     for (const manifest of manifests) modules.push(await importManifest(manifest, { allowCore: true, session }));
 
+    await upsertOrgRoles(orgRoles.value, session);
+    await upsertProfiles(profiles.value, session);
     const { created, updated } = await upsertUsers(users.value, passwordHash, session);
     await upsertSalaries(salaries.value, session);
     return { modules, usersCreated: created, usersUpdated: updated };

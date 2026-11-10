@@ -1,20 +1,34 @@
+import type { AccessProfileDoc } from '../models/accessProfile.js';
 import type { ModuleDoc } from '../models/module.js';
 import type { UserDoc } from '../models/user.js';
-import type { ManifestResource, ManifestRole, Scope } from '../moduleRegistry/manifest.js';
+import type { FieldAccessLevel, Grants, ManifestResource, Scope } from '../moduleRegistry/manifest.js';
 
 export interface ModuleAccess {
   hasAccess: boolean;
-  role: string | null;
-  roleName: string | null;
-  /** Permission to scope, for example { "leave.read": "team" }. */
+  profile: string | null;
+  profileName: string | null;
+  /** Permission to scope, for example { "salary.read": "team" }. */
   permissions: Record<string, Scope>;
-  /** The special privileges that count, which leaves out any the module no longer allows. */
-  specialPrivileges: string[];
+  /** The keys of the permission sets that count here, leaving out any the module no longer has. */
+  permissionSets: string[];
+  /** Access to protected fields, as "resource.field" to read or edit. A protected field not listed is hidden. */
+  fieldAccess: FieldAccessMap;
 }
 
-type UserAccessFields = Pick<UserDoc, 'superAdmin' | 'assignments' | 'privileges' | 'superAdminGrants'>;
-type ModuleAccessFields = Pick<ModuleDoc, 'key' | 'resources' | 'roles'>;
+/** Someone whose access is being worked out: the person, and the profile they hold, if any. */
+export interface Grantee {
+  user: Pick<UserDoc, 'superAdmin' | 'permissionSets'>;
+  profile: Pick<AccessProfileDoc, '_id' | 'name' | 'grants'> | null;
+}
+
+type ModuleAccessFields = Pick<ModuleDoc, 'key' | 'resources' | 'permissionSets'> & Partial<Pick<ModuleDoc, 'routes'>>;
 export type PermissionMap = Record<string, Scope>;
+export type FieldAccessMap = Record<string, FieldAccessLevel>;
+
+/** Edit includes read, so it's the wider of the two. */
+const grantFieldAccess = (fieldAccess: FieldAccessMap, field: string, level: FieldAccessLevel) => {
+  if (fieldAccess[field] !== 'edit') fieldAccess[field] = level;
+};
 
 const SCOPE_BREADTH: Record<Scope, number> = { own: 0, team: 1, all: 2 };
 
@@ -25,103 +39,83 @@ function grantPermission(permissions: PermissionMap, permission: string, scope: 
   if (!currentScope || isWiderScope(scope, currentScope)) permissions[permission] = scope;
 }
 
-function grantEverything(permissions: PermissionMap, resources: ManifestResource[]): void {
+function grantEverything(permissions: PermissionMap, resources: ManifestResource[], fieldAccess?: FieldAccessMap): void {
   for (const resource of resources) {
     for (const action of resource.actions) grantPermission(permissions, `${resource.key}.${action}`, 'all');
+    for (const field of resource.protectedFields ?? []) if (fieldAccess) grantFieldAccess(fieldAccess, `${resource.key}.${field}`, 'edit');
   }
 }
 
-function applyRole(permissions: PermissionMap, role: ManifestRole, resources: ManifestResource[]): void {
-  if (role.grants === '*') {
-    grantEverything(permissions, resources);
+/** Adds what a set of grants allows. Grants naming a resource or action the module no longer has give nothing. */
+function applyGrants(permissions: PermissionMap, grants: Grants, resources: ManifestResource[], fieldAccess?: FieldAccessMap): void {
+  if (grants === '*') {
+    grantEverything(permissions, resources, fieldAccess);
     return;
   }
-  const scopedResources = new Set(resources.filter((resource) => resource.scoped).map((resource) => resource.key));
-  for (const [resourceKey, grant] of Object.entries(role.grants)) {
-    // A scoped resource with no stated scope gets the narrowest one, so a manifest mistake can't widen access.
-    const scope = grant.scope ?? (scopedResources.has(resourceKey) ? 'own' : 'all');
-    for (const action of grant.actions) grantPermission(permissions, `${resourceKey}.${action}`, scope);
+  for (const [resourceKey, grant] of Object.entries(grants)) {
+    const resource = resources.find((candidate) => candidate.key === resourceKey);
+    if (!resource) continue;
+    // A scoped resource with no stated scope gets the narrowest one, so a mistake can't widen access.
+    const scope = resource.scoped ? (grant.scope ?? 'own') : 'all';
+    for (const action of grant.actions) {
+      if (resource.actions.includes(action)) grantPermission(permissions, `${resourceKey}.${action}`, scope);
+    }
+    for (const [field, level] of Object.entries(grant.fieldAccess ?? {})) {
+      if (fieldAccess && resource.protectedFields?.includes(field)) grantFieldAccess(fieldAccess, `${resourceKey}.${field}`, level);
+    }
   }
 }
 
-/** What one role template allows, before any special privileges are added. */
-export function listRolePermissions(role: ManifestRole, resources: ManifestResource[]): PermissionMap {
+/** What one set of grants gives on protected fields in a module. */
+export function listGrantFieldAccess(grants: Grants, resources: ManifestResource[]): FieldAccessMap {
+  const fieldAccess: FieldAccessMap = {};
+  applyGrants({}, grants, resources, fieldAccess);
+  return fieldAccess;
+}
+
+/** What one set of grants allows in a module, such as a permission set or a profile's part for that module. */
+export function listGrantPermissions(grants: Grants, resources: ManifestResource[]): PermissionMap {
   const permissions: PermissionMap = {};
-  applyRole(permissions, role, resources);
+  applyGrants(permissions, grants, resources);
   return permissions;
 }
 
-const privilegeScopeOf = (resource: ManifestResource): Scope => (resource.scoped ? 'team' : 'all');
-
-/** The special privileges a module allows, and how far each one reaches. */
-export function listGrantablePermissions(resources: ManifestResource[]): { permission: string; scope: Scope }[] {
-  return resources.flatMap((resource) =>
-    (resource.grantable ?? []).map((action) => ({ permission: `${resource.key}.${action}`, scope: privilegeScopeOf(resource) })),
-  );
-}
-
-/** Every permission a module has, which is what a super admin can give one person. */
-export function listAllPermissions(resources: ManifestResource[]): { permission: string; scope: Scope }[] {
-  return resources.flatMap((resource) =>
-    resource.actions.map((action) => ({ permission: `${resource.key}.${action}`, scope: privilegeScopeOf(resource) })),
-  );
-}
-
-function splitPermission(permission: string, resources: ManifestResource[]) {
-  const lastDot = permission.lastIndexOf('.');
-  return {
-    resource: resources.find((candidate) => candidate.key === permission.slice(0, lastDot)),
-    action: permission.slice(lastDot + 1) as ManifestResource['actions'][number],
-  };
-}
-
-function findPrivilegeScope(privilege: string, resources: ManifestResource[]): Scope | undefined {
-  const { resource, action } = splitPermission(privilege, resources);
-  return resource?.grantable?.includes(action) ? privilegeScopeOf(resource) : undefined;
-}
-
-function findSuperAdminGrantScope(permission: string, resources: ManifestResource[]): Scope | undefined {
-  const { resource, action } = splitPermission(permission, resources);
-  return resource?.actions.includes(action) ? privilegeScopeOf(resource) : undefined;
-}
-
-/** Reads a person's access map, which is a plain object, without finding anything it inherits from JavaScript. */
-const readOwnEntry = <Value>(map: Record<string, Value>, key: string): Value | undefined =>
+/** Reads an access map, which is a plain object, without finding anything it inherits from JavaScript. */
+export const readOwnEntry = <Value>(map: Record<string, Value>, key: string): Value | undefined =>
   Object.hasOwn(map, key) ? map[key] : undefined;
 
-/** Combines a person's fixed role template with their special privileges. The widest scope wins. */
-export function resolveModuleAccess(user: UserAccessFields, module: ModuleAccessFields): ModuleAccess {
+/** Combines a person's profile with the permission sets they hold in one module. The widest scope wins. */
+export function resolveModuleAccess({ user, profile }: Grantee, module: ModuleAccessFields): ModuleAccess {
   const permissions: PermissionMap = {};
+  const fieldAccess: FieldAccessMap = {};
 
   if (user.superAdmin) {
-    grantEverything(permissions, module.resources);
-    return { hasAccess: true, role: 'super-admin', roleName: 'Super admin', permissions, specialPrivileges: [] };
+    grantEverything(permissions, module.resources, fieldAccess);
+    // A super admin may remove an action an API still needs, which leaves that API to super admins rather than nobody.
+    for (const route of module.routes ?? []) {
+      for (const permission of route.permission ? [route.permission] : (route.anyPermission ?? [])) grantPermission(permissions, permission, 'all');
+    }
+    return { hasAccess: true, profile: 'super-admin', profileName: 'Super admin', permissions, permissionSets: [], fieldAccess };
   }
 
-  // A role the module no longer has, or a module that isn't loaded, grants nothing.
-  const assignedRoleKey = readOwnEntry(user.assignments, module.key);
-  const role = module.roles.find((candidate) => candidate.key === assignedRoleKey);
-  if (role) applyRole(permissions, role, module.resources);
+  const profileGrants = profile ? readOwnEntry(profile.grants, module.key) : undefined;
+  if (profileGrants) applyGrants(permissions, profileGrants, module.resources, fieldAccess);
 
-  const specialPrivileges: string[] = [];
-  for (const privilege of readOwnEntry(user.privileges, module.key) ?? []) {
-    const scope = findPrivilegeScope(privilege, module.resources);
-    if (!scope) continue;
-    grantPermission(permissions, privilege, scope);
-    specialPrivileges.push(privilege);
-  }
-  for (const permission of readOwnEntry(user.superAdminGrants ?? {}, module.key) ?? []) {
-    const scope = findSuperAdminGrantScope(permission, module.resources);
-    if (!scope) continue;
-    grantPermission(permissions, permission, scope);
-    specialPrivileges.push(permission);
+  // A set the module no longer has, or a module that isn't loaded, grants nothing.
+  const permissionSets: string[] = [];
+  for (const setKey of readOwnEntry(user.permissionSets ?? {}, module.key) ?? []) {
+    const permissionSet = module.permissionSets.find((candidate) => candidate.key === setKey);
+    if (!permissionSet) continue;
+    applyGrants(permissions, permissionSet.grants, module.resources, fieldAccess);
+    permissionSets.push(setKey);
   }
 
   return {
-    hasAccess: role !== undefined || specialPrivileges.length > 0,
-    role: role?.key ?? null,
-    roleName: role?.name ?? null,
+    hasAccess: Object.keys(permissions).length > 0,
+    profile: profile?._id ?? null,
+    profileName: profile?.name ?? null,
     permissions,
-    specialPrivileges,
+    permissionSets,
+    fieldAccess,
   };
 }

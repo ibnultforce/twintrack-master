@@ -1,5 +1,5 @@
 {
-  "roles": {
+  "permissionSets": {
     "master": [
       {
         "key": "admin",
@@ -13,7 +13,7 @@
               "update"
             ]
           },
-          "role": {
+          "permissionSet": {
             "actions": [
               "read"
             ]
@@ -36,10 +36,17 @@
               "update"
             ]
           },
-          "employeeAccess": {
+          "orgRole": {
             "actions": [
               "read",
-              "update"
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "accessProfile": {
+            "actions": [
+              "read"
             ]
           }
         }
@@ -47,7 +54,7 @@
       {
         "key": "hr-access",
         "name": "HR access manager",
-        "description": "HR staff who set each person's HR role and special privileges, and manage Employee app and field access from the HR panel. Cannot change role templates.",
+        "description": "HR staff who set each person's HR role and special privileges, and manage field access from the HR panel. Cannot change role templates.",
         "grants": {
           "user": {
             "actions": [
@@ -59,37 +66,13 @@
               "read",
               "update"
             ]
-          },
-          "employeeAccess": {
-            "actions": [
-              "read",
-              "update"
-            ]
-          }
-        }
-      },
-      {
-        "key": "employee-access",
-        "name": "Employee access manager",
-        "description": "From the HR panel: sets who has which Employee app role, gives special privileges, and manages access to fields the modules mark as HR-managed. Cannot change collection permissions, or fields a module keeps fixed.",
-        "grants": {
-          "user": {
-            "actions": [
-              "read"
-            ]
-          },
-          "employeeAccess": {
-            "actions": [
-              "read",
-              "update"
-            ]
           }
         }
       },
       {
         "key": "auditor",
         "name": "Auditor",
-        "description": "Reads the activity log and who has Employee app access.",
+        "description": "Reads the activity log and who has HR access.",
         "grants": {
           "audit": {
             "actions": [
@@ -106,7 +89,12 @@
               "read"
             ]
           },
-          "employeeAccess": {
+          "orgRole": {
+            "actions": [
+              "read"
+            ]
+          },
+          "accessProfile": {
             "actions": [
               "read"
             ]
@@ -130,7 +118,10 @@
             "actions": [
               "read"
             ],
-            "scope": "team"
+            "scope": "team",
+            "fieldAccess": {
+              "amount": "read"
+            }
           }
         }
       },
@@ -147,101 +138,120 @@
         "grants": {}
       }
     ],
-    "employee": [
-      {
-        "key": "profile-viewer",
-        "name": "Profile viewer",
-        "description": "Can view their own profile, but not change it.",
-        "grants": {
-          "profile": {
-            "actions": [
-              "read"
-            ]
-          }
-        }
-      },
+    "tasks": [
       {
         "key": "lead",
-        "name": "Lead",
-        "description": "Assigns tasks to their team, and sees and approves their team's leave.",
+        "name": "Team Lead",
+        "description": "Runs projects for their team: plans, hands to QA, approves and cancels tasks.",
         "grants": {
-          "profile": {
+          "project": {
             "actions": [
               "read",
+              "create",
               "update"
-            ]
+            ],
+            "scope": "team"
+          },
+          "task": {
+            "actions": [
+              "read",
+              "create",
+              "update",
+              "approve",
+              "delete"
+            ],
+            "scope": "team",
+            "fieldAccess": {
+              "qaEstimatedHours": "edit",
+              "qaActualHours": "edit",
+              "qaApprovedHours": "edit"
+            }
           }
         }
       },
       {
-        "key": "member",
-        "name": "Team member",
-        "description": "Works on the tasks given to them. Own leave, profile and payslips.",
+        "key": "developer",
+        "name": "Developer",
+        "description": "Works on and tests the tasks they are given.",
         "grants": {
-          "profile": {
+          "project": {
             "actions": [
-              "read",
-              "update"
-            ]
-          }
-        }
-      },
-      {
-        "key": "intern",
-        "name": "Intern",
-        "description": "Like a team member, but no payslips in the app.",
-        "grants": {
-          "profile": {
+              "read"
+            ],
+            "scope": "own"
+          },
+          "task": {
             "actions": [
-              "read",
-              "update"
-            ]
-          }
-        }
-      },
-      {
-        "key": "contractor",
-        "name": "Contractor",
-        "description": "Their own tasks and profile. Leave and pay go through the agency.",
-        "grants": {
-          "profile": {
-            "actions": [
-              "read",
-              "update"
-            ]
+              "read"
+            ],
+            "scope": "own"
           }
         }
       }
     ]
   },
-  "assignments": {
+  "people": {
     "u_03": {
-      "hr": "staff",
-      "master": "hr-access"
+      "hr": [
+        "staff"
+      ],
+      "master": [
+        "hr-access"
+      ]
     },
     "u_04": {
-      "hr": "manager",
-      "account": "viewer"
+      "hr": [
+        "manager"
+      ],
+      "account": [
+        "viewer"
+      ],
+      "tasks": [
+        "lead"
+      ]
     },
     "u_05": {
-      "account": "admin",
-      "hr": "viewer",
-      "master": "auditor"
+      "account": [
+        "admin"
+      ],
+      "hr": [
+        "viewer"
+      ],
+      "master": [
+        "auditor"
+      ]
     },
     "u_06": {
-      "account": "accountant",
-      "hr": "admin"
+      "account": [
+        "accountant"
+      ],
+      "hr": [
+        "admin"
+      ]
     },
     "u_07": {
-      "master": "admin"
+      "master": [
+        "admin"
+      ],
+      "tasks": [
+        "developer"
+      ]
     },
     "u_12": {
-      "hr": "admin",
-      "master": "employee-access"
+      "hr": [
+        "admin"
+      ]
     },
-    "u_13": {
-      "employee": "profile-viewer"
+    "u_09": {
+      "tasks": [
+        "developer"
+      ]
+    },
+    "u_10": {
+      "tasks": [
+        "developer"
+      ]
     }
   },
-  "privileges": {}
+  "profiles": []
 }

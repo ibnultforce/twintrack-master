@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { getMyModuleAccess, getMyProfile, logIn, logOut } from '@/lib/api/account';
-import { getManageableRoles } from '@/lib/api/modules';
+import { getManageablePermissionSets } from '@/lib/api/modules';
 import { ApiRequestError, refreshAccessToken, setAccessToken, setSessionListeners } from '@/lib/api/http';
 import type { PermissionMap, Profile } from '@/lib/api/types';
 import { getAccessOptions } from '@/lib/api/users';
@@ -17,8 +17,8 @@ interface SessionValue {
   can: (permission: string) => boolean;
   /** Whether this person can change someone's access in at least one module. */
   canChangeAccess: boolean;
-  /** Whether this person can create or edit roles in at least one module. */
-  canEditRoles: boolean;
+  /** Whether this person can read or edit permission sets in at least one module. */
+  canEditPermissionSets: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -28,7 +28,7 @@ interface LoadedSession {
   profile: Profile;
   masterPermissions: PermissionMap;
   canChangeAccess: boolean;
-  canEditRoles: boolean;
+  canEditPermissionSets: boolean;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -46,18 +46,18 @@ async function orWhenRefused<Value>(read: () => Promise<Value>, fallback: Value)
 async function loadSession(): Promise<LoadedSession> {
   const profile = await getMyProfile();
   // Nothing else answers until a temporary password has been replaced.
-  if (profile.mustChangePassword) return { profile, masterPermissions: {}, canChangeAccess: false, canEditRoles: false };
+  if (profile.mustChangePassword) return { profile, masterPermissions: {}, canChangeAccess: false, canEditPermissionSets: false };
 
-  const [masterAccess, accessOptions, manageableRoles] = await Promise.all([
+  const [masterAccess, accessOptions, manageableSets] = await Promise.all([
     orWhenRefused(() => getMyModuleAccess(MASTER_MODULE_KEY), null),
     orWhenRefused(getAccessOptions, []),
-    orWhenRefused(getManageableRoles, []),
+    orWhenRefused(getManageablePermissionSets, []),
   ]);
   return {
     profile,
     masterPermissions: masterAccess?.permissions ?? {},
     canChangeAccess: accessOptions.some((option) => option.canChange),
-    canEditRoles: manageableRoles.length > 0,
+    canEditPermissionSets: manageableSets.length > 0,
   };
 }
 
@@ -110,7 +110,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     profile: session?.profile ?? null,
     can: (permission) => Boolean(session?.masterPermissions[permission]),
     canChangeAccess: session?.canChangeAccess ?? false,
-    canEditRoles: session?.canEditRoles ?? false,
+    canEditPermissionSets: session?.canEditPermissionSets ?? false,
     signIn,
     signOut,
     refreshSession,

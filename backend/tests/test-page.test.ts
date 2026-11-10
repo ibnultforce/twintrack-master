@@ -3,7 +3,9 @@ import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { ConfigError, loadConfig } from '../src/config.js';
+import { hrRoutes } from '../src/modules/hr/hr.routes.js';
 import { createMasterRoutes } from '../src/modules/master/master.routes.js';
+import { tasksRoutes } from '../src/modules/tasks/tasks.routes.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { readSeedFiles } from './helpers/testAccess.js';
 import { useTestDatabase } from './helpers/database.js';
@@ -13,11 +15,27 @@ const PASSWORD = 'test-page-password';
 const COOKIE_HOLDER_EMAIL = 'rahim@twintrack.test';
 const PUBLIC_ADDRESS = 'demo-link.trycloudflare.com';
 
+interface ScenarioRequest {
+  method: string;
+  path: string;
+  as?: string;
+  literalToken?: string;
+  cookie?: boolean;
+  body?: string;
+  /** Sent in place of the allowed origin. Only this replay can send it, because browsers set Origin themselves. */
+  origin?: string;
+}
+/** A request run before the scenario, such as creating the record it uses. `save` keeps response fields for {{name}} placeholders. */
+interface SetupStep extends ScenarioRequest {
+  save?: Record<string, string>;
+}
 interface Scenario {
+  kind: 'success' | 'fail';
   title: string;
   expected: number;
   code?: string;
-  request: { method: string; path: string; as?: string; literalToken?: string; cookie?: boolean; body?: string };
+  setup?: SetupStep[];
+  request: ScenarioRequest;
 }
 interface ScenarioFile {
   groups: { routes: { id: string; scenarios: Scenario[] }[] }[];
@@ -110,30 +128,43 @@ describe('test page', () => {
   });
 
   describe('scenarios', () => {
-    it('cover every built route', () => {
-      const covered = routes.filter((route) => route.scenarios.length > 0).map((route) => route.id);
-      const built = createMasterRoutes(createTestConfig()).map((route) => `${route.method} ${route.path}`);
-      expect(built.filter((id) => !covered.includes(id))).toEqual([]);
+    const builtRouteIds = [...createMasterRoutes(createTestConfig()), ...hrRoutes, ...tasksRoutes].map((route) => `${route.method} ${route.path}`);
+    const routesWith = (kind: Scenario['kind']) => routes.filter((route) => route.scenarios.some((scenario) => scenario.kind === kind)).map((route) => route.id);
+
+    it.each(['success', 'fail'] as const)('give every built route in every module a %s scenario', (kind) => {
+      const covered = routesWith(kind);
+      expect(builtRouteIds.filter((id) => !covered.includes(id))).toEqual([]);
     });
 
     beforeAll(async () => {
       await seedDatabase({ files: readSeedFiles(), password: PASSWORD, nodeEnv: 'test' });
     });
 
-    it.each(scenarios)('%s', async (_name, { expected, code, request: sent }) => {
+    it.each(scenarios)('%s', async (_name, { expected, code, setup = [], request: sent }) => {
       await seedDatabase({ files: readSeedFiles(), password: PASSWORD, nodeEnv: 'test' });
 
       const logIn = (email: string) => request(enabledApp).post('/auth/login').set('Origin', TEST_ORIGIN).send({ email, password: PASSWORD });
-      const method = sent.method.toLowerCase() as 'get' | 'post' | 'patch' | 'put' | 'delete';
-      const pending = request(enabledApp)[method](sent.path).set('Origin', TEST_ORIGIN);
+      const saved: Record<string, string> = {};
+      const fillIn = (text: string) => text.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => saved[name] ?? `{{${name}}}`);
 
-      if (sent.as) pending.set('Authorization', `Bearer ${(await logIn(sent.as)).body.accessToken as string}`);
-      if (sent.literalToken) pending.set('Authorization', `Bearer ${sent.literalToken}`);
-      if (sent.cookie) pending.set('Cookie', ((await logIn(COOKIE_HOLDER_EMAIL)).headers['set-cookie'] as unknown as string[])[0]!);
-      if (sent.body) pending.set('Content-Type', 'application/json').send(sent.body.split('YOUR_PASSWORD').join(PASSWORD));
+      const sendRequest = async (sending: ScenarioRequest) => {
+        const method = sending.method.toLowerCase() as 'get' | 'post' | 'patch' | 'put' | 'delete';
+        const pending = request(enabledApp)[method](fillIn(sending.path)).set('Origin', sending.origin ?? TEST_ORIGIN);
+        if (sending.as) pending.set('Authorization', `Bearer ${(await logIn(sending.as)).body.accessToken as string}`);
+        if (sending.literalToken) pending.set('Authorization', `Bearer ${sending.literalToken}`);
+        if (sending.cookie) pending.set('Cookie', ((await logIn(COOKIE_HOLDER_EMAIL)).headers['set-cookie'] as unknown as string[])[0]!);
+        if (sending.body) pending.set('Content-Type', 'application/json').send(fillIn(sending.body.split('YOUR_PASSWORD').join(PASSWORD)));
+        return pending;
+      };
 
-      const response = await pending;
-      expect(response.status).toBe(expected);
+      for (const step of setup) {
+        const answer = await sendRequest(step);
+        expect(answer.status, `setup ${step.method} ${step.path}: ${JSON.stringify(answer.body)}`).toBeLessThan(300);
+        for (const [name, field] of Object.entries(step.save ?? {})) saved[name] = String(answer.body[field]);
+      }
+
+      const response = await sendRequest(sent);
+      expect(response.status, JSON.stringify(response.body)).toBe(expected);
       if (code) expect(response.body.error.code).toBe(code);
     });
   });

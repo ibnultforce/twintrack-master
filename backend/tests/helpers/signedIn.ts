@@ -1,6 +1,7 @@
 import { hash } from '@node-rs/argon2';
 import type { Application } from 'express';
 import request from 'supertest';
+import { OrgRole } from '../../src/modules/master/models/orgRole.js';
 import { User } from '../../src/modules/master/models/user.js';
 import { validateManifest } from '../../src/modules/master/moduleRegistry/manifest.js';
 import { importManifest } from '../../src/modules/master/moduleRegistry/moduleRegistry.service.js';
@@ -27,6 +28,17 @@ export async function addPerson(id: string, overrides: Record<string, unknown> =
     email: `${id}@twintrack.test`,
     passwordHash: await passwordHashPromise,
     ...overrides,
+  });
+}
+
+/** Adds a role to the org tree. With no parent it becomes the root. */
+export async function addOrgRole(id: string, parentId?: string) {
+  const parent = parentId ? await OrgRole.findById(parentId).lean() : null;
+  if (parentId && !parent) throw new Error(`Org role ${parentId} must be added before ${id}.`);
+  return OrgRole.create({
+    _id: id,
+    name: `Org role ${id}`,
+    ...(parent ? { parentId, ancestorIds: [...parent.ancestorIds, parent._id] } : { ancestorIds: [], isRoot: true }),
   });
 }
 

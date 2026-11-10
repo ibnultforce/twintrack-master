@@ -10,6 +10,7 @@ import { createRequestLogger } from '../src/lib/requestLogger.js';
 import { createAccessMiddleware } from '../src/modules/master/access/access.middleware.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { Session } from '../src/modules/master/models/session.js';
+import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { User } from '../src/modules/master/models/user.js';
 import { validateManifest } from '../src/modules/master/moduleRegistry/manifest.js';
 import { importManifest } from '../src/modules/master/moduleRegistry/moduleRegistry.service.js';
@@ -63,10 +64,10 @@ describe('access checks', () => {
 
   beforeEach(async () => {
     await importSeedManifests();
-    await addPerson('rahim', { name: 'Rahim Uddin', assignments: { hr: 'manager', account: 'viewer' }, managerId: 'farhana', title: 'Engineering Lead' });
+    await addPerson('rahim', { name: 'Rahim Uddin', permissionSets: { hr: ['manager'], account: ['viewer'] }, managerId: 'farhana', title: 'Engineering Lead' });
     await addPerson('farhana', { name: 'Farhana Kabir', superAdmin: true });
     await addPerson('karim');
-    await addPerson('sabbir', { assignments: { hr: 'staff', master: 'hr-access' } });
+    await addPerson('sabbir', { permissionSets: { hr: ['staff'], master: ['hr-access'] } });
   });
 
   describe('session check', () => {
@@ -185,11 +186,11 @@ describe('access checks', () => {
       expect((await getAs(await signIn('farhana@twintrack.test'), '/no-permission', privateApp)).status).toBe(403);
     });
 
-    it('applies a role change on the next call, with the same token', async () => {
+    it('applies a permission set change on the next call, with the same token', async () => {
       const token = await signIn('sabbir@twintrack.test');
       expect((await getAs(token, '/any-permission', privateApp)).status).toBe(200);
 
-      await User.updateOne({ _id: 'sabbir' }, { $unset: { 'assignments.master': 1 } });
+      await User.updateOne({ _id: 'sabbir' }, { $unset: { 'permissionSets.master': 1 } });
       expect((await getAs(token, '/any-permission', privateApp)).status).toBe(403);
     });
   });
@@ -265,7 +266,8 @@ describe('access checks', () => {
     });
 
     it.each([
-      ['a role', { name: 'Rahim', assignments: { master: 'admin' } }],
+      ['a permission set', { name: 'Rahim', permissionSets: { master: ['admin'] } }],
+      ['a profile', { name: 'Rahim', profileId: 'ap_any' }],
       ['super admin', { name: 'Rahim', superAdmin: true }],
       ['a job title', { name: 'Rahim', title: 'Founder' }],
       ['a blank name', { name: '   ' }],
@@ -276,7 +278,8 @@ describe('access checks', () => {
 
       const rahim = await User.findById('rahim').lean();
       expect(rahim).toMatchObject({ name: 'Rahim Uddin', superAdmin: false, title: 'Engineering Lead' });
-      expect(rahim?.assignments.master).toBeUndefined();
+      expect(rahim?.permissionSets.master).toBeUndefined();
+      expect(rahim?.profileId).toBeUndefined();
     });
   });
 
@@ -360,11 +363,11 @@ describe('access checks', () => {
       const response = await getAs(await signIn('rahim@twintrack.test'), '/me/modules');
       expect(response.status).toBe(200);
       expect(response.body.modules).toEqual([
-        { key: 'hr', name: 'HR', description: expect.any(String) as string, frontendUrl: HR_ORIGIN, roleName: 'Manager' },
+        { key: 'hr', name: 'HR', description: expect.any(String) as string, frontendUrl: HR_ORIGIN, profileName: null, permissionSets: ['manager'] },
       ]);
     });
 
-    it('leaves out a module that is not loaded, even with a role in it', async () => {
+    it('leaves out a module that is not loaded, even with a permission set in it', async () => {
       expect(moduleKeys((await getAs(await signIn('rahim@twintrack.test'), '/me/modules')).body)).not.toContain('account');
     });
 
@@ -374,14 +377,18 @@ describe('access checks', () => {
 
     it('lists every loaded module for a super admin, with no address when none is set', async () => {
       const { body } = await getAs(await signIn('farhana@twintrack.test'), '/me/modules');
-      expect(moduleKeys(body)).toEqual(['employee', 'hr', 'master']);
-      expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules[2]?.frontendUrl).toBeNull();
+      expect(moduleKeys(body)).toEqual(['hr', 'master', 'tasks']);
+      expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules[1]?.frontendUrl).toBeNull();
     });
 
-    it('lists a module reached through a special privilege alone', async () => {
-      await User.updateOne({ _id: 'karim' }, { $set: { 'privileges.hr': ['salary.read'] } });
-      const { body } = await getAs(await signIn('karim@twintrack.test'), '/me/modules');
-      expect(body.modules[0]).toMatchObject({ key: 'hr', roleName: null });
+    it('lists a module reached through a profile alone, and follows a profile change on the next call', async () => {
+      await AccessProfile.create({ _id: 'ap_staff', name: 'Staff', grants: { hr: { salary: { actions: ['read'], scope: 'own' } } } });
+      await User.updateOne({ _id: 'karim' }, { $set: { profileId: 'ap_staff' } });
+      const token = await signIn('karim@twintrack.test');
+      expect((await getAs(token, '/me/modules')).body.modules).toEqual([expect.objectContaining({ key: 'hr', profileName: 'Staff', permissionSets: [] })]);
+
+      await AccessProfile.updateOne({ _id: 'ap_staff' }, { $set: { grants: { master: { audit: { actions: ['read'] } } } } });
+      expect((await getAs(token, '/me/modules')).body.modules.map((module: { key: string }) => module.key)).toEqual(['master']);
     });
   });
 
@@ -392,7 +399,8 @@ describe('access checks', () => {
       expect(response.body).toMatchObject({
         module: 'hr',
         hasAccess: true,
-        role: 'manager',
+        profile: null,
+        permissionSets: ['manager'],
         permissions: { 'salary.read': 'team' },
       });
       expect(response.body.permissions['salary.update']).toBeUndefined();
@@ -410,11 +418,11 @@ describe('access checks', () => {
       expect(response.body.error.code).toBe('unknown_module');
     });
 
-    it('shows a role removed in Master on the next call, with the same token', async () => {
+    it('shows a permission set removed in Master on the next call, with the same token', async () => {
       const token = await signIn('rahim@twintrack.test');
       expect((await getAs(token, '/me/permissions/hr')).body.hasAccess).toBe(true);
 
-      await User.updateOne({ _id: 'rahim' }, { $unset: { 'assignments.hr': 1 } });
+      await User.updateOne({ _id: 'rahim' }, { $unset: { 'permissionSets.hr': 1 } });
       expect((await getAs(token, '/me/permissions/hr')).body.hasAccess).toBe(false);
     });
   });

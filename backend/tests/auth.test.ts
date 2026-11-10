@@ -58,7 +58,7 @@ describe('auth routes', () => {
   });
 
   beforeEach(async () => {
-    await User.create({ _id: 'u_04', name: 'Rahim Uddin', email: EMAIL, passwordHash, assignments: { hr: 'manager' } });
+    await User.create({ _id: 'u_04', name: 'Rahim Uddin', email: EMAIL, passwordHash, permissionSets: { hr: ['manager'] } });
   });
 
   describe('POST /auth/login', () => {

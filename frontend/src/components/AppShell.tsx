@@ -9,7 +9,7 @@ import { useSession } from '@/session/SessionProvider';
 const CenteredMessage = ({ children }: { children: ReactNode }) => <div className="centered"><p className="loading" role="status">{children}</p></div>;
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { status, profile, can, canChangeAccess, canEditRoles, signOut } = useSession();
+  const { status, profile, can, canChangeAccess, canEditPermissionSets, signOut } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const mustChangePassword = profile?.mustChangePassword ?? false;
@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (status !== 'signed-in' || !profile || mustChangePassword) return <CenteredMessage>Loading…</CenteredMessage>;
 
-  const isAllowed = (item: NavigationItem) => isNavigationItemAllowed(item, { can, canChangeAccess, canEditRoles });
+  const isAllowed = (item: NavigationItem) => isNavigationItemAllowed(item, { can, canChangeAccess, canEditPermissionSets });
   const consoleNavigation = CONSOLE_NAVIGATION.filter(isAllowed);
   const currentConsoleItem = CONSOLE_NAVIGATION.find((item) => isCurrentSection(pathname, item.href));
 
@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
       <main>
         {currentConsoleItem && !isAllowed(currentConsoleItem)
-          ? <section className="card"><p className="empty">Your role doesn&apos;t include this screen.</p></section>
+          ? <section className="card"><p className="empty">Your access doesn&apos;t include this screen.</p></section>
           : children}
       </main>
     </div>
