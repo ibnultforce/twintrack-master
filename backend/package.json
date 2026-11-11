@@ -14,6 +14,7 @@
     "test:postman": "tsx --env-file-if-exists=.env tests/run-postman.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@node-rs/argon2": "^2.2.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

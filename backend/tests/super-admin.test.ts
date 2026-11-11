@@ -2,14 +2,11 @@ import type { Application } from 'express';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
-import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { Module } from '../src/modules/master/models/module.js';
 import { User } from '../src/modules/master/models/user.js';
 import { useTestDatabase } from './helpers/database.js';
 import { addPerson, importSeedManifests, requestsAs, signIn, TEST_PASSWORD } from './helpers/signedIn.js';
 import { createTestConfig } from './helpers/testConfig.js';
-
-const REASON = 'Covering payroll this month';
 
 /** Gives one person a profile with these grants, straight in the database. */
 async function giveProfile(personId: string, grants: Record<string, unknown>) {
@@ -31,40 +28,39 @@ describe('what only a super admin can change', () => {
     await importSeedManifests();
     await addPerson('farhana', { superAdmin: true });
     await addPerson('tariq', { superAdmin: true });
-    await addPerson('alia', { permissionSets: { master: ['admin'] } });
-    await addPerson('sabbir', { permissionSets: { master: ['hr-access'] } });
-    await addPerson('rahim', { permissionSets: { hr: ['manager'] } });
+    await addPerson('alia', { profileId: 'ap_access_admin' });
+    await addPerson('sabbir', { profileId: 'ap_hr_access' });
+    await addPerson('rahim', { profileId: 'ap_engineering_lead' });
     await addPerson('karim');
   });
 
   describe('any person', () => {
-    it('gives a permission set to another super admin, and to themselves', async () => {
+    it('gives a profile to another super admin, and to themselves', async () => {
       const farhana = await as('farhana');
-      const toTariq = await farhana.put('/users/tariq/permission-sets', { module: 'hr', permissionSets: ['manager'], reason: REASON });
-      expect(toTariq.body.permissionSets).toEqual({ hr: ['manager'] });
-      expect((await farhana.put('/users/farhana/permission-sets', { module: 'hr', permissionSets: ['manager'], reason: REASON })).status).toBe(200);
+      const toTariq = await farhana.put('/users/tariq/profile', { profileId: 'ap_hr_admin' });
+      expect(toTariq.body.profileId).toBe('ap_hr_admin');
+      expect((await farhana.put('/users/farhana/profile', { profileId: 'ap_hr_admin' })).status).toBe(200);
     });
 
     it('gives themselves a profile, which nobody else may do', async () => {
       const profile = await AccessProfile.create({ _id: 'ap_staff', name: 'Staff', grants: {} });
-      expect((await (await as('farhana')).patch('/users/farhana', { profileId: profile._id })).status).toBe(200);
-      const refused = await (await as('alia')).patch('/users/alia', { profileId: profile._id });
+      expect((await (await as('farhana')).put('/users/farhana/profile', { profileId: profile._id })).status).toBe(200);
+      const refused = await (await as('alia')).put('/users/alia/profile', { profileId: profile._id });
       expect(refused.status).toBe(403);
-      expect(refused.body.error.code).toBe('own_account');
+      expect(refused.body.error.code).toBe('own_access');
     });
 
     it('leaves a super admin with everything, whatever is on their record', async () => {
-      await (await as('farhana')).put('/users/tariq/permission-sets', { module: 'hr', permissionSets: ['viewer'], reason: REASON });
+      await (await as('farhana')).put('/users/tariq/profile', { profileId: 'ap_auditor' });
       const permissions = await (await as('tariq')).get('/me/permissions/hr');
       expect(permissions.body).toMatchObject({ profile: 'super-admin' });
       expect(permissions.body.permissions['salary.update']).toBe('all');
     });
 
-    it('keeps other people out of super admins and their own access, as before', async () => {
+    it('keeps other people out of super admins and their own profile', async () => {
       const alia = await as('alia');
-      const giveAdmin = { module: 'hr', permissionSets: ['admin'], reason: REASON };
-      expect((await alia.put('/users/farhana/permission-sets', giveAdmin)).body.error.code).toBe('super_admin');
-      expect((await alia.put('/users/alia/permission-sets', giveAdmin)).body.error.code).toBe('own_access');
+      expect((await alia.put('/users/farhana/profile', { profileId: 'ap_developer' })).body.error.code).toBe('super_admin');
+      expect((await alia.put('/users/alia/profile', { profileId: 'ap_developer' })).body.error.code).toBe('own_access');
     });
   });
 
@@ -73,7 +69,7 @@ describe('what only a super admin can change', () => {
       const farhana = await as('farhana');
       const created = await farhana.post('/access-profiles', { name: 'HR lead', grants: { hr: '*' } });
       expect(created.status).toBe(201);
-      await farhana.patch('/users/karim', { profileId: created.body.id });
+      await farhana.put('/users/karim/profile', { profileId: created.body.id });
       expect((await (await as('karim')).get('/me/permissions/hr')).body.permissions['salary.approve']).toBe('all');
     });
 
@@ -89,119 +85,14 @@ describe('what only a super admin can change', () => {
     });
   });
 
-  describe('PATCH /permission-sets/:module/:key', () => {
-    const managerWithSalary = { grants: { salary: { actions: ['read', 'update'], scope: 'team' } } };
-
-    it('changes what a permission set allows, on the next request of everyone who has it', async () => {
-      const rahim = await as('rahim');
-      expect((await rahim.get('/me/permissions/hr')).body.permissions['salary.update']).toBeUndefined();
-
-      const response = await (await as('farhana')).patch('/permission-sets/hr/manager', { ...managerWithSalary, name: 'Team Lead' });
-      expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({ module: 'hr', key: 'manager', name: 'Team Lead', grants: ['salary.read (team)', 'salary.update (team)'] });
-
-      const permissions = await rahim.get('/me/permissions/hr');
-      expect(permissions.body.permissionSets).toEqual(['manager']);
-      expect(permissions.body.permissions['salary.update']).toBe('team');
-      expect(permissions.body.permissions['salary.approve']).toBeUndefined();
-    });
-
-    it('records the change, and marks the module as edited', async () => {
-      await (await as('farhana')).patch('/permission-sets/hr/manager', managerWithSalary);
-      const entry = await AuditLog.findOne({ action: 'permission_set.updated' }).lean();
-      expect(entry).toMatchObject({ actorId: 'farhana', module: 'hr', targetId: 'hr.manager', after: { grants: managerWithSalary.grants } });
-      expect((await Module.findOne({ key: 'hr' }).lean())?.permissionsEditedAt).toBeInstanceOf(Date);
-    });
-
-    it('can edit Master\'s own permission sets, without locking out the super admin', async () => {
-      const farhana = await as('farhana');
-      expect((await farhana.patch('/permission-sets/master/admin', { grants: { user: { actions: ['read'] } } })).status).toBe(200);
-      expect((await (await as('alia')).get('/modules')).status).toBe(403);
-      expect((await farhana.get('/modules')).status).toBe(200);
-    });
-
-    it.each([
-      ['an unknown resource', { grants: { ghost: { actions: ['read'] } } }, 'is not a resource'],
-      ['an unknown action', { grants: { salary: { actions: ['fly'] } } }, 'grants.salary.actions'],
-      ['a narrow scope on an unscoped resource', { grants: { access: { actions: ['read'], scope: 'team' } } }, "isn't scoped"],
-    ])('refuses %s, and saves nothing', async (_label, body, message) => {
-      const response = await (await as('farhana')).patch('/permission-sets/hr/manager', body);
-      expect(response.status).toBe(422);
-      expect(JSON.stringify(response.body.error.fields)).toContain(message);
-      expect((await Module.findOne({ key: 'hr' }).lean())?.permissionsEditedAt).toBeUndefined();
-    });
-
-    it.each([
-      ['no fields', {}],
-      ['another field', { key: 'renamed' }],
-      ['grants that are neither "*" nor a list', { grants: 'everything' }],
-    ])('refuses a request with %s', async (_label, body) => {
-      expect((await (await as('farhana')).patch('/permission-sets/hr/manager', body)).status).toBe(422);
-    });
-
-    it('answers 404 for a module or permission set that does not exist', async () => {
-      const farhana = await as('farhana');
-      expect((await farhana.patch('/permission-sets/account/viewer', managerWithSalary)).body.error.code).toBe('unknown_module');
-      expect((await farhana.patch('/permission-sets/hr/emperor', managerWithSalary)).body.error.code).toBe('unknown_permission_set');
-    });
-
-    it.each(['alia', 'sabbir'])('is refused for %s, who holds no permissionSet.update in HR', async (id) => {
-      const response = await (await as(id)).patch('/permission-sets/hr/manager', managerWithSalary);
-      expect(response.status).toBe(403);
-      expect(response.body.error.code).toBe('forbidden');
-    });
-  });
-
-  describe('POST and DELETE /permission-sets/:module', () => {
-    const lead = { key: 'lead', name: 'Team Lead', grants: { salary: { actions: ['read'], scope: 'team' } } };
-
-    it('adds a permission set that can be given straight away and takes effect', async () => {
-      const farhana = await as('farhana');
-      const response = await farhana.post('/permission-sets/hr', lead);
-      expect(response.status).toBe(201);
-      expect(response.body).toMatchObject({ module: 'hr', key: 'lead', name: 'Team Lead' });
-
-      expect((await farhana.put('/users/karim/permission-sets', { module: 'hr', permissionSets: ['lead'], reason: REASON })).status).toBe(200);
-      const permissions = await (await as('karim')).get('/me/permissions/hr');
-      expect(permissions.body).toMatchObject({ permissionSets: ['lead'] });
-      expect(permissions.body.permissions['salary.read']).toBe('team');
-    });
-
-    it.each([
-      ['a key already used', { ...lead, key: 'manager' }],
-      ['a badly formed key', { ...lead, key: 'Team Lead' }],
-      ['a permission the module does not have', { ...lead, grants: { salary: { actions: ['fly'] } } }],
-    ])('refuses %s', async (_label, body) => {
-      expect((await (await as('farhana')).post('/permission-sets/hr', body)).status).toBe(422);
-    });
-
-    it('removes a permission set nobody holds', async () => {
-      const farhana = await as('farhana');
-      await farhana.post('/permission-sets/hr', lead);
-      expect((await farhana.delete('/permission-sets/hr/lead')).status).toBe(200);
-      const hr = (await farhana.get('/permission-sets')).body.modules.find((module: { key: string }) => module.key === 'hr');
-      expect(hr.permissionSets.some((permissionSet: { key: string }) => permissionSet.key === 'lead')).toBe(false);
-    });
-
-    it('refuses to remove a permission set someone holds', async () => {
-      const response = await (await as('farhana')).delete('/permission-sets/hr/manager');
-      expect(response.status).toBe(409);
-      expect(response.body.error.code).toBe('permission_set_in_use');
-    });
-
-    it('is refused for an Access Admin', async () => {
-      expect((await (await as('alia')).post('/permission-sets/hr', lead)).body.error.code).toBe('forbidden');
-      expect((await (await as('alia')).delete('/permission-sets/hr/viewer')).body.error.code).toBe('forbidden');
-    });
-  });
-
   describe('PUT and DELETE /modules/:key/resources/:resource', () => {
-    it('adds a resource whose permissions a permission set can then use', async () => {
+    it('adds a resource whose permissions a profile can then use', async () => {
       const farhana = await as('farhana');
       const added = await farhana.put('/modules/hr/resources/bonus', { label: 'Bonuses', actions: ['read', 'approve'] });
       expect(added.status).toBe(201);
-      expect((await farhana.patch('/permission-sets/hr/staff', { grants: { bonus: { actions: ['approve'] } } })).status).toBe(200);
-      await farhana.put('/users/karim/permission-sets', { module: 'hr', permissionSets: ['staff'], reason: REASON });
+      const profile = await farhana.post('/access-profiles', { name: 'Bonus approver', grants: { hr: { bonus: { actions: ['approve'] } } } });
+      expect(profile.status).toBe(201);
+      await farhana.put('/users/karim/profile', { profileId: profile.body.id });
       expect((await (await as('karim')).get('/me/permissions/hr')).body.permissions).toEqual({ 'bonus.approve': 'all' });
     });
 
@@ -242,30 +133,21 @@ describe('what only a super admin can change', () => {
         expect(response.body.error.message).not.toContain('routes.');
       });
 
-      it('locks an action only until the last permission set using it lets go', async () => {
+      it('locks an action a profile uses, until the last profile using it lets go', async () => {
         const farhana = await as('farhana');
         await farhana.put('/modules/hr/resources/bonus', { label: 'Bonuses', actions: ['read', 'approve'] });
-        await farhana.patch('/permission-sets/hr/staff', { grants: { bonus: { actions: ['approve'] } } });
+        await AccessProfile.create({ _id: 'ap_bonus', name: 'Bonus approver', grants: { hr: { bonus: { actions: ['approve'] } } } });
         const karim = await asModuleAdmin();
 
         const whileUsed = await karim.put('/modules/hr/resources/bonus', { label: 'Bonuses', actions: ['read'] });
         expect(whileUsed.status).toBe(422);
-        expect(whileUsed.body.error.message).toContain('approve is used by permission set');
+        expect(whileUsed.body.error.message).toContain('approve is used by profile Bonus approver');
 
-        await farhana.patch('/permission-sets/hr/staff', { grants: { bonus: { actions: ['read'] } } });
+        await AccessProfile.updateOne({ _id: 'ap_bonus' }, { $set: { grants: { hr: { bonus: { actions: ['read'] } } } } });
         expect((await karim.put('/modules/hr/resources/bonus', { label: 'Bonuses', actions: ['read'] })).status).toBe(200);
       });
 
-      it('locks an action a profile uses', async () => {
-        const farhana = await as('farhana');
-        await farhana.put('/modules/hr/resources/bonus', { label: 'Bonuses', actions: ['read', 'approve'] });
-        await AccessProfile.create({ _id: 'ap_bonus', name: 'Bonus approver', grants: { hr: { bonus: { actions: ['approve'] } } } });
-        const response = await (await asModuleAdmin()).put('/modules/hr/resources/bonus', { label: 'Bonuses', actions: ['read'] });
-        expect(response.status).toBe(422);
-        expect(response.body.error.message).toContain('approve is used by profile Bonus approver');
-      });
-
-      it('refuses removing an action a permission set or a route uses', async () => {
+      it('refuses removing an action a profile or a route uses', async () => {
         const karim = await asModuleAdmin();
         expect((await karim.put('/modules/hr/resources/salary', { label: 'Salaries', actions: ['update'] })).status).toBe(422);
         expect((await karim.put('/modules/master/resources/audit', { label: 'Activity log', actions: ['delete'] })).status).toBe(422);
@@ -291,27 +173,23 @@ describe('what only a super admin can change', () => {
       expect((await farhana.put('/modules/master/resources/user', { label: 'People', actions })).status).toBe(200);
     });
 
-    it('lets a super admin remove an action that permission sets and profiles use, which they then lose', async () => {
+    it('lets a super admin remove an action that profiles use, which they then lose', async () => {
       const farhana = await as('farhana');
       await AccessProfile.create({ _id: 'ap_reader', name: 'Reader', grants: { hr: { salary: { actions: ['read', 'update'], scope: 'team' } } } });
       expect((await farhana.put('/modules/hr/resources/salary', { label: 'Salaries', actions: ['update'] })).status).toBe(200);
-      const permissionSets = (await farhana.get('/modules/hr/export')).body.permissionSets as { grants: Record<string, { actions: string[] }> | '*' }[];
-      for (const permissionSet of permissionSets) {
-        if (permissionSet.grants !== '*') expect(permissionSet.grants.salary?.actions ?? []).not.toContain('read');
-      }
       expect((await AccessProfile.findById('ap_reader').lean())?.grants).toEqual({ hr: { salary: { actions: ['update'], scope: 'team' } } });
     });
 
     it('lets a super admin remove an action an API uses, and keeps the module editable afterwards', async () => {
       const farhana = await as('farhana');
-      expect((await farhana.put('/modules/master/resources/permissionSet', { label: 'Permission sets', actions: ['read', 'create', 'update'] })).status).toBe(200);
+      expect((await farhana.put('/modules/master/resources/orgRole', { label: 'Org roles', actions: ['read', 'create', 'update'] })).status).toBe(200);
       expect((await farhana.put('/modules/master/resources/user', { label: 'Users', actions: ['read', 'update'] })).status).toBe(200);
       expect((await farhana.put('/modules/master/resources/user', { label: 'People', actions: ['read', 'update'] })).status).toBe(200);
       // Nobody else can hold the removed permission, so only a super admin can still use the API.
       expect((await farhana.post('/users', {})).status).not.toBe(403);
     });
 
-    it('lets a super admin remove a resource a permission set uses', async () => {
+    it('lets a super admin remove a resource a profile uses', async () => {
       expect((await (await as('farhana')).delete('/modules/hr/resources/salary')).status).toBe(200);
     });
 
@@ -322,33 +200,8 @@ describe('what only a super admin can change', () => {
   });
 
   describe('deciding from permissions alone', () => {
-    it('lets anyone whose permission set is given permissionSet.update edit the rules, and stops when it is taken away', async () => {
-      const farhana = await as('farhana');
-      const sabbir = await as('sabbir');
-      const grants = { salary: { actions: ['read'], scope: 'all' } };
-      await farhana.put('/users/sabbir/permission-sets', { module: 'hr', permissionSets: ['staff'], reason: REASON });
-      expect((await sabbir.patch('/permission-sets/hr/viewer', { name: 'Reader' })).status).toBe(403);
-
-      await farhana.patch('/permission-sets/hr/staff', { grants: { ...grants, permissionSet: { actions: ['update'] } } });
-      expect((await sabbir.patch('/permission-sets/hr/viewer', { name: 'Reader' })).status).toBe(200);
-
-      await farhana.patch('/permission-sets/hr/staff', { grants });
-      expect((await sabbir.patch('/permission-sets/hr/viewer', { name: 'Viewer' })).status).toBe(403);
-    });
-
-    it('takes which module someone can change access in from the Master manifest', async () => {
-      const master = await Module.findOne({ key: 'master' }).lean();
-      const resources = master!.resources.map((resource) => (resource.key === 'hrAccess' ? { ...resource, managesAccessOf: 'master' } : resource));
-      await Module.updateOne({ key: 'master' }, { $set: { resources } });
-
-      const sabbir = await as('sabbir');
-      expect((await sabbir.put('/users/karim/permission-sets', { module: 'master', permissionSets: ['auditor'], reason: REASON })).status).toBe(200);
-      const refused = await sabbir.put('/users/karim/permission-sets', { module: 'hr', permissionSets: ['staff'], reason: REASON });
-      expect(refused.body.error.code).toBe('module_access_only');
-    });
-
-    it('gives the scenario\'s salary permissions from permission set data', async () => {
-      await User.updateOne({ _id: 'karim' }, { $set: { 'permissionSets.hr': ['admin'] } });
+    it('gives the scenario\'s salary permissions from profile data', async () => {
+      await User.updateOne({ _id: 'karim' }, { $set: { profileId: 'ap_hr_admin' } });
       const salaryOf = async (id: string) => {
         const { body } = await (await as(id)).get('/me/permissions/hr');
         return Object.keys(body.permissions).filter((permission) => permission.startsWith('salary.')).sort();
@@ -361,11 +214,11 @@ describe('what only a super admin can change', () => {
   describe('protecting a super admin\'s edits', () => {
     const hrManifest = async () => {
       const module = await Module.findOne({ key: 'hr' }).lean();
-      return { manifestVersion: 1, module: { key: 'hr', name: 'HR', version: '9.0.0' }, resources: module!.resources, routes: [], permissionSets: module!.permissionSets };
+      return { manifestVersion: 1, module: { key: 'hr', name: 'HR', version: '9.0.0' }, resources: module!.resources, routes: [] };
     };
 
     beforeEach(async () => {
-      await (await as('farhana')).patch('/permission-sets/hr/viewer', { name: 'Reader' });
+      await (await as('farhana')).put('/modules/hr/resources/salary', { label: 'Pay', actions: ['read', 'create', 'update', 'approve', 'delete', 'share'] });
     });
 
     it('stops an Access Admin importing over them', async () => {

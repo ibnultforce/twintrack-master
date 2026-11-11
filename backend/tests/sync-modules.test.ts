@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { Module } from '../src/modules/master/models/module.js';
 import { User } from '../src/modules/master/models/user.js';
+import type { ManifestResource } from '../src/modules/master/moduleRegistry/manifest.js';
 import { syncModules } from '../src/seed/syncModules.js';
 import { useTestDatabase } from './helpers/database.js';
 
@@ -9,10 +11,10 @@ const manifest = (resources: object[], routes: object[] = [], version = '2.0.0')
   module: { key: 'tasks', name: 'Tasks', version },
   resources,
   routes,
-  permissionSets: [],
 });
 
-const taskResource = { key: 'task', label: 'Tasks', actions: ['read', 'create'], scoped: true };
+const taskResource: ManifestResource = { key: 'task', label: 'Tasks', actions: ['read', 'create'], scoped: true };
+const customResource: ManifestResource = { key: 'trip', label: 'Trips', actions: ['read'], custom: true, fields: [{ key: 'title', label: 'Title', type: 'text' }] };
 
 describe('reloading modules from their manifests', () => {
   useTestDatabase();
@@ -22,45 +24,30 @@ describe('reloading modules from their manifests', () => {
       key: 'tasks',
       name: 'Tasks',
       version: '1.0.0',
-      resources: [taskResource, { key: 'bonus', label: 'Bonuses', actions: ['read'] }],
+      resources: [taskResource, { key: 'bonus', label: 'Bonuses', actions: ['read'] } satisfies ManifestResource, customResource],
       routes: [],
-      permissionSets: [
-        { key: 'clerk', name: 'Clerk', grants: { task: { actions: ['read', 'delete'], scope: 'team' }, bonus: { actions: ['read'] } } },
-        { key: 'owner', name: 'Owner', grants: '*' },
-      ],
       permissionsEditedAt: new Date(),
-    } as never);
+    });
   });
 
-  it('takes resources from the file and keeps permission sets, without what the file no longer offers', async () => {
+  it('takes resources from the file, and keeps custom objects built in the app', async () => {
     const [synced] = await syncModules([manifest([taskResource])]);
 
-    expect(synced).toEqual({
-      key: 'tasks',
-      version: '2.0.0',
-      keptPermissionSets: ['clerk', 'owner'],
-      droppedPermissions: ['clerk: task.delete', 'clerk: bonus.read'],
-    });
+    expect(synced).toEqual({ key: 'tasks', version: '2.0.0' });
     const stored = await Module.findOne({ key: 'tasks' }).lean();
     expect(stored?.version).toBe('2.0.0');
-    expect(stored?.resources.map((resource) => resource.key)).toEqual(['task']);
-    expect(stored?.permissionSets).toEqual([
-      { key: 'clerk', name: 'Clerk', grants: { task: { actions: ['read'], scope: 'team' } } },
-      { key: 'owner', name: 'Owner', grants: '*' },
-    ]);
+    expect(stored?.resources.map((resource) => resource.key)).toEqual(['task', 'trip']);
   });
 
-  it('still counts kept permission sets as edits', async () => {
+  it('leaves people and profiles alone', async () => {
+    await AccessProfile.create({ _id: 'ap_clerk', name: 'Clerk', grants: { tasks: { task: { actions: ['read'], scope: 'team' } } } });
+    await User.create({ _id: 'u_1', name: 'One', email: 'one@twintrack.test', passwordHash: 'x', profileId: 'ap_clerk' });
     await syncModules([manifest([taskResource])]);
-    expect((await Module.findOne({ key: 'tasks' }).lean())?.permissionsEditedAt).toBeInstanceOf(Date);
-  });
 
-  it('adds nobody and leaves people alone', async () => {
-    await User.create({ _id: 'u_1', name: 'One', email: 'one@twintrack.test', passwordHash: 'x', permissionSets: { tasks: ['clerk'] } });
-    await syncModules([manifest([taskResource])]);
     const people = await User.find().lean();
     expect(people).toHaveLength(1);
-    expect(people[0]?.permissionSets).toEqual({ tasks: ['clerk'] });
+    expect(people[0]?.profileId).toBe('ap_clerk');
+    expect((await AccessProfile.findById('ap_clerk').lean())?.grants).toEqual({ tasks: { task: { actions: ['read'], scope: 'team' } } });
   });
 
   it('changes nothing when a manifest is invalid', async () => {

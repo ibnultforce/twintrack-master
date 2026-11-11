@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { describeError } from '@/lib/api/http';
-import type { FieldAccessLevel, FieldAccessMap, Grants, ModuleResource, PermissionMap, Scope } from '@/lib/api/types';
+import { type FieldAccessMap, type Grants, type ModuleResource, type PermissionMap, type Scope } from '@/lib/api/types';
 import { humanize, SCOPE_LABELS } from '@/lib/format';
 import { ALL_ACTIONS, buildGrants, isWiderScope, permissionKey, readResourceScopes } from '@/lib/grants';
-import { Notice } from './ui';
+import { FieldAccessPanel } from './FieldAccessPanel';
+import { Notice, Tabs } from './ui';
 
 const SCOPES: Scope[] = ['own', 'team', 'all'];
 
@@ -20,7 +21,7 @@ function ApiList({ resource, apis }: { resource: ModuleResource; apis: Record<st
 }
 
 /**
- * Ticks which actions a permission set or a profile allows in one module, and how far each resource reaches.
+ * Ticks which actions a profile allows in one module, and how far each resource reaches.
  * Anything this person doesn't hold is disabled. The API checks the same rule.
  */
 export function GrantsMatrix({ moduleKey, permissions, fieldAccess: initialFieldAccess = {}, resources, apis, canEdit, assignable, assignableFields = null, onSave }: {
@@ -40,7 +41,11 @@ export function GrantsMatrix({ moduleKey, permissions, fieldAccess: initialField
   const [selected, setSelected] = useState(() => new Set(Object.keys(permissions)));
   const [scopes, setScopes] = useState(() => readResourceScopes(permissions, resources));
   const [outcome, setOutcome] = useState<{ tone: 'good' | 'danger'; text: string } | null>(null);
-  const actions = ALL_ACTIONS.filter((action) => resources.some((resource) => resource.actions.includes(action)));
+  // One object at a time, so a module with many objects stays short. Ticks on other tabs are kept, and Save covers all.
+  const [activeKey, setActiveKey] = useState(resources[0]?.key ?? '');
+  const shownResources = resources.filter((resource) => resource.key === activeKey);
+  const actions = ALL_ACTIONS.filter((action) => shownResources.some((resource) => resource.actions.includes(action)));
+  const tickedCount = (resource: ModuleResource) => resource.actions.filter((action) => selected.has(permissionKey(resource.key, action))).length;
 
   const toggle = (resource: ModuleResource, permission: string) => {
     const next = new Set(selected);
@@ -74,46 +79,30 @@ export function GrantsMatrix({ moduleKey, permissions, fieldAccess: initialField
 
   return (
     <>
-      <div className="table-box">
+      {resources.length > 1 ? (
+        <Tabs
+          id={`grants-${moduleKey}`}
+          label={`Objects in ${moduleKey}`}
+          value={activeKey}
+          onChange={setActiveKey}
+          options={resources.map((resource) => ({ value: resource.key, label: resource.label, count: tickedCount(resource) }))}
+        />
+      ) : null}
+      <div className="table-box" id={`grants-${moduleKey}-panel`} role={resources.length > 1 ? 'tabpanel' : undefined}>
         <table className="matrix">
           <thead>
             <tr><th scope="col">Resource and its APIs</th>{actions.map((action) => <th scope="col" key={action}>{humanize(action)}</th>)}<th scope="col">Whose records</th></tr>
           </thead>
           <tbody>
-            {resources.map((resource) => {
+            {shownResources.map((resource) => {
               const holdsAny = resource.actions.some((action) => selected.has(permissionKey(resource.key, action)));
               return (
-                <tr key={resource.key}>
+                <Fragment key={resource.key}>
+                <tr>
                   <td>
                     <div className="strong">{resource.label}</div>
                     <div className="meta">{moduleKey}.{resource.key}</div>
                     <ApiList resource={resource} apis={apis} />
-                      {(resource.protectedFields ?? []).map((field) => {
-                        const key = permissionKey(resource.key, field);
-                        const held = assignableFields === null ? 'edit' : assignableFields[key];
-                        const levelAllowed = (level: FieldAccessLevel) => held === 'edit' || (held === 'read' && level === 'read');
-                        return (
-                          <label className="field-access" key={field}>
-                            <span>{humanize(field)}</span>
-                            <select
-                              className="input"
-                              aria-label={`${humanize(field)} access`}
-                              value={fieldAccess[key] ?? ''}
-                              disabled={!canEdit || !holdsAny}
-                              onChange={(event) => {
-                                const next = { ...fieldAccess };
-                                if (event.target.value) next[key] = event.target.value as FieldAccessLevel;
-                                else delete next[key];
-                                setFieldAccess(next);
-                              }}
-                            >
-                              <option value="">Hidden</option>
-                              <option value="read" disabled={!levelAllowed('read')}>Read</option>
-                              <option value="edit" disabled={!levelAllowed('edit')}>Edit</option>
-                            </select>
-                          </label>
-                        );
-                      })}
                   </td>
                   {actions.map((action) => {
                     if (!resource.actions.includes(action)) return <td className="muted" key={action} aria-hidden="true">–</td>;
@@ -131,6 +120,16 @@ export function GrantsMatrix({ moduleKey, permissions, fieldAccess: initialField
                     ) : <span className="muted">Everyone</span>}
                   </td>
                 </tr>
+                <FieldAccessPanel
+                  resource={resource}
+                  columnCount={actions.length + 2}
+                  selectedActions={resource.actions.filter((action) => selected.has(permissionKey(resource.key, action)))}
+                  fieldAccess={fieldAccess}
+                  assignableFields={assignableFields}
+                  canEdit={canEdit}
+                  onChange={setFieldAccess}
+                />
+                </Fragment>
               );
             })}
           </tbody>

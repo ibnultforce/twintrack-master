@@ -11,8 +11,7 @@
       "contract": "permanent",
       "status": "active",
       "orgRoleId": "or_founder",
-      "superAdmin": true,
-      "permissionSets": {}
+      "superAdmin": true
     },
     {
       "id": "u_03",
@@ -24,8 +23,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "orgRoleId": "or_people",
-      "permissionSets": {}
+      "orgRoleId": "or_people"
     },
     {
       "id": "u_04",
@@ -37,8 +35,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "orgRoleId": "or_engineering_lead",
-      "permissionSets": {}
+      "orgRoleId": "or_engineering_lead"
     },
     {
       "id": "u_05",
@@ -50,8 +47,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "orgRoleId": "or_finance_lead",
-      "permissionSets": {}
+      "orgRoleId": "or_finance_lead"
     },
     {
       "id": "u_06",
@@ -63,8 +59,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_05",
-      "orgRoleId": "or_finance",
-      "permissionSets": {}
+      "orgRoleId": "or_finance"
     },
     {
       "id": "u_07",
@@ -76,8 +71,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_04",
-      "orgRoleId": "or_engineering",
-      "permissionSets": {}
+      "orgRoleId": "or_engineering"
     },
     {
       "id": "u_08",
@@ -89,8 +83,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_04",
-      "orgRoleId": "or_engineering",
-      "permissionSets": {}
+      "orgRoleId": "or_engineering"
     },
     {
       "id": "u_09",
@@ -102,8 +95,7 @@
       "contract": "intern",
       "status": "active",
       "managerId": "u_04",
-      "orgRoleId": "or_engineering",
-      "permissionSets": {}
+      "orgRoleId": "or_engineering"
     },
     {
       "id": "u_10",
@@ -115,8 +107,7 @@
       "contract": "contractor",
       "status": "active",
       "managerId": "u_04",
-      "orgRoleId": "or_engineering",
-      "permissionSets": {}
+      "orgRoleId": "or_engineering"
     },
     {
       "id": "u_11",
@@ -128,8 +119,7 @@
       "contract": "permanent",
       "status": "inactive",
       "managerId": "u_01",
-      "orgRoleId": "or_operations",
-      "permissionSets": {}
+      "orgRoleId": "or_operations"
     },
     {
       "id": "u_12",
@@ -141,8 +131,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_01",
-      "orgRoleId": "or_hr_admin",
-      "permissionSets": {}
+      "orgRoleId": "or_hr_admin"
     },
     {
       "id": "u_13",
@@ -154,8 +143,7 @@
       "contract": "permanent",
       "status": "active",
       "managerId": "u_12",
-      "orgRoleId": "or_hr_staff",
-      "permissionSets": {}
+      "orgRoleId": "or_hr_staff"
     }
   ]
 }

@@ -21,18 +21,26 @@ export class ApiRequestError extends Error {
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
+  /** Sent as it is, with its own content type, such as an image file. Takes the place of body. */
+  file?: Blob;
   query?: Record<string, string | number | undefined>;
 }
 
 interface SessionListeners {
   onSessionEnded: () => void;
-  onPasswordChangeRequired: () => void;
+  /** The token for signing in as someone else ran out, so the super admin's own session takes over again. */
+  onImpersonationEnded: () => void;
 }
 
 /** Kept in memory only, so a script can't read it from storage. A reload gets a new one through the refresh cookie. */
 let accessToken: string | null = null;
 let listeners: SessionListeners | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
+/**
+ * While a super admin is signed in as someone else, the refresh cookie still belongs to the super admin. Refreshing then
+ * would swap identities in the middle of a screen, so an expired token ends the impersonation instead.
+ */
+let isImpersonating = false;
 
 /** These mean the token itself is the problem, so a refresh can fix them. */
 const REFRESHABLE_CODES = new Set(['no_token', 'invalid_token', 'token_expired']);
@@ -46,6 +54,10 @@ export function setSessionListeners(next: SessionListeners | null): void {
   listeners = next;
 }
 
+export function setImpersonating(next: boolean): void {
+  isImpersonating = next;
+}
+
 function buildUrl(path: string, query: RequestOptions['query']): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
@@ -57,14 +69,15 @@ function buildUrl(path: string, query: RequestOptions['query']): string {
 
 function send(path: string, options: RequestOptions): Promise<Response> {
   const hasBody = options.body !== undefined;
+  const contentType = options.file ? options.file.type : hasBody ? 'application/json' : undefined;
   return fetch(buildUrl(path, options.query), {
     method: options.method ?? 'GET',
     credentials: 'include',
     headers: {
-      ...(hasBody && { 'Content-Type': 'application/json' }),
+      ...(contentType && { 'Content-Type': contentType }),
       ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
     },
-    body: hasBody ? JSON.stringify(options.body) : undefined,
+    body: options.file ?? (hasBody ? JSON.stringify(options.body) : undefined),
   });
 }
 
@@ -116,6 +129,10 @@ export async function apiRequest<Result>(path: string, options: RequestOptions =
   if (response.ok) return parseSuccess<Result>(response);
 
   let error = await readError(response);
+  if (hadToken && isImpersonating && error.status === 401) {
+    listeners?.onImpersonationEnded();
+    throw error;
+  }
   if (hadToken && error.status === 401 && REFRESHABLE_CODES.has(error.code)) {
     if (!(await refreshAccessToken())) {
       listeners?.onSessionEnded();
@@ -127,8 +144,45 @@ export async function apiRequest<Result>(path: string, options: RequestOptions =
   }
 
   if (hadToken && error.status === 401) listeners?.onSessionEnded();
-  if (error.code === 'password_change_required') listeners?.onPasswordChangeRequired();
   throw error;
+}
+
+/** Reads a binary answer, such as a photo, which needs the access token and so can't be a plain image address. */
+export async function apiBlob(path: string): Promise<Blob> {
+  let response = await send(path, {});
+  if (response.status === 401 && accessToken !== null && !isImpersonating && (await refreshAccessToken())) response = await send(path, {});
+  if (!response.ok) throw await readError(response);
+  return response.blob();
+}
+
+export interface TryResult {
+  status: number;
+  /** The parsed JSON answer, the raw text if it wasn't JSON, or null for no body. */
+  body: unknown;
+  durationMs: number;
+}
+
+/**
+ * Sends one request exactly as asked, for trying an API, and returns whatever comes back instead of throwing on a
+ * refusal. An expired token is refreshed once, as in apiRequest. The path may include a query string.
+ */
+export async function tryApiRequest(method: NonNullable<RequestOptions['method']>, path: string, body?: unknown): Promise<TryResult> {
+  const started = performance.now();
+  let response = await send(path, { method, body });
+  if (response.status === 401 && accessToken !== null) {
+    const refusal = (await response.clone().json().catch(() => null)) as { error?: { code?: string } } | null;
+    if (REFRESHABLE_CODES.has(refusal?.error?.code ?? '') && (await refreshAccessToken())) response = await send(path, { method, body });
+  }
+  const text = await response.text();
+  let parsed: unknown = null;
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = text;
+    }
+  }
+  return { status: response.status, body: parsed, durationMs: Math.round(performance.now() - started) };
 }
 
 /** A message fit to show someone, including which fields were refused. */

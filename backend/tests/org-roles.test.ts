@@ -34,8 +34,8 @@ describe('org roles', () => {
     await addOrgRole('sales_east_team', 'sales_east');
     await addOrgRole('hr', 'root');
     await addPerson('farhana', { superAdmin: true, orgRoleId: 'root' });
-    await addPerson('alia', { name: 'Alia Access', permissionSets: { master: ['admin'] }, orgRoleId: 'hr' });
-    await addPerson('rumana', { permissionSets: { master: ['auditor'] }, orgRoleId: 'hr' });
+    await addPerson('alia', { name: 'Alia Access', profileId: 'ap_access_admin', orgRoleId: 'hr' });
+    await addPerson('rumana', { profileId: 'ap_auditor', orgRoleId: 'hr' });
     await addPerson('karim', { orgRoleId: 'sales_east_team' });
   });
 

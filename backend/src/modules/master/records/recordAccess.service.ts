@@ -168,3 +168,8 @@ export async function unshareRecord(actor: Actor, record: ScopedRecord, shareId:
   });
   return { removed: true, id: shareId };
 }
+
+/** Removes shares made to one person by name, when that person is deleted. */
+export async function deleteSharesGrantedTo(userId: string, session: ClientSession): Promise<void> {
+  await RecordShare.deleteMany({ granteeType: 'user', granteeId: userId }, { session });
+}

@@ -4,11 +4,13 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
+import { PasswordLink } from '../src/modules/master/models/passwordLink.js';
 import { Session } from '../src/modules/master/models/session.js';
 import { User } from '../src/modules/master/models/user.js';
 import { useTestDatabase } from './helpers/database.js';
 import { addOrgRole, addPerson, importSeedManifests, requestsAs, signIn, TEST_PASSWORD } from './helpers/signedIn.js';
 import { createTestConfig, TEST_ORIGIN } from './helpers/testConfig.js';
+import { createRecordingEmailSender } from './helpers/testEmail.js';
 
 const NEW_PASSWORD = 'a-brand-new-password';
 
@@ -16,20 +18,28 @@ describe('user administration', () => {
   useTestDatabase();
 
   let app: Application;
+  const emails = createRecordingEmailSender();
   const as = async (id: string) => requestsAs(app, await signIn(app, `${id}@twintrack.test`));
+  const setPassword = (token: string, newPassword = NEW_PASSWORD) =>
+    request(app).post('/auth/set-password').set('Origin', TEST_ORIGIN).send({ token, newPassword });
 
   beforeAll(() => {
-    app = createApp(createTestConfig());
+    app = createApp(createTestConfig({ PORTAL_URL: 'https://portal.twintrack.test' }), { emailSender: emails });
+  });
+
+  beforeEach(() => {
+    emails.sent.length = 0;
+    emails.failing = false;
   });
 
   beforeEach(async () => {
     await importSeedManifests();
     await addOrgRole('or_root');
     await addPerson('farhana', { name: 'Farhana Kabir', superAdmin: true });
-    await addPerson('alia', { name: 'Alia Access', permissionSets: { master: ['admin'] } });
-    await addPerson('sabbir', { name: 'Sabbir Alam', permissionSets: { hr: ['staff'], master: ['hr-access'] } });
-    await addPerson('rumana', { name: 'Rumana Akter', permissionSets: { master: ['auditor'] } });
-    await addPerson('rahim', { name: 'Rahim Uddin', title: 'Engineering Lead', managerId: 'farhana', permissionSets: { hr: ['manager'] } });
+    await addPerson('alia', { name: 'Alia Access', profileId: 'ap_access_admin' });
+    await addPerson('sabbir', { name: 'Sabbir Alam', profileId: 'ap_hr_access' });
+    await addPerson('rumana', { name: 'Rumana Akter', profileId: 'ap_auditor' });
+    await addPerson('rahim', { name: 'Rahim Uddin', title: 'Engineering Lead', managerId: 'farhana', profileId: 'ap_engineering_lead' });
     await addPerson('karim', { name: 'Karim Ahmed', title: 'Backend Developer', managerId: 'rahim' });
     await addPerson('jahid', { name: 'Jahid Rana', status: 'inactive' });
   });
@@ -42,8 +52,8 @@ describe('user administration', () => {
       ['read a person', 'get', '/users/rahim'],
       ['edit a person', 'patch', '/users/rahim', { title: 'Boss' }],
       ['set status', 'patch', '/users/rahim/status', { status: 'inactive' }],
-      ['reset a password', 'post', '/users/rahim/reset-password'],
-      ['set permission sets', 'put', '/users/rahim/permission-sets', { module: 'hr', permissionSets: [] }],
+      ['send password links', 'post', '/users/password-links', { userIds: ['rahim'] }],
+      ['give a profile', 'put', '/users/rahim/profile', { profileId: null }],
     ];
 
     it.each(adminRoutes)('%s needs a token', async (_label, method, path) => {
@@ -61,15 +71,7 @@ describe('user administration', () => {
       const auditor = await as('rumana');
       expect((await auditor.get('/users')).status).toBe(200);
       expect((await auditor.patch('/users/rahim', { title: 'Boss' })).status).toBe(403);
-      expect((await auditor.put('/users/rahim/permission-sets', { module: 'hr', permissionSets: ['admin'], reason: 'No' })).status).toBe(403);
-    });
-
-    it('blocks an admin who still has a temporary password', async () => {
-      const admin = await as('alia');
-      await User.updateOne({ _id: 'alia' }, { $set: { mustChangePassword: true } });
-      const response = await admin.get('/users');
-      expect(response.status).toBe(403);
-      expect(response.body.error.code).toBe('password_change_required');
+      expect((await auditor.put('/users/rahim/profile', { profileId: null })).status).toBe(403);
     });
   });
 
@@ -116,29 +118,58 @@ describe('user administration', () => {
   describe('POST /users', () => {
     const newPerson = { name: 'Nadia Noor', email: 'NADIA@twintrack.test', title: 'Analyst', managerId: 'rahim', orgRoleId: 'or_root' };
 
-    it('adds a person and shows the temporary password once', async () => {
+    it('adds a person and emails them a link to set their password', async () => {
       const response = await (await as('alia')).post('/users', newPerson);
       expect(response.status).toBe(201);
-      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.body).toMatchObject({ invitationSent: true });
       expect(response.body.user).toMatchObject({
         name: 'Nadia Noor',
         email: 'nadia@twintrack.test',
         contract: 'permanent',
         status: 'active',
-        mustChangePassword: true,
         superAdmin: false,
         orgRoleId: 'or_root',
-        permissionSets: {},
       });
-      expect(response.body.temporaryPassword.length).toBeGreaterThanOrEqual(12);
       expect(response.body.user.passwordHash).toBeUndefined();
+      expect(response.body).not.toHaveProperty('temporaryPassword');
+
+      const [email] = emails.sent;
+      expect(email).toMatchObject({ to: 'nadia@twintrack.test', subject: 'Set up your TwinTrack account' });
+      expect(email?.text).toContain('https://portal.twintrack.test/set-password?token=');
+      expect(email?.html).toContain('Hi Nadia Noor,');
     });
 
-    it('records it without the password', async () => {
+    it('lets nobody sign in until the link is used, then the chosen password works', async () => {
+      await (await as('alia')).post('/users', newPerson);
+      const token = emails.latestLinkToken('nadia@twintrack.test');
+
+      expect((await setPassword(token)).body).toEqual({ passwordSet: true });
+      const nadia = requestsAs(app, await signIn(app, 'nadia@twintrack.test', NEW_PASSWORD));
+      expect((await nadia.get('/me/modules')).body).toEqual({ modules: [] });
+    });
+
+    it('still adds the person when the email fails, and says so', async () => {
+      emails.failing = true;
       const response = await (await as('alia')).post('/users', newPerson);
+      expect(response.status).toBe(201);
+      expect(response.body.invitationSent).toBe(false);
+      expect(await User.exists({ email: 'nadia@twintrack.test' })).toBeTruthy();
+    });
+
+    it('escapes a name that looks like markup in the email', async () => {
+      await (await as('alia')).post('/users', { ...newPerson, name: '<b>Nadia</b>' });
+      expect(emails.sent[0]?.html).toContain('&lt;b&gt;Nadia&lt;/b&gt;');
+      expect(emails.sent[0]?.html).not.toContain('<b>Nadia</b>');
+    });
+
+    it('records it, and stores only a hash of the link', async () => {
+      const response = await (await as('alia')).post('/users', newPerson);
+      const token = emails.latestLinkToken('nadia@twintrack.test');
       const entry = await AuditLog.findOne({ action: 'user.created' }).lean();
       expect(entry).toMatchObject({ actorId: 'alia', targetId: response.body.user.id, targetName: 'Nadia Noor' });
-      expect(JSON.stringify(entry)).not.toContain(response.body.temporaryPassword);
+
+      const stored = JSON.stringify(await PasswordLink.find().lean()) + JSON.stringify(await AuditLog.find().lean());
+      expect(stored).not.toContain(token);
     });
 
     it('refuses an email already in use, in any case', async () => {
@@ -169,7 +200,7 @@ describe('user administration', () => {
 
     it.each([
       ['super admin', { superAdmin: true }],
-      ['a role', { permissionSets: { master: ['admin'] } }],
+      ['a profile, which has its own route', { profileId: 'ap_access_admin' }],
       ['a password hash', { passwordHash: 'x' }],
       ['an id', { _id: 'chosen' }],
     ])('refuses a request that tries to set %s', async (_label, extra) => {
@@ -186,27 +217,21 @@ describe('user administration', () => {
       expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(['hr', 'master', 'tasks']);
     });
 
-    it('offers the permission sets of each module, with what they allow', async () => {
-      const { body } = await (await as('alia')).get('/users/access-options');
-      const hr = body.modules.find((module: { key: string }) => module.key === 'hr');
-      expect(hr.permissionSets).toContainEqual(expect.objectContaining({ key: 'manager', name: 'Manager', grants: ['salary.read (team)'] }));
-    });
-
-    it('says which modules this caller may change', async () => {
-      const canChange = async (id: string) => {
-        const { body } = await (await as(id)).get('/users/access-options');
-        return Object.fromEntries(body.modules.map((module: { key: string; canChange: boolean }) => [module.key, module.canChange]));
-      };
-      expect(await canChange('alia')).toEqual({ hr: true, master: true, tasks: true });
-      expect(await canChange('sabbir')).toEqual({ hr: true, master: false, tasks: false });
-      expect(await canChange('rumana')).toEqual({ hr: false, master: false, tasks: false });
+    it('lists every module to someone who reads people or gives profiles, and to nobody else', async () => {
+      for (const id of ['alia', 'sabbir', 'rumana']) {
+        expect((await (await as(id)).get('/users/access-options')).body.modules).toEqual([
+          { key: 'hr', name: 'HR' },
+          { key: 'master', name: 'Master' },
+          { key: 'tasks', name: 'Tasks' },
+        ]);
+      }
     });
 
     it('returns one person, and 404 for anyone else', async () => {
       const admin = await as('alia');
       const response = await admin.get('/users/rahim');
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({ id: 'rahim', name: 'Rahim Uddin', permissionSets: { hr: ['manager'] } });
+      expect(response.body).toMatchObject({ id: 'rahim', name: 'Rahim Uddin', profileId: 'ap_engineering_lead' });
       expect(response.body.passwordHash).toBeUndefined();
 
       const missing = await admin.get('/users/nobody');
@@ -279,7 +304,7 @@ describe('user administration', () => {
       ['no org role', { orgRoleId: null }],
       ['super admin', { superAdmin: true }],
       ['a status', { status: 'inactive' }],
-      ['a role', { permissionSets: { master: ['admin'] } }],
+      ['a profile, which has its own route', { profileId: 'ap_access_admin' }],
       ['a blank name', { name: ' ' }],
       ['an object as a title', { title: { $ne: null } }],
     ])('refuses a request with %s', async (_label, body) => {
@@ -348,13 +373,24 @@ describe('user administration', () => {
     });
   });
 
-  describe('POST /users/:id/reset-password', () => {
-    it('replaces the password, signs the person out and requires a change', async () => {
-      const rahim = await as('rahim');
-      const response = await (await as('alia')).post('/users/rahim/reset-password');
+  describe('POST /users/password-links', () => {
+    const sendLinks = async (userIds: string[], by = 'alia') => (await as(by)).post('/users/password-links', { userIds });
+
+    it('emails each person a reset link, and their current password works until they use it', async () => {
+      const response = await sendLinks(['rahim', 'karim']);
       expect(response.status).toBe(200);
-      expect(response.headers['cache-control']).toBe('no-store');
-      expect(response.body.user.mustChangePassword).toBe(true);
+      expect(response.body.results).toEqual([
+        { userId: 'rahim', email: 'rahim@twintrack.test', sent: true },
+        { userId: 'karim', email: 'karim@twintrack.test', sent: true },
+      ]);
+      expect(emails.sent.map((email) => email.subject)).toEqual(['Set a new TwinTrack password', 'Set a new TwinTrack password']);
+      expect((await signIn(app, 'rahim@twintrack.test')).length).toBeGreaterThan(0);
+    });
+
+    it('signs the person out everywhere once they set the new password, and the old one stops working', async () => {
+      const rahim = await as('rahim');
+      await sendLinks(['rahim']);
+      expect((await setPassword(emails.latestLinkToken('rahim@twintrack.test'))).status).toBe(200);
 
       expect((await rahim.get('/me/modules')).status).toBe(401);
       const oldPassword = await request(app)
@@ -362,194 +398,193 @@ describe('user administration', () => {
         .set('Origin', TEST_ORIGIN)
         .send({ email: 'rahim@twintrack.test', password: TEST_PASSWORD });
       expect(oldPassword.status).toBe(401);
-
-      const fresh = requestsAs(app, await signIn(app, 'rahim@twintrack.test', response.body.temporaryPassword));
-      expect((await fresh.get('/me/modules')).body.error.code).toBe('password_change_required');
+      expect(await AuditLog.exists({ action: 'auth.password_set', actorId: 'rahim' })).toBeTruthy();
     });
 
-    it('gives a different password each time, and logs none of them', async () => {
-      const admin = await as('alia');
-      const first = (await admin.post('/users/rahim/reset-password')).body.temporaryPassword;
-      const second = (await admin.post('/users/rahim/reset-password')).body.temporaryPassword;
-      expect(first).not.toBe(second);
-
-      const entries = JSON.stringify(await AuditLog.find({ action: 'user.password_reset' }).lean());
-      expect(entries).not.toContain(first);
-      expect(entries).not.toContain(second);
+    it('lets a link be used only once', async () => {
+      await sendLinks(['rahim']);
+      const token = emails.latestLinkToken('rahim@twintrack.test');
+      expect((await setPassword(token)).status).toBe(200);
+      const again = await setPassword(token, 'yet-another-password');
+      expect(again.status).toBe(400);
+      expect(again.body.error.code).toBe('invalid_password_link');
     });
 
-    it('refuses your own account, so a stolen session cannot take it over', async () => {
-      const response = await (await as('alia')).post('/users/alia/reset-password');
-      expect(response.status).toBe(403);
-      expect(response.body.error.code).toBe('own_account');
+    it('makes an earlier link stop working when a newer one is sent', async () => {
+      await sendLinks(['rahim']);
+      const first = emails.latestLinkToken('rahim@twintrack.test');
+      await sendLinks(['rahim']);
+      expect((await setPassword(first)).body.error.code).toBe('invalid_password_link');
+      expect((await setPassword(emails.latestLinkToken('rahim@twintrack.test'))).status).toBe(200);
     });
 
-    it('refuses a super admin unless a super admin asks', async () => {
-      const response = await (await as('alia')).post('/users/farhana/reset-password');
-      expect(response.status).toBe(403);
-      expect(response.body.error.code).toBe('super_admin_protected');
+    it('refuses an expired link', async () => {
+      await sendLinks(['rahim']);
+      await PasswordLink.updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+      expect((await setPassword(emails.latestLinkToken('rahim@twintrack.test'))).body.error.code).toBe('invalid_password_link');
     });
 
-    it('answers 404 for someone who does not exist', async () => {
-      expect((await (await as('alia')).post('/users/nobody/reset-password')).status).toBe(404);
-    });
-  });
-
-  describe('PUT /users/:id/permission-sets', () => {
-    const giveManager = { module: 'hr', permissionSets: ['manager'], reason: 'Leads the backend team' };
-
-    it('gives a permission set and records it with the reason', async () => {
-      const response = await (await as('alia')).put('/users/karim/permission-sets', giveManager);
-      expect(response.status).toBe(200);
-      expect(response.body.permissionSets).toEqual({ hr: ['manager'] });
-
-      const entry = await AuditLog.findOne({ action: 'user.permission_sets_changed' }).lean();
-      expect(entry).toMatchObject({
-        actorId: 'alia',
-        targetId: 'karim',
-        module: 'hr',
-        reason: giveManager.reason,
-        before: { permissionSets: [] },
-        after: { permissionSets: ['manager'] },
-      });
+    it('refuses a short new password from a link', async () => {
+      await sendLinks(['rahim']);
+      expect((await setPassword(emails.latestLinkToken('rahim@twintrack.test'), 'short')).status).toBe(422);
     });
 
-    it('takes every set away with an empty list, and needs no reason for that', async () => {
-      const response = await (await as('alia')).put('/users/rahim/permission-sets', { module: 'hr', permissionSets: [] });
-      expect(response.status).toBe(200);
-      expect(response.body.permissionSets).toEqual({});
+    it('reports each person it could not send to, and still sends the rest', async () => {
+      const response = await sendLinks(['alia', 'farhana', 'jahid', 'nobody', 'karim']);
+      expect(response.body.results).toEqual([
+        { userId: 'alia', email: 'alia@twintrack.test', sent: false, error: 'own_account' },
+        { userId: 'farhana', email: 'farhana@twintrack.test', sent: false, error: 'super_admin_protected' },
+        { userId: 'jahid', email: 'jahid@twintrack.test', sent: false, error: 'account_inactive' },
+        { userId: 'nobody', sent: false, error: 'unknown_user' },
+        { userId: 'karim', email: 'karim@twintrack.test', sent: true },
+      ]);
+      expect(emails.sent).toHaveLength(1);
     });
 
-    it('takes sets away in a module that is no longer loaded', async () => {
-      await User.updateOne({ _id: 'rahim' }, { $set: { 'permissionSets.account': ['viewer'] } });
-      const response = await (await as('alia')).put('/users/rahim/permission-sets', { module: 'account', permissionSets: [] });
-      expect(response.status).toBe(200);
-      expect(response.body.permissionSets.account).toBeUndefined();
+    it('lets a super admin send a link to another super admin', async () => {
+      await addPerson('sadia', { superAdmin: true });
+      expect((await sendLinks(['sadia'], 'farhana')).body.results[0].sent).toBe(true);
     });
 
-    it('needs a reason to give a new set', async () => {
-      const response = await (await as('alia')).put('/users/karim/permission-sets', { module: 'hr', permissionSets: ['manager'] });
-      expect(response.status).toBe(422);
-      expect(response.body.error.fields[0].path).toBe('reason');
+    it('says when the email could not be sent', async () => {
+      emails.failing = true;
+      expect((await sendLinks(['rahim'])).body.results).toEqual([{ userId: 'rahim', email: 'rahim@twintrack.test', sent: false, error: 'email_failed' }]);
     });
 
-    it('applies on the person\'s next request, with the same token', async () => {
-      const karim = await as('karim');
-      expect((await karim.get('/me/permissions/hr')).body.hasAccess).toBe(false);
-      await (await as('sabbir')).put('/users/karim/permission-sets', giveManager);
-      expect((await karim.get('/me/permissions/hr')).body.permissions['salary.read']).toBe('team');
+    it('logs the link being sent, but never the link', async () => {
+      await sendLinks(['rahim']);
+      const entries = JSON.stringify(await AuditLog.find({ action: 'user.password_link_sent' }).lean());
+      expect(entries).toContain('"targetId":"rahim"');
+      expect(entries).not.toContain(emails.latestLinkToken('rahim@twintrack.test'));
     });
 
-    it('lets an HR access manager change HR permission sets only', async () => {
-      const sabbir = await as('sabbir');
-      expect((await sabbir.put('/users/karim/permission-sets', giveManager)).status).toBe(200);
-
-      const refused = await sabbir.put('/users/karim/permission-sets', { ...giveManager, module: 'master', permissionSets: ['admin'] });
-      expect(refused.status).toBe(403);
-      expect(refused.body.error.code).toBe('module_access_only');
-      expect((await User.findById('karim').lean())?.permissionSets.master).toBeUndefined();
-    });
-
-    it('stops anyone changing their own access', async () => {
-      const response = await (await as('alia')).put('/users/alia/permission-sets', giveManager);
-      expect(response.status).toBe(403);
-      expect(response.body.error.code).toBe('own_access');
-    });
-
-    it('has nothing to set on a super admin', async () => {
-      const response = await (await as('alia')).put('/users/farhana/permission-sets', giveManager);
-      expect(response.status).toBe(409);
-      expect(response.body.error.code).toBe('super_admin');
-    });
-
-    it('refuses a set the module does not have, or a module not loaded', async () => {
-      const admin = await as('alia');
-      const unknownSet = await admin.put('/users/karim/permission-sets', { ...giveManager, permissionSets: ['emperor'] });
-      expect(unknownSet.status).toBe(422);
-      expect(unknownSet.body.error.code).toBe('unknown_permission_set');
-      expect((await admin.put('/users/karim/permission-sets', { ...giveManager, module: 'account', permissionSets: ['viewer'] })).status).toBe(404);
-    });
-
-    it('stores a repeated set once, and writes nothing when nothing changes', async () => {
-      const admin = await as('alia');
-      const response = await admin.put('/users/karim/permission-sets', { ...giveManager, permissionSets: ['manager', 'manager'] });
-      expect(response.body.permissionSets).toEqual({ hr: ['manager'] });
-
-      await admin.put('/users/karim/permission-sets', giveManager);
-      expect(await AuditLog.countDocuments({ action: 'user.permission_sets_changed' })).toBe(1);
-    });
-
-    it.each([
-      ['a key that could reach another field', { module: 'hr.$', permissionSets: [] }],
-      ['a key with a dot', { module: 'hr.admin', permissionSets: [] }],
-      ['a key that would find a JavaScript built-in', { module: 'constructor', permissionSets: [] }],
-      ['no permissionSets field', { module: 'hr' }],
-      ['an object as the sets', { module: 'hr', permissionSets: { $ne: null } }],
-    ])('refuses %s', async (_label, body) => {
-      expect((await (await as('alia')).put('/users/karim/permission-sets', body)).status).toBe(422);
+    it.each([{}, { userIds: [] }, { userIds: ['rahim'], extra: true }])('refuses the body %j', async (body) => {
+      expect((await (await as('alia')).post('/users/password-links', body)).status).toBe(422);
     });
   });
 
-  describe('a person\'s profile', () => {
+  describe('PUT /users/:id/profile', () => {
     beforeEach(async () => {
+      // Within an HR access manager's own access: they read people in Master too.
+      await AccessProfile.create({ _id: 'ap_reader', name: 'Reader', grants: { master: { user: { actions: ['read'] } } } });
       await AccessProfile.create({ _id: 'ap_staff', name: 'Staff', grants: { hr: { salary: { actions: ['read'], scope: 'own' } } } });
     });
 
-    it('is given and taken away through PATCH /users/:id, and applies on the next request', async () => {
+    it('gives a profile, records it, and applies on the person\'s next request with the same token', async () => {
       const karim = await as('karim');
-      const admin = await as('alia');
-      expect((await admin.patch('/users/karim', { profileId: 'ap_staff' })).body.profileId).toBe('ap_staff');
-      expect((await karim.get('/me/permissions/hr')).body).toMatchObject({ profileName: 'Staff', permissions: { 'salary.read': 'own' } });
-
-      expect((await admin.patch('/users/karim', { profileId: null })).body.profileId).toBeUndefined();
       expect((await karim.get('/me/permissions/hr')).body.hasAccess).toBe(false);
+
+      const response = await (await as('farhana')).put('/users/karim/profile', { profileId: 'ap_staff' });
+      expect(response.status).toBe(200);
+      expect(response.body.profileId).toBe('ap_staff');
+      expect((await karim.get('/me/permissions/hr')).body).toMatchObject({ profileName: 'Staff', permissions: { 'salary.read': 'own' } });
+      expect(await AuditLog.findOne({ action: 'user.profile_changed' }).lean()).toMatchObject({
+        actorId: 'farhana',
+        targetId: 'karim',
+        before: { profile: null },
+        after: { profile: 'Staff' },
+      });
     });
 
-    it('can be set when adding a person', async () => {
-      const response = await (await as('alia')).post('/users', { name: 'Nadia Noor', email: 'nadia@twintrack.test', orgRoleId: 'or_root', profileId: 'ap_staff' });
-      expect(response.status).toBe(201);
-      expect(response.body.user.profileId).toBe('ap_staff');
+    it('takes the profile away with null', async () => {
+      const response = await (await as('farhana')).put('/users/rahim/profile', { profileId: null });
+      expect(response.status).toBe(200);
+      expect(response.body.profileId).toBeUndefined();
+      expect((await (await as('rahim')).get('/me/permissions/hr')).body.hasAccess).toBe(false);
+    });
+
+    it('writes nothing when nothing changes', async () => {
+      const admin = await as('farhana');
+      await admin.put('/users/karim/profile', { profileId: 'ap_staff' });
+      await admin.put('/users/karim/profile', { profileId: 'ap_staff' });
+      expect(await AuditLog.countDocuments({ action: 'user.profile_changed' })).toBe(1);
     });
 
     it('refuses a profile that does not exist', async () => {
-      const response = await (await as('alia')).patch('/users/karim', { profileId: 'ap_ghost' });
+      const response = await (await as('alia')).put('/users/karim/profile', { profileId: 'ap_ghost' });
       expect(response.status).toBe(422);
       expect(response.body.error.fields[0].path).toBe('profileId');
     });
 
-    it('needs user.update, so an HR access manager can not give one', async () => {
-      expect((await (await as('sabbir')).patch('/users/karim', { profileId: 'ap_staff' })).status).toBe(403);
+    it('stops anyone changing their own profile', async () => {
+      const response = await (await as('alia')).put('/users/alia/profile', { profileId: null });
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('own_access');
     });
 
-    it('counts a person among a module\'s people when only their profile gives access there', async () => {
-      await (await as('alia')).patch('/users/karim', { profileId: 'ap_staff' });
+    it('leaves a super admin to other super admins', async () => {
+      const response = await (await as('alia')).put('/users/farhana/profile', { profileId: 'ap_staff' });
+      expect(response.status).toBe(409);
+      expect(response.body.error.code).toBe('super_admin');
+    });
+
+    it('refuses giving a profile beyond the giver\'s own access, and replacing one beyond it', async () => {
+      const sabbir = await as('sabbir');
+      const beyond = await sabbir.put('/users/karim/profile', { profileId: 'ap_staff' });
+      expect(beyond.status).toBe(403);
+      expect(beyond.body.error.code).toBe('beyond_own_access');
+      expect(beyond.body.error.message).toContain('salary.read');
+
+      expect((await sabbir.put('/users/karim/profile', { profileId: 'ap_reader' })).status).toBe(200);
+      const replacing = await sabbir.put('/users/rahim/profile', { profileId: 'ap_reader' });
+      expect(replacing.status).toBe(403);
+      expect(replacing.body.error.code).toBe('beyond_own_access');
+    });
+
+    it('reaches only the people the giver\'s scope covers', async () => {
+      await AccessProfile.create({
+        _id: 'ap_team_giver',
+        name: 'Team giver',
+        grants: { master: { user: { actions: ['read'] }, userProfile: { actions: ['update'], scope: 'team' } } },
+      });
+      await User.updateOne({ _id: 'rahim' }, { $set: { profileId: 'ap_team_giver' } });
+      const rahim = await as('rahim');
+
+      expect((await rahim.put('/users/karim/profile', { profileId: 'ap_reader' })).status).toBe(200);
+      const outside = await rahim.put('/users/rumana/profile', { profileId: 'ap_reader' });
+      expect(outside.status).toBe(403);
+      expect(outside.body.error.code).toBe('out_of_scope');
+    });
+
+    it('needs userProfile.update, which user.update alone does not give', async () => {
+      await AccessProfile.create({ _id: 'ap_editor', name: 'Editor', grants: { master: { user: { actions: ['read', 'update'] } } } });
+      await User.updateOne({ _id: 'rahim' }, { $set: { profileId: 'ap_editor' } });
+      const response = await (await as('rahim')).put('/users/karim/profile', { profileId: null });
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('forbidden');
+    });
+
+    it.each([
+      ['no profileId field', {}],
+      ['an object as the profile', { profileId: { $ne: null } }],
+      ['another field', { profileId: null, superAdmin: true }],
+    ])('refuses %s', async (_label, body) => {
+      expect((await (await as('alia')).put('/users/karim/profile', body)).status).toBe(422);
+    });
+
+    it('counts a person among a module\'s people when their profile gives access there', async () => {
+      await (await as('farhana')).put('/users/karim/profile', { profileId: 'ap_staff' });
       const { body } = await (await as('alia')).get('/modules/hr/people');
       const karim = body.people.find((person: { id: string }) => person.id === 'karim');
-      expect(karim).toMatchObject({ profile: { id: 'ap_staff', name: 'Staff' }, profilePermissions: { 'salary.read': 'own' }, permissionSets: [] });
+      expect(karim).toMatchObject({ profile: { id: 'ap_staff', name: 'Staff' }, profilePermissions: { 'salary.read': 'own' } });
     });
   });
 
   describe('Rahim and Karim, from start to finish', () => {
-    it('takes a new person from a temporary password to a permission set that applies at once', async () => {
+    it('takes a new person from an emailed link to a profile that applies at once', async () => {
       const added = await (await as('alia')).post('/users', { name: 'Nadia Noor', email: 'nadia@twintrack.test', managerId: 'rahim', orgRoleId: 'or_root' });
       const nadiaId = added.body.user.id as string;
 
-      const nadia = requestsAs(app, await signIn(app, 'nadia@twintrack.test', added.body.temporaryPassword));
-      expect((await nadia.get('/me/modules')).status).toBe(403);
-      const changed = await nadia.post('/auth/change-password', { currentPassword: added.body.temporaryPassword, newPassword: NEW_PASSWORD });
-      expect(changed.status).toBe(200);
+      await setPassword(emails.latestLinkToken('nadia@twintrack.test'));
+      const nadia = requestsAs(app, await signIn(app, 'nadia@twintrack.test', NEW_PASSWORD));
       expect((await nadia.get('/me/modules')).body).toEqual({ modules: [] });
 
-      const hrManager = await as('sabbir');
-      await hrManager.put(`/users/${nadiaId}/permission-sets`, { module: 'hr', permissionSets: ['staff'], reason: 'Joins the people team' });
-      const asStaff = await nadia.get('/me/permissions/hr');
-      expect(asStaff.body.permissionSets).toEqual(['staff']);
-      expect(asStaff.body.permissions['salary.read']).toBeUndefined();
+      const admin = await as('alia');
+      await admin.put(`/users/${nadiaId}/profile`, { profileId: 'ap_developer' });
+      expect((await nadia.get('/me/permissions/tasks')).body).toMatchObject({ profileName: 'Developer', permissions: { 'task.read': 'own' } });
 
-      await hrManager.put(`/users/${nadiaId}/permission-sets`, { module: 'hr', permissionSets: ['staff', 'manager'], reason: 'Helping with payroll this month' });
-      const withManager = await nadia.get('/me/permissions/hr');
-      expect(withManager.body).toMatchObject({ permissionSets: ['staff', 'manager'] });
-      expect(withManager.body.permissions['salary.read']).toBe('team');
+      await admin.put(`/users/${nadiaId}/profile`, { profileId: null });
+      expect((await nadia.get('/me/permissions/tasks')).body.hasAccess).toBe(false);
     });
   });
 });

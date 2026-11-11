@@ -5,8 +5,6 @@ import type { ManifestRoute } from '../modules/master/moduleRegistry/manifest.js
 export interface ApiRoute extends Omit<ManifestRoute, 'planned'> {
   /** Runs after the access checks, for checks that apply to this route only. */
   middleware?: RequestHandler[];
-  /** For the few signed routes someone must reach before they've replaced a temporary password. */
-  allowedDuringPasswordChange?: boolean;
   handler: RequestHandler;
 }
 

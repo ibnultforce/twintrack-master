@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { resolveDependencies } from '../src/appDependencies.js';
+import { readFileSync, writeFileSync } from 'node:fs';
 import request from 'supertest';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { ConfigError, loadConfig } from '../src/config.js';
 import { hrRoutes } from '../src/modules/hr/hr.routes.js';
@@ -22,6 +23,10 @@ interface ScenarioRequest {
   literalToken?: string;
   cookie?: boolean;
   body?: string;
+  /** Sent with the body. JSON unless set, which a photo upload needs. */
+  contentType?: string;
+  /** An Accept header, which the MCP endpoint needs. */
+  accept?: string;
   /** Sent in place of the allowed origin. Only this replay can send it, because browsers set Origin themselves. */
   origin?: string;
 }
@@ -43,7 +48,37 @@ interface ScenarioFile {
 
 const scenarioFile = JSON.parse(readFileSync(new URL('../test-page/scenarios.json', import.meta.url), 'utf8')) as ScenarioFile;
 const routes = scenarioFile.groups.flatMap((group) => group.routes);
-const scenarios = routes.flatMap((route) => route.scenarios.map((scenario) => [`${route.id}: ${scenario.title}`, scenario] as const));
+const scenarios = routes.flatMap((route) => route.scenarios.map((scenario) => [`${route.id}: ${scenario.title}`, scenario, route.id] as const));
+
+/**
+ * Set API_SAMPLES_FILE to a path to save each route's first success scenario, request and response, for the API
+ * scenarios page in design/. Tokens are replaced and long lists cut to two items, so the file is safe to publish.
+ */
+const SAMPLES_FILE = process.env.API_SAMPLES_FILE;
+const SAMPLE_LIST_LENGTH = 2;
+const SECRET_FIELDS = new Set(['accessToken']);
+interface ApiSample {
+  title: string;
+  request: { method: string; path: string; as?: string; body?: unknown };
+  response: { status: number; body: unknown };
+}
+const samples: Record<string, ApiSample> = {};
+
+function toSampleValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.slice(0, SAMPLE_LIST_LENGTH).map(toSampleValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, SECRET_FIELDS.has(key) ? `<${key}>` : toSampleValue(inner)]));
+  }
+  return value;
+}
+
+const parseSentBody = (body: string) => {
+  try {
+    return JSON.parse(body) as unknown;
+  } catch {
+    return body;
+  }
+};
 
 interface Account {
   id: string;
@@ -55,7 +90,8 @@ const seedUsers = (readSeedFiles().users as { users: { id: string; email: string
 describe('test page', () => {
   useTestDatabase();
 
-  const enabledApp = createApp(createTestConfig({ TEST_PAGE_ENABLED: 'true' }));
+  // Impersonation is on too, as in development, where the page is used.
+  const enabledApp = createApp(createTestConfig({ TEST_PAGE_ENABLED: 'true', IMPERSONATION_ENABLED: 'true' }));
   const disabledApp = createApp(createTestConfig());
 
   describe('availability', () => {
@@ -128,11 +164,24 @@ describe('test page', () => {
   });
 
   describe('scenarios', () => {
-    const builtRouteIds = [...createMasterRoutes(createTestConfig()), ...hrRoutes, ...tasksRoutes].map((route) => `${route.method} ${route.path}`);
+    const builtRouteIds = [...createMasterRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...hrRoutes, ...tasksRoutes].map((route) => `${route.method} ${route.path}`);
     const routesWith = (kind: Scenario['kind']) => routes.filter((route) => route.scenarios.some((scenario) => scenario.kind === kind)).map((route) => route.id);
 
+    // Succeeding on these needs something neither this replay nor someone using the page can get: a link that only
+    // arrives by email, or an OAuth request an app started through /oauth/authorize, which answers with a redirect.
+    // users-admin.test.ts, api-access.test.ts and the Postman collection cover their success.
+    // GET and DELETE /mcp only ever answer 405, because the endpoint is stateless.
+    const SUCCESS_COVERED_ELSEWHERE = [
+      'POST /auth/set-password',
+      'GET /oauth/requests/:id',
+      'POST /oauth/requests/:id/decision',
+      'POST /me/connected-apps/:id/revoke',
+      'GET /mcp',
+      'DELETE /mcp',
+    ];
+
     it.each(['success', 'fail'] as const)('give every built route in every module a %s scenario', (kind) => {
-      const covered = routesWith(kind);
+      const covered = [...routesWith(kind), ...(kind === 'success' ? SUCCESS_COVERED_ELSEWHERE : [])];
       expect(builtRouteIds.filter((id) => !covered.includes(id))).toEqual([]);
     });
 
@@ -140,7 +189,12 @@ describe('test page', () => {
       await seedDatabase({ files: readSeedFiles(), password: PASSWORD, nodeEnv: 'test' });
     });
 
-    it.each(scenarios)('%s', async (_name, { expected, code, setup = [], request: sent }) => {
+    afterAll(() => {
+      if (SAMPLES_FILE) writeFileSync(SAMPLES_FILE, `${JSON.stringify(samples, null, 2)}
+`);
+    });
+
+    it.each(scenarios)('%s', async (_name, { kind, title, expected, code, setup = [], request: sent }, routeId) => {
       await seedDatabase({ files: readSeedFiles(), password: PASSWORD, nodeEnv: 'test' });
 
       const logIn = (email: string) => request(enabledApp).post('/auth/login').set('Origin', TEST_ORIGIN).send({ email, password: PASSWORD });
@@ -151,9 +205,10 @@ describe('test page', () => {
         const method = sending.method.toLowerCase() as 'get' | 'post' | 'patch' | 'put' | 'delete';
         const pending = request(enabledApp)[method](fillIn(sending.path)).set('Origin', sending.origin ?? TEST_ORIGIN);
         if (sending.as) pending.set('Authorization', `Bearer ${(await logIn(sending.as)).body.accessToken as string}`);
-        if (sending.literalToken) pending.set('Authorization', `Bearer ${sending.literalToken}`);
+        if (sending.literalToken) pending.set('Authorization', `Bearer ${fillIn(sending.literalToken)}`);
+        if (sending.accept) pending.set('Accept', sending.accept);
         if (sending.cookie) pending.set('Cookie', ((await logIn(COOKIE_HOLDER_EMAIL)).headers['set-cookie'] as unknown as string[])[0]!);
-        if (sending.body) pending.set('Content-Type', 'application/json').send(fillIn(sending.body.split('YOUR_PASSWORD').join(PASSWORD)));
+        if (sending.body) pending.set('Content-Type', sending.contentType ?? 'application/json').send(fillIn(sending.body.split('YOUR_PASSWORD').join(PASSWORD)));
         return pending;
       };
 
@@ -166,6 +221,14 @@ describe('test page', () => {
       const response = await sendRequest(sent);
       expect(response.status, JSON.stringify(response.body)).toBe(expected);
       if (code) expect(response.body.error.code).toBe(code);
+
+      if (SAMPLES_FILE && kind === 'success' && !samples[routeId]) {
+        samples[routeId] = {
+          title,
+          request: { method: sent.method, path: fillIn(sent.path), ...(sent.as && { as: sent.as }), ...(sent.body && { body: parseSentBody(fillIn(sent.body)) }) },
+          response: { status: response.status, body: toSampleValue(response.body) },
+        };
+      }
     });
   });
 });

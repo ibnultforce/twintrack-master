@@ -1,9 +1,7 @@
 import { z } from 'zod';
-import { asArray, asRecord, fieldErrors, type FieldError, type Validated } from '../../../lib/validation.js';
+import { asRecord, fieldErrors, type FieldError, type Validated } from '../../../lib/validation.js';
 import { CONTRACTS, USER_STATUSES } from '../models/user.js';
-import { MODULE_KEY, type Manifest } from '../moduleRegistry/manifest.js';
 
-const moduleKey = z.string().regex(MODULE_KEY, 'must be a module key');
 
 const userRowSchema = z.object({
   id: z.string().regex(/^[A-Za-z0-9_-]+$/, 'must be letters, numbers, hyphens and underscores'),
@@ -18,7 +16,6 @@ const userRowSchema = z.object({
   orgRoleId: z.string().optional(),
   superAdmin: z.boolean().default(false),
   profileId: z.string().optional(),
-  permissionSets: z.record(moduleKey, z.array(z.string())).default({}),
 });
 
 export type UserRow = z.infer<typeof userRowSchema>;
@@ -69,23 +66,6 @@ function checkManagers(rows: RawRow[]): FieldError[] {
   return errors;
 }
 
-// A module that isn't registered yet is allowed here, so access can be set up before it arrives.
-function checkPermissionSets(rows: RawRow[], manifests: Map<string, Manifest>): FieldError[] {
-  const errors: FieldError[] = [];
-  rows.forEach((row, index) => {
-    for (const [moduleName, setKeys] of Object.entries(asRecord(row.permissionSets))) {
-      const manifest = manifests.get(moduleName);
-      if (!manifest) continue;
-      for (const setKey of asArray(setKeys)) {
-        if (!manifest.permissionSets.some((candidate) => candidate.key === setKey)) {
-          errors.push({ path: `users.${index}.permissionSets.${moduleName}`, message: `"${String(setKey)}" is not a permission set in ${moduleName}` });
-        }
-      }
-    }
-  });
-  return errors;
-}
-
 function checkProfiles(rows: RawRow[], profileIds: Set<string> | undefined): FieldError[] {
   if (!profileIds) return [];
   const errors: FieldError[] = [];
@@ -108,15 +88,16 @@ function checkOrgRoles(rows: RawRow[], orgRoleIds: Set<string> | undefined): Fie
   return errors;
 }
 
-function crossChecks(rawRows: unknown[], modules: Manifest[], related: RelatedIds): FieldError[] {
+function crossChecks(rawRows: unknown[], related: RelatedIds): FieldError[] {
   const rows = rawRows.map(asRecord);
-  const manifests = new Map(modules.map((manifest) => [manifest.module.key, manifest]));
   return [
     ...checkUniqueIdsAndEmails(rows),
     ...checkManagers(rows),
-    ...checkPermissionSets(rows, manifests),
     ...checkOrgRoles(rows, related.orgRoleIds),
     ...checkProfiles(rows, related.profileIds),
+    ...rows.flatMap((row, index) =>
+      row.permissionSets === undefined ? [] : [{ path: `users.${index}.permissionSets`, message: 'permission sets were removed: give the person a profileId' }],
+    ),
   ];
 }
 
@@ -127,7 +108,7 @@ export interface RelatedIds {
 }
 
 /** Checks a whole users file. Any problem rejects the file, so nobody is imported from a bad one. */
-export function validateUsersFile(raw: unknown, modules: Manifest[], related: RelatedIds = {}): Validated<UserRow[]> {
+export function validateUsersFile(raw: unknown, related: RelatedIds = {}): Validated<UserRow[]> {
   const file = asRecord(raw);
   if (file.type !== 'users' || !Array.isArray(file.users)) {
     return { ok: false, errors: [{ path: '', message: 'expected { "type": "users", "users": [...] }' }] };
@@ -140,7 +121,7 @@ export function validateUsersFile(raw: unknown, modules: Manifest[], related: Re
     if (parsed.success) rows.push(parsed.data);
     else errors.push(...fieldErrors(parsed.error.issues, `users.${index}`));
   });
-  errors.push(...crossChecks(file.users, modules, related));
+  errors.push(...crossChecks(file.users, related));
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value: rows };
 }

@@ -12,6 +12,10 @@ export interface SessionDoc {
   expiresAt: Date;
   absoluteExpiresAt: Date;
   revokedAt?: Date;
+  /** Set when a super admin started this session to see the app as this person. Development only. */
+  impersonatorId?: string;
+  /** The super admin's own session, which they return to when they stop. */
+  impersonatorSessionId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +31,8 @@ const sessionSchema = new Schema<SessionDoc>(
     expiresAt: { type: Date, required: true },
     absoluteExpiresAt: { type: Date, required: true, expires: 0 },
     revokedAt: Date,
+    impersonatorId: String,
+    impersonatorSessionId: String,
   },
   { timestamps: true },
 );

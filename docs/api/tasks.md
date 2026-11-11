@@ -6,7 +6,7 @@ Not built yet: points and the revert penalty, invoices and billing, project cred
 
 ## Getting access
 
-A person reaches Tasks through their profile, or through a Tasks permission set given with `PUT /users/:id/permission-sets` and `"module": "tasks"`. No profiles or permission sets ship with the product. Holding `access.update` in Tasks lets someone give or take away anyone's Tasks permission sets.
+A person reaches Tasks through their profile, given with `PUT /users/:id/profile`. No profiles ship with the product.
 
 | Permission | Lets someone |
 |---|---|
@@ -25,7 +25,7 @@ A person reaches Tasks through their profile, or through a Tasks permission set 
 - Nobody approves or reverts a task they worked on or tested (`403 own_work`).
 - The assignee and QA person must be the project lead or a member, and the QA person can't be the assignee.
 
-**QA hours** (`qaEstimatedHours`, `qaActualHours`, `qaApprovedHours`) are protected fields. They're left out of responses and history unless a grant's `fieldAccess` gives `read` or `edit`, and setting one needs `edit` (`403 field_not_editable`). `qaResult` is visible to everyone who can read the task.
+**Field access** controls a project's `name`, `description`, `status`, `totalAllocatedHours` and `deadline`, and a task's `title`, `description`, `dueDate`, `estimatedHours`, `actualHours`, `approvedHours`, `qaResult` and QA hours. A field the grant doesn't name follows its actions. Steps such as start or approve set status and hours themselves, and those aren't checked as writes. **QA hours** (`qaEstimatedHours`, `qaActualHours`, `qaApprovedHours`) are protected fields. They're left out of responses and history unless a grant's `fieldAccess` gives `read`, `create` or `edit`, and setting one needs `edit`, since tasks set them only on records that already exist (`403 field_not_editable`). `qaResult` is visible to everyone who can read the task, unless a grant sets it to `hidden`.
 
 ## Projects
 

@@ -23,8 +23,10 @@ describe('access profiles', () => {
 
   beforeEach(async () => {
     await importSeedManifests();
+    // Only the Access admin's profile is needed here, so the lists and counts below start from it alone.
+    await AccessProfile.deleteMany({ _id: { $ne: 'ap_access_admin' } });
     await addPerson('farhana', { superAdmin: true });
-    await addPerson('alia', { permissionSets: { master: ['admin'] } });
+    await addPerson('alia', { profileId: 'ap_access_admin' });
     await addPerson('karim');
   });
 
@@ -61,7 +63,7 @@ describe('access profiles', () => {
 
     await User.updateOne({ _id: 'karim' }, { $set: { profileId: created.body.id } });
     const { body } = await farhana.get('/access-profiles');
-    expect(body.profiles).toEqual([
+    expect(body.profiles.filter((profile: { id: string }) => profile.id !== 'ap_access_admin')).toEqual([
       expect.objectContaining({
         name: 'Staff',
         description: 'Everyone on the team',
@@ -81,7 +83,7 @@ describe('access profiles', () => {
     const response = await (await as('farhana')).post('/access-profiles', { name: 'Bad', grants });
     expect(response.status).toBe(422);
     expect(JSON.stringify(response.body.error.fields)).toContain(message);
-    expect(await AccessProfile.countDocuments()).toBe(0);
+    expect(await AccessProfile.countDocuments({ _id: { $ne: 'ap_access_admin' } })).toBe(0);
   });
 
   it('changes a profile, which applies to everyone holding it on their next request', async () => {
@@ -110,7 +112,7 @@ describe('access profiles', () => {
 
     await User.updateOne({ _id: 'karim' }, { $unset: { profileId: 1 } });
     expect((await farhana.delete(`/access-profiles/${profile.id}`)).status).toBe(200);
-    expect(await AccessProfile.countDocuments()).toBe(0);
+    expect(await AccessProfile.countDocuments({ _id: { $ne: 'ap_access_admin' } })).toBe(0);
   });
 
   it('answers 404 for a profile that does not exist, and 422 for an empty change', async () => {

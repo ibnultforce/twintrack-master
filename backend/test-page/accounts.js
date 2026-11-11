@@ -1,8 +1,8 @@
 // The home view: sign in as one person, see what they can do, and change someone's access if they're allowed to.
 import { describeFailure, escapeHtml, logIn, logOut, send, signedInEmail } from './api.js';
 
-const CHANGE_REASON = 'Testing from the test page';
 const DEFAULT_TARGET_EMAIL = 'karim@twintrack.test';
+const NO_PROFILE = '';
 
 const state = {
   accounts: [],
@@ -13,9 +13,9 @@ const state = {
   loginError: '',
   me: null,
   changeResult: null,
-  change: { target: DEFAULT_TARGET_EMAIL, module: '', action: '' },
-  setEdit: { module: 'hr', set: 'manager' },
-  setResult: null,
+  change: { target: DEFAULT_TARGET_EMAIL, profileId: NO_PROFILE },
+  profileEdit: { profileId: NO_PROFILE, module: 'hr' },
+  profileResult: null,
 };
 
 export function setAccountData(accounts, routes, testPassword) {
@@ -65,8 +65,7 @@ function renderSignIn(view) {
 
 function permissionsHtml(modules) {
   if (modules.length === 0) return '<p class="small">You have no access to any module.</p>';
-  const describeSource = ({ profileName, permissionSets }) =>
-    [profileName && `profile ${profileName}`, permissionSets.length > 0 && `sets ${permissionSets.join(', ')}`].filter(Boolean).join(', ') || 'no profile or set';
+  const describeSource = ({ profileName }) => (profileName ? `profile ${profileName}` : 'no profile');
   return modules.map((module) => `<p class="small"><b>${escapeHtml(module.name)}</b> (${escapeHtml(describeSource(module))}): ${escapeHtml(Object.keys(module.permissions).join(', ') || 'nothing')}</p>`).join('');
 }
 
@@ -79,37 +78,28 @@ function routesHtml(routeStatuses) {
 }
 
 function changeCard() {
-  const changeableModules = state.me.options.filter((module) => module.canChange);
-  if (changeableModules.length === 0) return '<div class="card"><h3>Change someone\'s access</h3><p class="small">You can\'t change anyone\'s access.</p></div>';
+  const { canGiveProfiles, profiles } = state.me;
+  if (!canGiveProfiles || !profiles) return '<div class="card"><h3>Change someone\'s access</h3><p class="small">You can\'t give anyone a profile. That needs userProfile.update, and accessProfile.read to list the profiles.</p></div>';
 
-  const { target, action } = state.change;
-  const chosenModule = changeableModules.find((module) => module.key === state.change.module) ?? changeableModules[0];
+  const { target, profileId } = state.change;
   const people = state.accounts.map((account) => option(account.email, `${account.name}: ${account.access}`, target)).join('');
-  const actions = [
-    ...chosenModule.permissionSets.map((permissionSet) => option(`give:${permissionSet.key}`, `Give permission set: ${permissionSet.name}`, action)),
-    option('clear:', 'Take away every permission set', action),
-  ];
-  const routesNote = chosenModule.key === 'master' ? '' : `<p class="small muted">${escapeHtml(chosenModule.name)} routes aren't built yet, so this change shows in the person's permissions, but no route uses it. Choose Master to see routes open and close.</p>`;
+  const choices = [option(NO_PROFILE, 'No profile', profileId), ...profiles.map((profile) => option(profile.id, profile.name, profileId))].join('');
   return `<div class="card">
     <h3>Change someone's access</h3>
-    <p class="small muted">This really changes the shared test data.</p>
+    <p class="small muted">This really changes the shared test data. A profile applies in every module, and you can only give one within your own access.</p>
     <div class="form">
       <label for="change-target">Person<select id="change-target" data-change="target">${people}</select></label>
-      <label for="change-module">Module<select id="change-module" data-change="module">${changeableModules.map((module) => option(module.key, module.name, chosenModule.key)).join('')}</select></label>
-      <label for="change-action">Change<select id="change-action" data-change="action">${actions.join('')}</select></label>
+      <label for="change-profile">Profile<select id="change-profile" data-change="profileId">${choices}</select></label>
     </div>
-    ${routesNote}
     <div><button class="run" data-apply="true">Save the change</button></div>
     ${state.changeResult ?? ''}
   </div>`;
 }
 
-const NEW_SET = '';
-
-function resourceRow(resource, permissionSet) {
-  const held = (action) => Boolean(permissionSet?.permissions[`${resource.key}.${action}`]);
+function resourceRow(resource, permissions) {
+  const held = (action) => Boolean(permissions[`${resource.key}.${action}`]);
   const heldAction = resource.actions.find(held);
-  const scope = heldAction ? permissionSet.permissions[`${resource.key}.${heldAction}`] : 'own';
+  const scope = heldAction ? permissions[`${resource.key}.${heldAction}`] : 'own';
   const boxes = resource.actions.map((action) => {
     const id = `grant-${resource.key}-${action}`;
     return `<label class="check" for="${escapeHtml(id)}"><input type="checkbox" id="${escapeHtml(id)}" data-resource="${escapeHtml(resource.key)}" data-action-name="${escapeHtml(action)}"${held(action) ? ' checked' : ''}> ${escapeHtml(action)}</label>`;
@@ -120,29 +110,28 @@ function resourceRow(resource, permissionSet) {
   return `<tr><td>${escapeHtml(resource.label)}</td><td><div class="checks">${boxes}</div></td><td>${scopes}</td></tr>`;
 }
 
-function permissionSetEditorCard() {
-  const { ruleModules } = state.me;
-  if (!ruleModules || ruleModules.length === 0) return '';
-  const chosenModule = ruleModules.find((module) => module.key === state.setEdit.module) ?? ruleModules[0];
-  const permissionSet = chosenModule.permissionSets.find((candidate) => candidate.key === state.setEdit.set);
-  const setOptions = [
-    ...chosenModule.permissionSets.map((candidate) => option(candidate.key, candidate.name, permissionSet?.key)),
-    option(NEW_SET, 'Add a new permission set', permissionSet?.key ?? NEW_SET),
-  ].join('');
+/** Edits one module's part of a profile. Only shown to someone who can list profiles and modules. */
+function profileEditorCard() {
+  const { profiles, ruleModules } = state.me;
+  if (!profiles || !ruleModules || ruleModules.length === 0) return '';
+  const chosenModule = ruleModules.find((module) => module.key === state.profileEdit.module) ?? ruleModules[0];
+  const profile = profiles.find((candidate) => candidate.id === state.profileEdit.profileId);
+  const permissions = profile?.modules.find((part) => part.key === chosenModule.key)?.permissions ?? {};
+  const profileOptions = [option(NO_PROFILE, 'Add a new profile', profile?.id ?? NO_PROFILE), ...profiles.map((candidate) => option(candidate.id, candidate.name, profile?.id))].join('');
   return `<div class="card">
-    <h3>Edit a permission set</h3>
-    <p class="small muted">This changes what everyone holding the set can do on their next request, in the shared test data.</p>
+    <h3>Edit a profile</h3>
+    <p class="small muted">This changes what everyone holding the profile can do on their next request, in the shared test data. You can only build one within your own access.</p>
     <div class="form">
-      <label for="set-module">Module<select id="set-module" data-set-edit="module">${ruleModules.map((module) => option(module.key, module.name, chosenModule.key)).join('')}</select></label>
-      <label for="set-choice">Permission set<select id="set-choice" data-set-edit="set">${setOptions}</select></label>
-      <label for="set-name">Name<input id="set-name" value="${escapeHtml(permissionSet?.name ?? '')}" autocomplete="off"></label>
+      <label for="profile-choice">Profile<select id="profile-choice" data-profile-edit="profileId">${profileOptions}</select></label>
+      <label for="profile-module">Module<select id="profile-module" data-profile-edit="module">${ruleModules.map((module) => option(module.key, module.name, chosenModule.key)).join('')}</select></label>
+      <label for="profile-name">Name<input id="profile-name" value="${escapeHtml(profile?.name ?? '')}" autocomplete="off"></label>
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>Resource</th><th>Permissions</th><th>Reach</th></tr></thead>
-      <tbody>${chosenModule.resources.map((resource) => resourceRow(resource, permissionSet)).join('')}</tbody>
+      <tbody>${chosenModule.resources.map((resource) => resourceRow(resource, permissions)).join('')}</tbody>
     </table></div>
-    <div class="buttons"><button class="run" data-save-set="true">${permissionSet ? 'Save permission set' : 'Add permission set'}</button>${permissionSet ? '<button class="chip" data-remove-set="true">Remove permission set</button>' : ''}</div>
-    ${state.setResult ?? ''}
+    <div class="buttons"><button class="run" data-save-profile="true">${profile ? 'Save profile' : 'Add profile'}</button>${profile ? '<button class="chip" data-remove-profile="true">Remove profile</button>' : ''}</div>
+    ${state.profileResult ?? ''}
   </div>`;
 }
 
@@ -151,9 +140,8 @@ function renderSignedIn(view) {
   view.innerHTML = `
     <div class="heading-row"><h2>Signed in as ${escapeHtml(profile.name)}</h2><button class="chip" data-sign-out="true">Sign out</button></div>
     <p class="small muted">${escapeHtml(profile.email)}. Choose a route on the left to send a request as this person.</p>
-    ${profile.mustChangePassword ? '<div class="card warning"><p class="small">This person has a temporary password, so most routes refuse them. Open <code>POST /auth/change-password</code> on the left to replace it.</p></div>' : ''}
     ${changeCard()}
-    ${permissionSetEditorCard()}
+    ${profileEditorCard()}
     <div class="card"><h3>What you can do</h3>${permissionsHtml(modules)}</div>
     <div class="card"><h3>What you can reach</h3><p class="small muted">Tested just now as ${escapeHtml(profile.name)}, using routes that only read data.</p>${routesHtml(routeStatuses)}</div>`;
 }
@@ -163,21 +151,16 @@ export function renderAccounts(view) {
   else renderSignIn(view);
 }
 
-/** The permission set editor only appears for someone the API lets edit sets in at least one module. */
-async function loadRuleEditor(asMe) {
-  const answer = await asMe('/permission-sets');
-  return { ruleModules: answer.status === 200 ? answer.body.modules : null };
-}
-
 async function loadMyAccess() {
   const email = signedInEmail();
   const asMe = (path) => send({ method: 'GET', path, as: email });
-  const [profile, myModules, options, statuses, ruleEditor] = await Promise.all([
+  const [profile, myModules, masterAccess, profiles, registered, statuses] = await Promise.all([
     asMe('/auth/me'),
     asMe('/me/modules'),
-    asMe('/users/access-options'),
+    asMe('/me/permissions/master'),
+    asMe('/access-profiles'),
+    asMe('/modules'),
     Promise.all(readRoutes().map((route) => asMe(exampleOf(route).path))),
-    loadRuleEditor(asMe),
   ]);
   const moduleList = myModules.body?.modules ?? [];
   const permissions = await Promise.all(moduleList.map((module) => asMe(`/me/permissions/${module.key}`)));
@@ -186,18 +169,13 @@ async function loadMyAccess() {
     modules: moduleList.map((module, index) => ({
       name: module.name,
       profileName: module.profileName,
-      permissionSets: module.permissionSets,
       permissions: permissions[index].body?.permissions ?? {},
     })),
-    options: options.status === 200 ? options.body.modules : [],
+    canGiveProfiles: Boolean(profile.body?.superAdmin || masterAccess.body?.permissions?.['userProfile.update']),
+    profiles: profiles.status === 200 ? profiles.body.profiles : null,
+    ruleModules: registered.status === 200 ? registered.body.modules : null,
     routeStatuses: new Map(readRoutes().map((route, index) => [route.id, statuses[index].status])),
-    ...ruleEditor,
   };
-  const firstChangeable = state.me.options.find((module) => module.canChange);
-  if (firstChangeable) {
-    state.change.module = firstChangeable.key;
-    state.change.action = firstActionIn(firstChangeable);
-  }
 }
 
 async function handleLogIn(view) {
@@ -226,35 +204,20 @@ async function signOutAndPrepare(view, nextEmail) {
   renderAccounts(view);
 }
 
-function changeRequest(targetId, held) {
-  const { module: moduleKey, action } = state.change;
-  const setKey = action.slice(action.indexOf(':') + 1);
-  // The route replaces the list, so giving one keeps the sets the person already holds.
-  const permissionSets = setKey ? [...new Set([...(held?.permissionSets ?? []), setKey])] : [];
-  return {
-    method: 'PUT',
-    path: `/users/${targetId}/permission-sets`,
-    as: signedInEmail(),
-    body: JSON.stringify({ module: moduleKey, permissionSets, reason: CHANGE_REASON }),
-  };
-}
-
-const firstActionIn = (module) => (module.permissionSets[0] ? `give:${module.permissionSets[0].key}` : 'clear:');
-
 async function applyChange(view) {
   const { target } = state.change;
   const targetAccount = state.accounts.find((account) => account.email === target);
-  const moduleField = document.getElementById('change-module');
-  const actionField = document.getElementById('change-action');
-  state.change.module = moduleField.value;
-  state.change.action = actionField.value;
+  state.change.profileId = document.getElementById('change-profile').value;
   // The last result would otherwise stay on screen, looking like the answer to this change.
   state.changeResult = null;
   renderAccounts(view);
   try {
-    const people = await send({ method: 'GET', path: `/modules/${state.change.module}/people`, as: signedInEmail() });
-    const held = people.body?.people?.find((person) => person.id === targetAccount.id);
-    const { status, body } = await send(changeRequest(targetAccount.id, held));
+    const { status, body } = await send({
+      method: 'PUT',
+      path: `/users/${targetAccount.id}/profile`,
+      as: signedInEmail(),
+      body: JSON.stringify({ profileId: state.change.profileId || null }),
+    });
     const switchButton = target === signedInEmail() ? '' : `<div><button class="run" data-switch="${escapeHtml(target)}">Sign in as ${escapeHtml(nameOf(target))} to test</button></div>`;
     state.changeResult = status < 400
       ? `<p class="outcome good">Saved. It applies to ${escapeHtml(nameOf(target))} straight away.</p>${switchButton}`
@@ -279,59 +242,60 @@ function grantsFromEditor(moduleKey) {
   return grants;
 }
 
-const setKeyFrom = (name) => name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-
 function editOutcome(status, body, savedText) {
   return status < 400
     ? `<p class="outcome good">${escapeHtml(savedText)}</p>`
     : `<p class="outcome refused">Refused: ${status} ${escapeHtml(body?.error?.code)}. ${escapeHtml(body?.error?.message)}</p>`;
 }
 
-async function savePermissionSet(view) {
-  const moduleKey = document.getElementById('set-module').value;
-  const chosenSetKey = document.getElementById('set-choice').value;
-  const name = document.getElementById('set-name').value.trim();
-  const grants = grantsFromEditor(moduleKey);
-  const key = chosenSetKey || setKeyFrom(name);
+async function saveProfile(view) {
+  const moduleKey = document.getElementById('profile-module').value;
+  const chosenId = document.getElementById('profile-choice').value;
+  const name = document.getElementById('profile-name').value.trim();
+  const moduleGrants = grantsFromEditor(moduleKey);
+  const existing = state.me.profiles.find((profile) => profile.id === chosenId);
+  // A profile holds every module, so an edit keeps the other modules' parts as they are.
+  const grants = { ...(existing?.grants ?? {}) };
+  if (Object.keys(moduleGrants).length > 0) grants[moduleKey] = moduleGrants;
+  else delete grants[moduleKey];
   try {
-    const answer = chosenSetKey
-      ? await send({ method: 'PATCH', path: `/permission-sets/${moduleKey}/${chosenSetKey}`, as: signedInEmail(), body: JSON.stringify({ name, grants }) })
-      : await send({ method: 'POST', path: `/permission-sets/${moduleKey}`, as: signedInEmail(), body: JSON.stringify({ key, name, grants }) });
-    state.setResult = editOutcome(answer.status, answer.body, `Saved ${name}. It applies on each person's next request.`);
+    const answer = existing
+      ? await send({ method: 'PATCH', path: `/access-profiles/${existing.id}`, as: signedInEmail(), body: JSON.stringify({ name, grants }) })
+      : await send({ method: 'POST', path: '/access-profiles', as: signedInEmail(), body: JSON.stringify({ name, grants }) });
+    state.profileResult = editOutcome(answer.status, answer.body, `Saved ${name}. It applies on each holder's next request.`);
     if (answer.status < 400) {
-      state.setEdit = { module: moduleKey, set: key };
+      state.profileEdit = { profileId: answer.body.id, module: moduleKey };
       await loadMyAccess();
     }
   } catch (error) {
-    state.setResult = `<p class="outcome bad">${escapeHtml(describeFailure(error))}</p>`;
+    state.profileResult = `<p class="outcome bad">${escapeHtml(describeFailure(error))}</p>`;
   }
   renderAccounts(view);
 }
 
-async function removePermissionSet(view) {
-  const moduleKey = document.getElementById('set-module').value;
-  const chosenSetKey = document.getElementById('set-choice').value;
-  if (!confirm(`Remove this permission set from the shared test data?\n\n${chosenSetKey}`)) return;
+async function removeProfile(view) {
+  const chosenId = document.getElementById('profile-choice').value;
+  if (!confirm(`Remove this profile from the shared test data?\n\n${chosenId}`)) return;
   try {
-    const answer = await send({ method: 'DELETE', path: `/permission-sets/${moduleKey}/${chosenSetKey}`, as: signedInEmail() });
-    state.setResult = editOutcome(answer.status, answer.body, `Removed ${chosenSetKey}.`);
+    const answer = await send({ method: 'DELETE', path: `/access-profiles/${chosenId}`, as: signedInEmail() });
+    state.profileResult = editOutcome(answer.status, answer.body, `Removed ${chosenId}.`);
     if (answer.status < 400) {
-      state.setEdit.set = NEW_SET;
+      state.profileEdit.profileId = NO_PROFILE;
       await loadMyAccess();
     }
   } catch (error) {
-    state.setResult = `<p class="outcome bad">${escapeHtml(describeFailure(error))}</p>`;
+    state.profileResult = `<p class="outcome bad">${escapeHtml(describeFailure(error))}</p>`;
   }
   renderAccounts(view);
 }
 
 export function handleAccountsClick(view, button) {
-  if (button.dataset.saveSet) {
-    void savePermissionSet(view);
+  if (button.dataset.saveProfile) {
+    void saveProfile(view);
     return;
   }
-  if (button.dataset.removeSet) {
-    void removePermissionSet(view);
+  if (button.dataset.removeProfile) {
+    void removeProfile(view);
     return;
   }
   if (button.dataset.use) {
@@ -353,17 +317,11 @@ export function handleAccountsSubmit(view, event) {
 }
 
 export function handleAccountsChange(view, field) {
-  if (field.dataset.setEdit) {
-    state.setEdit[field.dataset.setEdit] = field.value;
-    if (field.dataset.setEdit === 'module') state.setEdit.set = NEW_SET;
-    state.setResult = null;
+  if (field.dataset.profileEdit) {
+    state.profileEdit[field.dataset.profileEdit] = field.value;
+    state.profileResult = null;
     renderAccounts(view);
     return;
   }
-  state.change[field.dataset.change] = field.value;
-  if (field.dataset.change === 'module') {
-    const chosenModule = state.me.options.find((module) => module.key === field.value);
-    state.change.action = firstActionIn(chosenModule);
-    renderAccounts(view);
-  }
+  if (field.dataset.change) state.change[field.dataset.change] = field.value;
 }

@@ -4,7 +4,7 @@ import { decodeJwt, decodeProtectedHeader, jwtVerify } from 'jose';
 import request, { type Response } from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
-import { hashRefreshToken } from '../src/modules/master/auth/tokens.js';
+import { hashRandomToken } from '../src/modules/master/auth/tokens.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { Session } from '../src/modules/master/models/session.js';
 import { User } from '../src/modules/master/models/user.js';
@@ -58,14 +58,15 @@ describe('auth routes', () => {
   });
 
   beforeEach(async () => {
-    await User.create({ _id: 'u_04', name: 'Rahim Uddin', email: EMAIL, passwordHash, permissionSets: { hr: ['manager'] } });
+    await User.create({ _id: 'u_04', name: 'Rahim Uddin', email: EMAIL, passwordHash, profileId: 'ap_engineering_lead' });
   });
 
   describe('POST /auth/login', () => {
     it('returns a short-lived token holding identity only', async () => {
       const response = await postLogin();
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({ expiresIn: 900, mustChangePassword: false });
+      expect(response.body).toMatchObject({ expiresIn: 900 });
+      expect(response.body).not.toHaveProperty('mustChangePassword');
       expect(response.headers['cache-control']).toBe('no-store');
 
       const { accessToken } = response.body as { accessToken: string };
@@ -96,7 +97,7 @@ describe('auth routes', () => {
     it('stores only a hash of the refresh token, and ends the session after 7 days idle or 30 days total', async () => {
       const refreshToken = refreshTokenFrom(await postLogin());
       const session = await Session.findOne().lean();
-      expect(session?.tokenHash).toBe(hashRefreshToken(refreshToken));
+      expect(session?.tokenHash).toBe(hashRandomToken(refreshToken));
       expect(JSON.stringify(session)).not.toContain(refreshToken);
 
       const daysLeft = (date: Date | undefined) => Math.round((date!.getTime() - Date.now()) / MILLISECONDS_PER_DAY);
@@ -175,7 +176,7 @@ describe('auth routes', () => {
       await request(app).post('/auth/logout').set('Origin', 'https://evil.example').set('Cookie', cookie);
 
       const session = await Session.findOne().lean();
-      expect(session?.tokenHash).toBe(hashRefreshToken(refreshToken));
+      expect(session?.tokenHash).toBe(hashRandomToken(refreshToken));
       expect(session?.revokedAt).toBeUndefined();
     });
   });
@@ -189,7 +190,7 @@ describe('auth routes', () => {
 
       const secondToken = refreshTokenFrom(response);
       expect(secondToken).not.toBe(firstToken);
-      expect((await Session.findOne().lean())?.tokenHash).toBe(hashRefreshToken(secondToken));
+      expect((await Session.findOne().lean())?.tokenHash).toBe(hashRandomToken(secondToken));
     });
 
     it('answers 401 with no cookie and with an unknown cookie', async () => {
@@ -219,7 +220,7 @@ describe('auth routes', () => {
       expect(secondTab.status).toBe(200);
       expect(setCookieHeader(secondTab)).toBeUndefined();
 
-      expect((await Session.findOne().lean())?.tokenHash).toBe(hashRefreshToken(secondToken));
+      expect((await Session.findOne().lean())?.tokenHash).toBe(hashRandomToken(secondToken));
       expect((await postRefresh(secondToken)).status).toBe(200);
     });
 

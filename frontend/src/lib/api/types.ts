@@ -1,6 +1,8 @@
 export type Scope = 'own' | 'team' | 'all';
 export type PermissionMap = Record<string, Scope>;
-export type FieldAccessLevel = 'read' | 'edit';
+/** Narrowest first, matching the backend's order. */
+export const FIELD_ACCESS_LEVELS = ['hidden', 'read', 'create', 'edit'] as const;
+export type FieldAccessLevel = (typeof FIELD_ACCESS_LEVELS)[number];
 /** Access to protected fields, as "resource.field" to read or edit. */
 export type FieldAccessMap = Record<string, FieldAccessLevel>;
 export type Contract = 'permanent' | 'intern' | 'contractor';
@@ -15,9 +17,14 @@ export interface Profile {
   team?: string;
   contract: Contract;
   superAdmin: boolean;
-  mustChangePassword: boolean;
   orgRoleId?: string;
   manager: { id: string; name: string } | null;
+  employeeNumber?: number;
+  photoUpdatedAt?: string;
+  /** The super admin seeing the app as this person, when that is what this session is. */
+  impersonatedBy?: { id: string; name: string };
+  /** Whether "Log in as" is offered: a super admin, in development, not already signed in as someone else. */
+  canImpersonate: boolean;
 }
 
 export interface MyModule {
@@ -26,7 +33,6 @@ export interface MyModule {
   description?: string;
   frontendUrl: string | null;
   profileName: string | null;
-  permissionSets: string[];
 }
 
 export interface ModuleAccess {
@@ -35,9 +41,9 @@ export interface ModuleAccess {
   profile: string | null;
   profileName: string | null;
   permissions: PermissionMap;
-  /** The keys of the permission sets that count in this module. */
-  permissionSets: string[];
   fieldAccess: FieldAccessMap;
+  /** Each permission held and the APIs it opens, as "METHOD /path". */
+  apis: Record<string, string[]>;
 }
 
 export interface User {
@@ -53,9 +59,13 @@ export interface User {
   orgRoleId?: string;
   profileId?: string;
   superAdmin: boolean;
-  mustChangePassword: boolean;
-  /** Module key to the keys of the permission sets held there. */
-  permissionSets: Record<string, string[]>;
+  employeeNumber?: number;
+  /** When the photo last changed. Missing means there's no photo. */
+  photoUpdatedAt?: string;
+  /** Missing means they have never signed in, so their account is still waiting to be set up. */
+  lastSignedInAt?: string;
+  /** Missing when the viewer may not see this person's online status. */
+  online?: boolean;
 }
 
 export interface UserDetails {
@@ -67,29 +77,94 @@ export interface UserDetails {
   contract: Contract;
   managerId: string | null;
   orgRoleId: string;
-  profileId?: string | null;
+  /** Handed out in order when a person is added, so only an edit sets it. */
+  employeeNumber?: number;
 }
 
-export interface TemporaryPasswordResult {
+export interface CreatedUserResult {
   user: User;
-  temporaryPassword: string;
+  /** False when the invitation email couldn't be sent. A new link can be sent from the person's page. */
+  invitationSent: boolean;
 }
 
-export interface PermissionSetSummary {
-  key: string;
-  name: string;
-  description: string;
-  /** Short labels, such as "salary.read (team)". */
-  grants: string[];
-  permissions: PermissionMap;
-  fieldAccess: FieldAccessMap;
+export type PasswordLinkError = 'unknown_user' | 'account_inactive' | 'super_admin_protected' | 'own_account' | 'email_failed';
+
+export interface PasswordLinkResult {
+  userId: string;
+  email?: string;
+  sent: boolean;
+  error?: PasswordLinkError;
 }
 
-export interface AccessOption {
+/** What anyone signed in may see about a colleague. */
+export interface DirectoryEntry {
+  id: string;
+  name: string;
+  email: string;
+  title?: string;
+  department?: string;
+  team?: string;
+  employeeNumber?: number;
+  photoUpdatedAt?: string;
+  online?: boolean;
+}
+
+export type ClientStatus = 'active' | 'inactive';
+
+export interface Client {
+  id: string;
+  name: string;
+  initials?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
+  notes?: string;
+  status: ClientStatus;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientDetails {
+  name: string;
+  initials: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  address: string | null;
+  notes: string | null;
+}
+
+export interface ApiToken {
+  id: string;
+  name: string;
+  /** The token's first characters, to tell tokens apart. */
+  prefix: string;
+  lastUsedAt?: string;
+  expiresAt?: string;
+  revokedAt?: string;
+  createdAt: string;
+}
+
+export interface ConnectedApp {
+  id: string;
+  clientName: string;
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
+/** An app asking to connect, as the consent page shows it. */
+export interface OAuthRequest {
+  id: string;
+  clientName: string;
+  /** Where the browser goes back to, which the app can't fake, unlike its name. */
+  redirectHost: string;
+  expiresAt: string;
+}
+
+/** A loaded module, as the Access screen lists them. */
+export interface AccessModule {
   key: string;
   name: string;
-  permissionSets: PermissionSetSummary[];
-  canChange: boolean;
 }
 
 export interface ModulePerson {
@@ -97,10 +172,11 @@ export interface ModulePerson {
   name: string;
   email: string;
   status: UserStatus;
+  /** Their place in the org tree, which decides whose records their team scope reaches. */
+  orgRole: { id: string; name: string } | null;
   profile: { id: string; name: string } | null;
   /** What the person's profile gives in this module. */
   profilePermissions: PermissionMap;
-  permissionSets: string[];
 }
 
 export interface AddablePerson {
@@ -108,6 +184,8 @@ export interface AddablePerson {
   name: string;
   email: string;
   title?: string;
+  /** The profile they hold now, which giving one replaces. */
+  profileId?: string;
 }
 
 export type ResourceAction = 'read' | 'create' | 'update' | 'delete' | 'approve' | 'share';
@@ -117,7 +195,9 @@ export interface ModuleResource {
   label: string;
   actions: ResourceAction[];
   scoped?: boolean;
-  /** Fields hidden unless a profile or permission set gives read or edit access to them. */
+  /** The record's fields that field access controls. */
+  recordFields?: string[];
+  /** Fields hidden unless a profile gives access to them. */
   protectedFields?: string[];
   /** Set on objects an admin defined in the app. */
   custom?: boolean;
@@ -143,7 +223,7 @@ export interface ReadableObject {
   moduleName: string;
   key: string;
   label: string;
-  fields: (CustomFieldDefinition & { editable: boolean })[];
+  fields: (CustomFieldDefinition & { editable: boolean; creatable: boolean })[];
   can: { create: boolean; update: boolean; delete: boolean };
 }
 
@@ -177,41 +257,11 @@ export interface RegisteredModule {
   resources: ModuleResource[];
   /** Each permission and the APIs it opens, as "METHOD /path". */
   apis: Record<string, string[]>;
-  /** Each permission and the APIs, permission sets and profiles that rely on it. An action in use can't be removed. */
+  /** Each permission and the APIs and profiles that rely on it. An action in use can't be removed. */
   usedBy: Record<string, string[]>;
 }
 
-export interface PermissionSetRights {
-  create: boolean;
-  update: boolean;
-  delete: boolean;
-}
-
-export interface ManageableModule {
-  key: string;
-  name: string;
-  resources: ModuleResource[];
-  apis: Record<string, string[]>;
-  can: PermissionSetRights;
-  /** What this person may put in a permission set, and how far it can reach. */
-  assignable: PermissionMap;
-  /** The protected fields this person may give access to. */
-  assignableFields: FieldAccessMap;
-  permissionSets: PermissionSet[];
-}
-
-export interface PermissionSet {
-  module: string;
-  moduleName: string;
-  key: string;
-  name: string;
-  description: string;
-  grants: string[];
-  permissions: PermissionMap;
-  fieldAccess: FieldAccessMap;
-}
-
-/** Grants for one module, as the API takes them. A profile or set may also hold "*", everything in the module. */
+/** Grants for one module, as the API takes them. A profile may also hold "*", everything in the module. */
 export type Grants = Record<string, { actions: ResourceAction[]; scope?: Scope; fieldAccess?: Record<string, FieldAccessLevel> }>;
 
 export interface AccessProfile {

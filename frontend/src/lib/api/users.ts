@@ -1,5 +1,5 @@
-import { apiRequest } from './http';
-import type { AccessOption, AddablePerson, ModulePerson, TemporaryPasswordResult, User, UserDetails, UserStatus } from './types';
+import { apiBlob, apiRequest, setAccessToken } from './http';
+import type { AccessModule, AddablePerson, CreatedUserResult, ModulePerson, PasswordLinkResult, User, UserDetails, UserStatus } from './types';
 
 /** The most the API returns in one page. */
 const MAX_PAGE_SIZE = 100;
@@ -28,8 +28,9 @@ export async function listAllUsers(): Promise<User[]> {
 
 export const getUser = (userId: string) => apiRequest<User>(userPath(userId));
 
+/** Adds a person, who is emailed a link to set their password. */
 export const createUser = (details: Partial<UserDetails>) =>
-  apiRequest<TemporaryPasswordResult>('/users', { method: 'POST', body: details });
+  apiRequest<CreatedUserResult>('/users', { method: 'POST', body: details });
 
 export const updateUser = (userId: string, details: Partial<UserDetails>) =>
   apiRequest<User>(userPath(userId), { method: 'PATCH', body: details });
@@ -37,18 +38,37 @@ export const updateUser = (userId: string, details: Partial<UserDetails>) =>
 export const setUserStatus = (userId: string, status: UserStatus) =>
   apiRequest<User>(`${userPath(userId)}/status`, { method: 'PATCH', body: { status } });
 
-export const resetUserPassword = (userId: string) =>
-  apiRequest<TemporaryPasswordResult>(`${userPath(userId)}/reset-password`, { method: 'POST' });
+/** Only works for someone who never signed in. Everyone else is deactivated instead. */
+export const deleteUser = (userId: string) => apiRequest(userPath(userId), { method: 'DELETE' });
 
-/** Replaces the permission sets a person holds in one module. Giving a new one needs a reason. */
-export const setUserPermissionSets = (userId: string, moduleKey: string, permissionSets: string[], reason?: string) =>
-  apiRequest<User>(`${userPath(userId)}/permission-sets`, { method: 'PUT', body: { module: moduleKey, permissionSets, reason } });
+export const getNextEmployeeNumber = async () =>
+  (await apiRequest<{ employeeNumber: number }>('/users/next-employee-number')).employeeNumber;
 
+/** Emails each person a one-time link to set a new password, and reports what happened for each. */
+export async function sendPasswordLinks(userIds: string[]): Promise<PasswordLinkResult[]> {
+  return (await apiRequest<{ results: PasswordLinkResult[] }>('/users/password-links', { method: 'POST', body: { userIds } })).results;
+}
+
+export const getUserPhoto = (userId: string) => apiBlob(`${userPath(userId)}/photo`);
+
+export const setUserPhoto = (userId: string, image: File) =>
+  apiRequest<{ photoUpdatedAt: string }>(`${userPath(userId)}/photo`, { method: 'PUT', file: image });
+
+export const removeUserPhoto = (userId: string) => apiRequest(`${userPath(userId)}/photo`, { method: 'DELETE' });
+
+/** Development only: signs the super admin in as this person, until they stop. */
+export async function impersonateUser(userId: string): Promise<void> {
+  const { accessToken } = await apiRequest<{ accessToken: string }>(`${userPath(userId)}/impersonate`, { method: 'POST' });
+  setAccessToken(accessToken);
+}
+
+/** Gives a person a profile, replacing any they had, or takes it away with null. */
 export const setUserProfile = (userId: string, profileId: string | null) =>
-  apiRequest<User>(userPath(userId), { method: 'PATCH', body: { profileId } });
+  apiRequest<User>(`${userPath(userId)}/profile`, { method: 'PUT', body: { profileId } });
 
-export async function getAccessOptions(): Promise<AccessOption[]> {
-  return (await apiRequest<{ modules: AccessOption[] }>('/users/access-options')).modules;
+/** The loaded modules, for the Access screen. Needs user.read or userProfile.update. */
+export async function listAccessModules(): Promise<AccessModule[]> {
+  return (await apiRequest<{ modules: AccessModule[] }>('/users/access-options')).modules;
 }
 
 /** How many matches the person search shows. Typing narrows the list if there are more. */

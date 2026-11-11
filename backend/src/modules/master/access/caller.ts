@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import { ApiError } from '../../../lib/errors.js';
 import type { AccessProfileDoc } from '../models/accessProfile.js';
 import type { UserDoc } from '../models/user.js';
 import type { Scope } from '../moduleRegistry/manifest.js';
@@ -9,6 +10,15 @@ export interface Caller {
   /** The profile the person holds, read with them on each request. */
   profile: AccessProfileDoc | null;
   sessionId: string;
+  /** Set when a super admin is seeing the app as this person, in development. */
+  impersonatorId?: string;
+}
+
+/** Keeps a super admin seeing the app as someone from changing that person's account or credentials. */
+export function assertNotImpersonating(caller: Caller): void {
+  if (caller.impersonatorId) {
+    throw new ApiError(403, 'impersonating', "You can't do this while signed in as someone else. Stop first.");
+  }
 }
 
 /** Who is making an admin change: what services need for their own rules and for the activity log. */

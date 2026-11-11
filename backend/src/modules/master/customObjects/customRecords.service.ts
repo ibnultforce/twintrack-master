@@ -24,7 +24,7 @@ import {
   type RecordNeed,
   type ShareInput,
 } from '../records/recordAccess.service.js';
-import { assertMayWriteFields, readFieldRules, redactHistory, type FieldRules } from '../records/fieldSecurity.service.js';
+import { assertMayWriteFields, buildFieldRules, readFieldRules, redactHistory, type FieldRules } from '../records/fieldSecurity.service.js';
 import { listRecordHistory, writeRecordHistory } from '../records/recordHistory.service.js';
 import { findCustomObject, type FieldDefinition } from './customObjects.service.js';
 
@@ -54,10 +54,14 @@ export async function listReadableObjects(caller: Caller) {
     return module.resources
       .filter((resource) => resource.custom === true && access.permissions[`${resource.key}.read`])
       .map((resource) => {
-        const levelOf = (field: string) => (caller.user.superAdmin ? 'edit' : access.fieldAccess[`${resource.key}.${field}`]);
+        const rules = buildFieldRules(resource, access.fieldAccess, caller.user.superAdmin);
         const fields = ((resource.fields ?? []) as FieldDefinition[])
-          .filter((field) => !field.protected || levelOf(field.key))
-          .map((field) => ({ ...field, editable: !field.protected || levelOf(field.key) === 'edit' }));
+          .filter((field) => !rules.hidden.includes(field.key))
+          .map((field) => ({
+            ...field,
+            editable: !rules.readOnly.includes(field.key) && !rules.createOnly.includes(field.key),
+            creatable: !rules.readOnly.includes(field.key),
+          }));
         return {
           module: module.key,
           moduleName: module.name,
@@ -196,7 +200,7 @@ export async function getCustomRecord(context: ObjectContext, recordId: string) 
 /** The caller owns the new record. */
 export async function createCustomRecord(context: ObjectContext, rawValues: unknown) {
   const values = parseValues(context.fields, rawValues, { isNew: true });
-  assertMayWriteFields(context.rules, Object.keys(values));
+  assertMayWriteFields(context.rules, Object.keys(values), 'create');
   const actorId = context.actor.user._id;
   const record = await runInTransaction(async (session) => {
     const [created] = await CustomRecord.create(
@@ -236,7 +240,7 @@ export function updateCustomRecord(context: ObjectContext, recordId: string, raw
     historyAction: 'updated',
     save: (_existing, session) => {
       // Checked after the reach check, so someone outside it learns nothing about the fields.
-      assertMayWriteFields(context.rules, Object.keys(values));
+      assertMayWriteFields(context.rules, Object.keys(values), 'update');
       const toSet = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== null).map(([key, value]) => [`values.${key}`, value]));
       const toUnset = Object.fromEntries(Object.entries(values).filter(([, value]) => value === null).map(([key]) => [`values.${key}`, 1]));
       return changeRecord(CustomRecord, recordId, { $set: toSet, ...(Object.keys(toUnset).length > 0 && { $unset: toUnset }) }, { actorId: context.actor.user._id, expectedVersion: version, session }, recordNotFound);

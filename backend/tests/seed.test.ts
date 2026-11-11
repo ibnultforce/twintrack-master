@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { ValidationFailure } from '../src/lib/validation.js';
 import { Module } from '../src/modules/master/models/module.js';
 import { User } from '../src/modules/master/models/user.js';
-import { validateManifest, type Manifest } from '../src/modules/master/moduleRegistry/manifest.js';
 import { validateUsersFile } from '../src/modules/master/users/usersFile.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { readSeedFiles as readProductSeedFiles, type SeedFiles } from '../src/seed/seedFiles.js';
@@ -22,25 +21,19 @@ const row = (id: string, overrides: Record<string, unknown> = {}) => ({
   email: `${id}@x.test`,
   ...overrides,
 });
-const errorsFor = (users: unknown[], modules: Manifest[] = []): string => {
-  const result = validateUsersFile({ type: 'users', users }, modules);
+const errorsFor = (users: unknown[]): string => {
+  const result = validateUsersFile({ type: 'users', users });
   return result.ok ? '' : result.errors.map((e) => `${e.path}: ${e.message}`).join('\n');
 };
 
 describe('validateUsersFile', () => {
-  const hr = (() => {
-    const result = validateManifest(readSeedFiles().manifests[1]);
-    if (!result.ok) throw new Error('HR manifest is invalid');
-    return result.value;
-  })();
-
   it('accepts the example team', () => {
-    const result = validateUsersFile(readSeedFiles().users, [hr]);
+    const result = validateUsersFile(readSeedFiles().users);
     expect(result.ok && result.value.length).toBe(12);
   });
 
   it('reports every problem in the invalid sample at once', () => {
-    const result = validateUsersFile(readJson('./fixtures/users-invalid.json'), []);
+    const result = validateUsersFile(readJson('./fixtures/users-invalid.json'));
     expect(result.ok).toBe(false);
     const text = result.ok ? '' : result.errors.map((e) => `${e.path}: ${e.message}`).join('\n');
     expect(text).toMatch(/users\.0\.contract/);
@@ -51,7 +44,7 @@ describe('validateUsersFile', () => {
     expect(text).toMatch(/id "b1" is used twice/);
     expect(text).toMatch(/users\.6\.email/);
     expect(text).toMatch(/users\.7\.name/);
-    expect(text).toMatch(/users\.8\.permissionSets/);
+    expect(text).toMatch(/users\.8\.permissionSets: permission sets were removed/);
   });
 
   it('rejects a reporting line that goes round in a circle', () => {
@@ -59,38 +52,34 @@ describe('validateUsersFile', () => {
     expect(text).toMatch(/goes round in a circle/);
   });
 
-  it('checks permission sets only against registered modules', () => {
-    expect(errorsFor([row('a', { permissionSets: { hr: ['nope'] } })], [hr])).toMatch(/"nope" is not a permission set in hr/);
-    expect(errorsFor([row('a', { permissionSets: { hr: ['manager'] } })], [hr])).toBe('');
-    expect(errorsFor([row('a', { permissionSets: { account: ['viewer'] } })], [hr])).toBe('');
+  it('refuses permission sets, which were removed', () => {
+    expect(errorsFor([row('a', { permissionSets: {} })])).toMatch(/permission sets were removed/);
+    expect(errorsFor([row('a', { profileId: 'ap_engineering_lead' })])).toBe('');
   });
 
   it('checks profiles against the profiles loaded with the people', () => {
-    const result = validateUsersFile({ type: 'users', users: [row('a', { profileId: 'ap_ghost' })] }, [], { profileIds: new Set(['ap_staff']) });
+    const result = validateUsersFile({ type: 'users', users: [row('a', { profileId: 'ap_ghost' })] }, { profileIds: new Set(['ap_staff']) });
     expect(result.ok ? '' : result.errors[0]?.message).toMatch(/profile "ap_ghost" is not in the profiles file/);
   });
 
   it('rejects a file of the wrong type', () => {
-    expect(validateUsersFile({ type: 'other' }, []).ok).toBe(false);
-    expect(validateUsersFile(null, []).ok).toBe(false);
+    expect(validateUsersFile({ type: 'other' }).ok).toBe(false);
+    expect(validateUsersFile(null).ok).toBe(false);
   });
 });
 
 describe('what the product ships', () => {
   const files = readProductSeedFiles();
 
-  it('has no ready-made permission sets in any module, and no profiles', () => {
-    expect((files.manifests as { permissionSets: unknown[] }[]).flatMap((manifest) => manifest.permissionSets)).toEqual([]);
+  it('has no profiles, and no permission sets in any manifest', () => {
+    for (const manifest of files.manifests as object[]) expect(manifest).not.toHaveProperty('permissionSets');
     expect(files.profiles).toBeUndefined();
   });
 
   it('gives access to nobody but the super admin', () => {
-    const { users } = files.users as { users: { superAdmin?: boolean; profileId?: string; permissionSets?: object }[] };
+    const { users } = files.users as { users: { superAdmin?: boolean; profileId?: string }[] };
     expect(users.filter((user) => user.superAdmin)).toHaveLength(1);
-    for (const user of users) {
-      expect(user.profileId).toBeUndefined();
-      expect(user.permissionSets ?? {}).toEqual({});
-    }
+    for (const user of users) expect(user.profileId).toBeUndefined();
   });
 });
 
@@ -106,11 +95,11 @@ describe('seedDatabase', () => {
     expect((await Module.findOne({ key: 'hr' }).lean())?.core).toBe(false);
 
     const rahim = await User.findById('u_04').lean();
-    expect(rahim).toMatchObject({ name: 'Rahim Uddin', managerId: 'u_01', permissionSets: { hr: ['manager'] } });
-    expect((await User.findById('u_03').lean())?.permissionSets.master).toEqual(['hr-access']);
+    expect(rahim).toMatchObject({ name: 'Rahim Uddin', managerId: 'u_01', profileId: 'ap_engineering_lead' });
+    expect((await User.findById('u_03').lean())?.profileId).toBe('ap_hr_access');
     expect((await User.findById('u_01').lean())?.superAdmin).toBe(true);
     expect((await User.findById('u_11').lean())?.status).toBe('inactive');
-    expect((await User.findById('u_08').lean())?.permissionSets).toEqual({});
+    expect((await User.findById('u_08').lean())?.profileId).toBeUndefined();
   });
 
   it('can be re-run without duplicating anything', async () => {
@@ -125,12 +114,14 @@ describe('seedDatabase', () => {
   it('resets access on re-run but keeps passwords already set', async () => {
     await seed();
     const original = await User.findById('u_08').select('+passwordHash').lean();
-    await User.updateOne({ _id: 'u_08' }, { $set: { 'permissionSets.hr': ['admin'] } });
+    await User.updateOne({ _id: 'u_08' }, { $set: { profileId: 'ap_hr_admin' } });
+    await User.collection.updateOne({ _id: 'u_08' as never }, { $set: { permissionSets: { hr: ['admin'] } } });
 
     await seed(readSeedFiles(), 'a-different-password');
 
     const after = await User.findById('u_08').select('+passwordHash').lean();
-    expect(after?.permissionSets).toEqual({});
+    expect(after?.profileId).toBeUndefined();
+    expect(await User.collection.findOne({ _id: 'u_08' as never })).not.toHaveProperty('permissionSets');
     expect(after?.passwordHash).toBe(original?.passwordHash);
   });
 
@@ -144,7 +135,7 @@ describe('seedDatabase', () => {
 
   it('writes nothing when any file is invalid', async () => {
     const badUsers = clone(readSeedFiles());
-    (badUsers.users as { users: { permissionSets: object }[] }).users[1]!.permissionSets = { hr: ['not-a-set'] };
+    (badUsers.users as { users: { profileId: string }[] }).users[1]!.profileId = 'ap_not_a_profile';
     await expect(seed(badUsers)).rejects.toThrow(ValidationFailure);
 
     const badManifest = clone(readSeedFiles());

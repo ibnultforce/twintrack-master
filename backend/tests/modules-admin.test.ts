@@ -12,15 +12,14 @@ import { createTestConfig, TEST_ORIGIN } from './helpers/testConfig.js';
 
 const HR_ORIGIN = 'http://hr.twintrack.localhost:3200';
 
-const inventoryManifest = (version = '1.0.0', permissionSets = [{ key: 'lead', name: 'Lead', grants: '*' as const }]) => ({
+const inventoryManifest = (version = '1.0.0') => ({
   manifestVersion: 1,
   module: { key: 'inventory', name: 'Inventory', version, description: 'Stock tracking.' },
   resources: [{ key: 'item', label: 'Items', actions: ['read', 'create'] }],
   routes: [],
-  permissionSets,
 });
 
-describe('module, permission set and activity administration', () => {
+describe('module and activity administration', () => {
   useTestDatabase();
 
   let app: Application;
@@ -34,10 +33,12 @@ describe('module, permission set and activity administration', () => {
     await importSeedManifests();
     await addOrgRole('or_root');
     await addPerson('farhana', { superAdmin: true });
-    await addPerson('alia', { name: 'Alia Access', permissionSets: { master: ['admin'] } });
-    await addPerson('sabbir', { permissionSets: { master: ['hr-access'] } });
-    await addPerson('rumana', { name: 'Rumana Akter', permissionSets: { master: ['auditor'] } });
-    await addPerson('karim', { permissionSets: { inventory: ['lead'] } });
+    await addPerson('alia', { name: 'Alia Access', profileId: 'ap_access_admin' });
+    await addPerson('sabbir', { profileId: 'ap_hr_access' });
+    await addPerson('rumana', { name: 'Rumana Akter', profileId: 'ap_auditor' });
+    // A profile may cover a module before it's loaded, and grants nothing until it is.
+    await AccessProfile.create({ _id: 'ap_inventory', name: 'Inventory lead', grants: { inventory: '*' } });
+    await addPerson('karim', { profileId: 'ap_inventory' });
   });
 
   describe('who can reach each route', () => {
@@ -45,7 +46,6 @@ describe('module, permission set and activity administration', () => {
       ['get', '/modules'],
       ['post', '/modules/import'],
       ['delete', '/modules/hr'],
-      ['get', '/permission-sets'],
       ['get', '/audit'],
     ] as const)('%s %s needs a token, and is refused without the permission', async (method, path) => {
       expect((await request(app)[method](path)).status).toBe(401);
@@ -58,7 +58,6 @@ describe('module, permission set and activity administration', () => {
       const auditor = await as('rumana');
       expect((await auditor.get('/audit')).status).toBe(200);
       expect((await auditor.get('/modules')).status).toBe(403);
-      expect((await auditor.get('/permission-sets')).status).toBe(403);
     });
 
     it('keeps the activity log and modules from an HR access manager', async () => {
@@ -87,9 +86,9 @@ describe('module, permission set and activity administration', () => {
 
       const response = await (await as('farhana')).post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
       expect(response.status).toBe(201);
-      expect(response.body).toMatchObject({ key: 'inventory', version: '1.0.0', core: false, created: true, orphanedPermissionSets: 0 });
+      expect(response.body).toMatchObject({ key: 'inventory', version: '1.0.0', core: false, created: true });
 
-      expect((await karim.get('/me/modules')).body.modules[0]).toMatchObject({ key: 'inventory', permissionSets: ['lead'] });
+      expect((await karim.get('/me/modules')).body.modules[0]).toMatchObject({ key: 'inventory', profileName: 'Inventory lead' });
     });
 
     it('asks for the password of the person importing, and saves nothing without it', async () => {
@@ -102,47 +101,38 @@ describe('module, permission set and activity administration', () => {
     });
 
     describe('for someone who is not a super admin', () => {
-      const bareManifest = (version = '1.0.0') => ({ ...inventoryManifest(version, []), resources: [{ key: 'item', label: 'Items', actions: ['read', 'create'] }] });
-
-      it('adds a bare module, and updates one without changing its permission sets', async () => {
+      it('adds a module and imports a new version of it', async () => {
         const admin = await as('alia');
-        expect((await admin.post('/modules/import', { manifest: bareManifest(), password: TEST_PASSWORD })).status).toBe(201);
-
-        await (await as('farhana')).post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
+        expect((await admin.post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD })).status).toBe(201);
         expect((await admin.post('/modules/import', { manifest: inventoryManifest('1.1.0'), password: TEST_PASSWORD })).status).toBe(200);
       });
 
-      it('refuses a manifest with a new permission set', async () => {
-        const response = await (await as('alia')).post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
-        expect(response.status).toBe(403);
-        expect(response.body.error.code).toBe('beyond_own_access');
-        expect(await Module.countDocuments({ key: 'inventory' })).toBe(0);
-      });
+      it('needs module.update to replace resources edited in the app', async () => {
+        await (await as('farhana')).put('/modules/hr/resources/salary', { label: 'Pay', actions: ['read', 'create', 'update', 'approve', 'delete', 'share'] });
+        const hr = (await Module.findOne({ key: 'hr' }).lean())!;
+        const manifest = { manifestVersion: 1, module: { key: 'hr', name: 'HR', version: '9.0.0' }, resources: hr.resources, routes: [] };
+        const refused = await (await as('alia')).post('/modules/import', { manifest, password: TEST_PASSWORD });
+        expect(refused.status).toBe(409);
+        expect(refused.body.error.code).toBe('permissions_edited');
 
-      it('refuses changing what an existing permission set allows', async () => {
-        await (await as('farhana')).post('/modules/import', { manifest: inventoryManifest('1.0.0', [{ key: 'lead', name: 'Lead', grants: { item: { actions: ['read'] } } as never }]), password: TEST_PASSWORD });
-        const response = await (await as('alia')).post('/modules/import', { manifest: inventoryManifest('1.1.0'), password: TEST_PASSWORD });
-        expect(response.body.error.code).toBe('beyond_own_access');
-      });
-
-      it('needs permissionSet.update in the module as well as module.update to replace edited permissions', async () => {
         await AccessProfile.create({ _id: 'ap_modules', name: 'Modules', grants: { master: { module: { actions: ['create', 'update'] } } } });
         await User.updateOne({ _id: 'alia' }, { $set: { profileId: 'ap_modules' } });
-        await (await as('farhana')).post('/permission-sets/hr', { key: 'clerk', name: 'Clerk', grants: {} });
-        const hr = (await Module.findOne({ key: 'hr' }).lean())!;
-        const manifest = { manifestVersion: 1, module: { key: 'hr', name: 'HR', version: '9.0.0' }, resources: hr.resources, routes: [], permissionSets: hr.permissionSets };
-        const response = await (await as('alia')).post('/modules/import', { manifest: manifest, password: TEST_PASSWORD });
-        expect(response.status).toBe(409);
-        expect(response.body.error.code).toBe('permissions_edited');
+        expect((await (await as('alia')).post('/modules/import', { manifest, password: TEST_PASSWORD })).status).toBe(200);
       });
     });
 
-    it('replaces a module imported again, and counts people whose permission set has gone', async () => {
+    it('refuses a manifest that still lists permission sets, which were removed', async () => {
+      const response = await (await as('farhana')).post('/modules/import', { manifest: { ...inventoryManifest(), permissionSets: [] }, password: TEST_PASSWORD });
+      expect(response.status).toBe(422);
+      expect(JSON.stringify(response.body.error.fields)).toContain('permission sets were removed');
+    });
+
+    it('replaces a module imported again, and records both versions', async () => {
       const admin = await as('farhana');
       await admin.post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
-      const response = await admin.post('/modules/import', { manifest: inventoryManifest('1.1.0', [{ key: 'member', name: 'Member', grants: '*' }]), password: TEST_PASSWORD });
+      const response = await admin.post('/modules/import', { manifest: inventoryManifest('1.1.0'), password: TEST_PASSWORD });
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({ version: '1.1.0', created: false, orphanedPermissionSets: 1 });
+      expect(response.body).toMatchObject({ version: '1.1.0', created: false });
 
       const entries = await AuditLog.find({ action: 'module.imported' }).sort({ at: 1, _id: 1 }).lean();
       expect(entries.map((entry) => entry.before)).toEqual([{ version: null }, { version: '1.0.0' }]);
@@ -163,7 +153,7 @@ describe('module, permission set and activity administration', () => {
     });
 
     it('keeps the module list working if such a module is already stored', async () => {
-      await Module.create({ key: 'constructor', name: 'Old', version: '1.0.0', resources: [], routes: [], permissionSets: [] });
+      await Module.create({ key: 'constructor', name: 'Old', version: '1.0.0', resources: [], routes: [] });
       const response = await (await as('karim')).get('/me/modules');
       expect(response.status).toBe(200);
       expect(response.body.modules).toEqual([]);
@@ -186,15 +176,16 @@ describe('module, permission set and activity administration', () => {
   });
 
   describe('GET /modules/:key/export', () => {
-    it('returns a manifest that can be imported back, with permission sets created in the app', async () => {
+    it('returns a manifest that can be imported back, with resources changed in the app', async () => {
       const admin = await as('farhana');
       await admin.post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
-      await admin.post('/permission-sets/inventory', { key: 'clerk', name: 'Clerk', grants: { item: { actions: ['read'] } } });
+      await admin.put('/modules/inventory/resources/bin', { label: 'Bins', actions: ['read'] });
 
       const exported = await admin.get('/modules/inventory/export');
       expect(exported.status).toBe(200);
       expect(exported.body.module).toEqual({ key: 'inventory', name: 'Inventory', version: '1.0.0', description: 'Stock tracking.' });
-      expect(exported.body.permissionSets.map((permissionSet: { key: string }) => permissionSet.key)).toEqual(['lead', 'clerk']);
+      expect(exported.body.resources.map((resource: { key: string }) => resource.key)).toEqual(['item', 'bin']);
+      expect(exported.body).not.toHaveProperty('permissionSets');
 
       const reimported = await admin.post('/modules/import', { manifest: exported.body, password: TEST_PASSWORD });
       expect(reimported.status).toBe(200);
@@ -219,7 +210,7 @@ describe('module, permission set and activity administration', () => {
       expect((await karim.get('/me/modules')).body.modules).toEqual([]);
       expect(await AuditLog.countDocuments({ action: 'module.removed', targetId: 'inventory' })).toBe(1);
 
-      expect((await User.findById('karim').lean())?.permissionSets).toEqual({ inventory: ['lead'] });
+      expect((await User.findById('karim').lean())?.profileId).toBe('ap_inventory');
       await admin.post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
       expect((await karim.get('/me/modules')).body.modules).toHaveLength(1);
     });
@@ -238,31 +229,18 @@ describe('module, permission set and activity administration', () => {
     });
   });
 
-  describe('GET /permission-sets', () => {
-    const findSet = (body: { modules: { key: string; permissionSets: { key: string }[] }[] }, module: string, key: string) =>
-      body.modules.find((candidate) => candidate.key === module)?.permissionSets.find((permissionSet) => permissionSet.key === key);
-
-    it('describes the permission sets of every module a super admin can reach', async () => {
-      const { body, status } = await (await as('farhana')).get('/permission-sets');
-      expect(status).toBe(200);
-      expect(findSet(body, 'hr', 'admin')).toMatchObject({ moduleName: 'HR', name: 'HR Admin', grants: ['Everything in this module'] });
-      expect(findSet(body, 'hr', 'manager')).toMatchObject({
-        grants: ['salary.read (team)'],
-      });
-      expect(findSet(body, 'master', 'auditor')).toMatchObject({ grants: expect.arrayContaining(['audit.read', 'user.read']) });
-    });
-  });
-
   describe('GET /audit', () => {
     it('lists the newest entries first, with a total and who did what', async () => {
       const admin = await as('alia');
       await admin.post('/users', { name: 'Nadia Noor', email: 'nadia@twintrack.test', orgRoleId: 'or_root' });
 
-      const response = await admin.get('/audit?pageSize=1');
+      // Adding someone also sends their invitation, which is logged after the person is created.
+      const response = await admin.get('/audit?pageSize=2');
       expect(response.status).toBe(200);
-      expect(response.body.total).toBeGreaterThan(1);
-      expect(response.body.entries).toHaveLength(1);
-      expect(response.body.entries[0]).toMatchObject({ action: 'user.created', actorName: 'Alia Access', targetName: 'Nadia Noor' });
+      expect(response.body.total).toBeGreaterThan(2);
+      expect(response.body.entries).toHaveLength(2);
+      expect(response.body.entries[0]).toMatchObject({ action: 'user.password_link_sent', actorName: 'Alia Access', targetName: 'Nadia Noor' });
+      expect(response.body.entries[1]).toMatchObject({ action: 'user.created', actorName: 'Alia Access', targetName: 'Nadia Noor' });
       expect(response.body.entries[0].id).toEqual(expect.any(String));
     });
 

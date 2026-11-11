@@ -199,6 +199,9 @@ export async function createTask(actor: Actor, scope: Scope, details: NewTaskDet
   // The new task has no shares yet, so this checks the caller's scope reaches the people it will belong to.
   await assertCanReachRecord(actor, scope, { ...historyRef(taskId), peopleIds: taskPeople({ ...details, tlId }, project) }, 'edit');
 
+  const rules = await fieldRulesFor(actor);
+  assertMayWriteFields(rules, Object.keys(details), 'create');
+
   const record: NewTaskRecord = { ...details, tlId, _id: taskId, taskNumber: await takeNextTaskNumber() };
   const task = await runInTransaction(async (session) => {
     const created = await insertTask(record, actor.user._id, session);
@@ -206,7 +209,7 @@ export async function createTask(actor: Actor, scope: Scope, details: NewTaskDet
     await recordAudit({ action: 'task.created', ...taskAuditFields(actor, created) }, session);
     return created;
   });
-  return toTaskView(task, project, await fieldRulesFor(actor));
+  return toTaskView(task, project, rules);
 }
 
 interface StepDefinition {
@@ -218,7 +221,7 @@ interface StepDefinition {
   version?: number;
   /** Rules about who may take this step on this task, beyond holding the permission and reaching the task. */
   check?: (context: TaskContext) => void | Promise<void>;
-  /** Fields the step sets, which need edit access when they're protected. */
+  /** Fields the caller sets in this step, which need edit access to each. Fields the step itself moves on, such as status, aren't listed. */
   writes?: string[];
   buildUpdate: (context: TaskContext, now: Date) => UpdateQuery<TaskDoc>;
   /** A comment saved with the change, such as the reason for a revert. */
@@ -236,7 +239,7 @@ async function runStep(actor: Actor, scope: Scope, taskId: string, definition: S
   await definition.check?.(context);
   // After the reach check, so someone outside it learns nothing about the fields.
   const rules = await fieldRulesFor(actor);
-  assertMayWriteFields(rules, definition.writes ?? []);
+  assertMayWriteFields(rules, definition.writes ?? [], 'update');
 
   const update = definition.buildUpdate(context, new Date());
   const saved = await runInTransaction(async (session: ClientSession) => {
@@ -257,6 +260,7 @@ export async function updateTask(actor: Actor, scope: Scope, taskId: string, cha
     auditAction: 'task.updated',
     need: 'edit',
     version,
+    writes: Object.keys(fields),
     check: async ({ task, project }) => {
       if (!fields.assignedDevId || fields.assignedDevId === task.assignedDevId) return;
       assertIsProjectMember(project, fields.assignedDevId, 'assignedDevId');

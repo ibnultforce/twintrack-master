@@ -35,13 +35,15 @@ function RecordDialog({ object, record, onSaved, onClose }: { object: ReadableOb
     })),
   );
   const [error, setError] = useState('');
+  // A create-only field can be filled in on a new record but not changed afterwards.
+  const canSet = (field: (typeof object.fields)[number]) => (record ? field.editable : field.creatable);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
     const values: Record<string, unknown> = {};
     for (const field of object.fields) {
-      if (!field.editable) continue;
+      if (!canSet(field)) continue;
       const value = readInput(field, inputs[field.key] ?? '');
       // A new record leaves out blanks. A change sends them as null, which clears the field.
       if (value !== null || record) values[field.key] = value;
@@ -63,20 +65,20 @@ function RecordDialog({ object, record, onSaved, onClose }: { object: ReadableOb
           const id = `field-${field.key}`;
           const value = inputs[field.key];
           const update = (next: string | boolean) => setInputs({ ...inputs, [field.key]: next });
-          const label = `${field.label}${field.required ? ' (required)' : ''}${field.editable ? '' : ' (read only)'}`;
+          const label = `${field.label}${field.required ? ' (required)' : ''}${canSet(field) ? '' : ' (read only)'}`;
           if (field.type === 'boolean') {
-            return <label className="check" key={field.key}><input type="checkbox" id={id} checked={value === true} disabled={!field.editable} onChange={(event) => update(event.target.checked)} />{label}</label>;
+            return <label className="check" key={field.key}><input type="checkbox" id={id} checked={value === true} disabled={!canSet(field)} onChange={(event) => update(event.target.checked)} />{label}</label>;
           }
           return (
             <div className="field" key={field.key}>
               <label htmlFor={id}>{label}</label>
               {field.type === 'select' ? (
-                <select className="input" id={id} value={String(value ?? '')} disabled={!field.editable} onChange={(event) => update(event.target.value)}>
+                <select className="input" id={id} value={String(value ?? '')} disabled={!canSet(field)} onChange={(event) => update(event.target.value)}>
                   <option value="">None</option>
                   {(field.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
                 </select>
               ) : (
-                <input className="input" id={id} autoComplete="off" type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'} value={String(value ?? '')} disabled={!field.editable} required={field.required && !record} onChange={(event) => update(event.target.value)} />
+                <input className="input" id={id} autoComplete="off" type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'} value={String(value ?? '')} disabled={!canSet(field)} required={field.required && !record} onChange={(event) => update(event.target.value)} />
               )}
             </div>
           );

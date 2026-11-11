@@ -31,10 +31,11 @@ describe('custom objects', () => {
 
   let app: Application;
   const as = async (name: string) => requestsAs(app, await signIn(app, `${name}@twintrack.test`, PASSWORD));
-  const giveSet = async (personId: string, key: string, grants: object) => {
+  /** Builds a profile with these HR grants, as the super admin, and gives it to the person in place of the one they had. */
+  const giveHrProfile = async (personId: string, name: string, hrGrants: object) => {
     const farhana = await as('farhana');
-    await farhana.post('/permission-sets/hr', { key, name: key, grants });
-    await farhana.put(`/users/${personId}/permission-sets`, { module: 'hr', permissionSets: [key], reason: 'Testing' });
+    const created = await farhana.post('/access-profiles', { name, grants: { hr: hrGrants } });
+    await farhana.put(`/users/${personId}/profile`, { profileId: created.body.id });
   };
 
   beforeAll(() => {
@@ -99,8 +100,8 @@ describe('custom objects', () => {
   describe('records', () => {
     beforeEach(async () => {
       await (await as('farhana')).post('/modules/hr/objects', trainingDefinition);
-      await giveSet(ID.KARIM, 'training-editor', { training: { actions: ['read', 'create', 'update'], scope: 'own', fieldAccess: { cost: 'edit' } } });
-      await giveSet(ID.RAHIM, 'training-lead', { training: { actions: ['read', 'delete'], scope: 'team' } });
+      await giveHrProfile(ID.KARIM, 'training-editor', { training: { actions: ['read', 'create', 'update'], scope: 'own', fieldAccess: { cost: 'edit' } } });
+      await giveHrProfile(ID.RAHIM, 'training-lead', { training: { actions: ['read', 'delete'], scope: 'team' } });
     });
 
     it('creates a record checked against the fields, owned by the creator', async () => {
@@ -162,7 +163,7 @@ describe('custom objects', () => {
     });
 
     it('can be shared like any other record', async () => {
-      await giveSet(ID.MEHEDI, 'training-reader', { training: { actions: ['read'], scope: 'own' } });
+      await giveHrProfile(ID.MEHEDI, 'training-reader', { training: { actions: ['read'], scope: 'own' } });
       const karim = await as('karim');
       const created = (await karim.post(TRAINING, { values: { title: 'First aid' } })).body;
       expect((await (await as('mehedi')).get(TRAINING)).body.total).toBe(0);

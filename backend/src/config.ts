@@ -1,7 +1,15 @@
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { MODULE_KEY } from './modules/master/moduleRegistry/manifest.js';
 
 const MIN_SECRET_LENGTH = 32;
+
+/** Local addresses used when nothing else says where the portal is. Production refuses to rely on it. */
+const DEFAULT_PORTAL_URL = 'http://twintrack.localhost:3100';
+const MASTER_FRONTEND_KEY = 'master';
+const DEFAULT_PUBLIC_API_URL = 'http://localhost:4100';
+const ENCRYPTION_KEY_PATTERN = /^[0-9a-f]{64}$/i;
+const ENCRYPTION_KEY_BYTES = 32;
 
 const positiveInteger = (defaultValue: number) => z.coerce.number().int().positive().default(defaultValue);
 
@@ -52,6 +60,13 @@ const envSchema = z
     LOGIN_MAX_FAILED_ATTEMPTS: positiveInteger(10),
     LOGIN_RATE_WINDOW_MINUTES: positiveInteger(15),
     TEST_PAGE_ENABLED: z.enum(['true', 'false']).default('false'),
+    RESEND_API_KEY: z.string().trim().optional(),
+    EMAIL_FROM: z.string().trim().min(1).default('TwinTrack <no-reply@twintrack.com>'),
+    PORTAL_URL: z.string().refine(isWebOrigin, 'must be an address such as https://twintrack.com').optional(),
+    PASSWORD_LINK_TTL_HOURS: positiveInteger(24),
+    IMPERSONATION_ENABLED: z.enum(['true', 'false']).default('false'),
+    PUBLIC_API_URL: z.string().refine(isWebOrigin, 'must be an address such as https://api.twintrack.com').optional(),
+    ENCRYPTION_KEY: z.string().trim().regex(ENCRYPTION_KEY_PATTERN, 'must be 64 hexadecimal characters').optional(),
   })
   .superRefine((env, context) => {
     // A module frontend that isn't allowed to call the API would open and then fail on its first request.
@@ -70,6 +85,22 @@ const envSchema = z
     if (env.NODE_ENV === 'production' && env.TEST_PAGE_ENABLED === 'true') {
       context.addIssue({ code: 'custom', path: ['TEST_PAGE_ENABLED'], message: 'must not be true in production' });
     }
+    if (env.NODE_ENV === 'production' && env.IMPERSONATION_ENABLED === 'true') {
+      context.addIssue({ code: 'custom', path: ['IMPERSONATION_ENABLED'], message: 'must not be true in production' });
+    }
+    // Without a key, emails are written to the log, which would leak set-password links in production.
+    if (env.NODE_ENV === 'production' && !env.RESEND_API_KEY) {
+      context.addIssue({ code: 'custom', path: ['RESEND_API_KEY'], message: 'is required in production' });
+    }
+    if (env.NODE_ENV === 'production' && !env.PUBLIC_API_URL?.startsWith('https://')) {
+      context.addIssue({ code: 'custom', path: ['PUBLIC_API_URL'], message: 'is required in production, as an https address' });
+    }
+    if (env.NODE_ENV === 'production' && !env.ENCRYPTION_KEY) {
+      context.addIssue({ code: 'custom', path: ['ENCRYPTION_KEY'], message: 'is required in production' });
+    }
+    if (env.NODE_ENV === 'production' && !env.PORTAL_URL && !env.MODULE_FRONTEND_URLS.has(MASTER_FRONTEND_KEY)) {
+      context.addIssue({ code: 'custom', path: ['PORTAL_URL'], message: 'is required in production, for the links in emails' });
+    }
   });
 
 export interface AuthSettings {
@@ -85,6 +116,17 @@ export interface AuthSettings {
   isRefreshCookieSecure: boolean;
   loginMaxFailedAttempts: number;
   loginRateWindowMinutes: number;
+  /** Lets a super admin sign in as someone else, to see what they see. Never allowed in production. */
+  isImpersonationEnabled: boolean;
+}
+
+export interface EmailSettings {
+  /** Sends through Resend when set. Without it, emails are written to the log, which only development allows. */
+  resendApiKey?: string;
+  from: string;
+  /** The portal address that links in emails open. */
+  portalUrl: string;
+  passwordLinkTtlHours: number;
 }
 
 export interface Config {
@@ -99,7 +141,15 @@ export interface Config {
   trustProxyHops: number;
   /** Serves the browser test page at /try. Never allowed in production. */
   isTestPageEnabled: boolean;
+  /** This API's own public address. OAuth and the MCP endpoint name it to the apps that connect. */
+  publicApiUrl: string;
+  /**
+   * Encrypts secrets that must be read back, such as OAuth client secrets. Losing it makes them unreadable.
+   * Outside production a missing key is replaced by a random one, so those secrets last until the server restarts.
+   */
+  encryptionKey: Buffer;
   auth: AuthSettings;
+  email: EmailSettings;
 }
 
 export class ConfigError extends Error {}
@@ -120,6 +170,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     logLevel: values.LOG_LEVEL,
     trustProxyHops: values.TRUST_PROXY_HOPS,
     isTestPageEnabled: values.TEST_PAGE_ENABLED === 'true',
+    publicApiUrl: values.PUBLIC_API_URL ?? DEFAULT_PUBLIC_API_URL,
+    encryptionKey: values.ENCRYPTION_KEY ? Buffer.from(values.ENCRYPTION_KEY, 'hex') : randomBytes(ENCRYPTION_KEY_BYTES),
     auth: {
       accessTokenSecret: values.JWT_ACCESS_SECRET,
       tokenIssuer: values.JWT_ISSUER,
@@ -132,6 +184,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         : values.NODE_ENV === 'production',
       loginMaxFailedAttempts: values.LOGIN_MAX_FAILED_ATTEMPTS,
       loginRateWindowMinutes: values.LOGIN_RATE_WINDOW_MINUTES,
+      isImpersonationEnabled: values.IMPERSONATION_ENABLED === 'true',
+    },
+    email: {
+      resendApiKey: values.RESEND_API_KEY || undefined,
+      from: values.EMAIL_FROM,
+      portalUrl: values.PORTAL_URL ?? values.MODULE_FRONTEND_URLS.get(MASTER_FRONTEND_KEY) ?? DEFAULT_PORTAL_URL,
+      passwordLinkTtlHours: values.PASSWORD_LINK_TTL_HOURS,
     },
   };
 }

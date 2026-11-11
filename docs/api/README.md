@@ -24,7 +24,7 @@ curl -i -X POST "$API/auth/login" \
 ```
 
 ```json
-{ "accessToken": "eyJ...", "expiresIn": 900, "mustChangePassword": false }
+{ "accessToken": "eyJ...", "expiresIn": 900 }
 ```
 
 The response also sets the `twintrack_refresh` cookie.
@@ -46,20 +46,19 @@ Each route declares one of three access levels:
 | Access | What the API checks, in order |
 |---|---|
 | `public` | Nothing. Login, refresh and logout check the `Origin` header themselves. |
-| `signed` | A valid token, an open session and an active account, then that no temporary password is waiting to be changed |
+| `signed` | A valid token, an open session and an active account |
 | `private` | The same as `signed`, then the named permission in that route's module |
 
-A few `signed` routes in Master also work out the caller's rights from their profile and permission sets. [master.md](master.md) notes which ones.
+A few `signed` routes, such as custom records, work out the caller's rights from their profile in the service. The module's doc notes which ones.
 
 ### How someone gets a permission
 
 A permission is written `resource.action`, such as `salary.read`. A person holds one through any of these:
 
 - **Super admin:** every permission in every module.
-- **Profile:** one per person, org-wide, setting their baseline in every module. Given with `PATCH /users/:id` and `profileId`. `GET /access-profiles` lists them.
-- **Permission set:** a named bundle in one module, added on top of the profile. Given with `PUT /users/:id/permission-sets`, with a reason. `GET /permission-sets` lists the ones you can reach.
+- **Profile:** one per person, org-wide, and the only place their permissions come from. Given with `PUT /users/:id/profile`, which needs `userProfile.update` and stays within the giver's own access and reach. `GET /access-profiles` lists them.
 
-Changes apply on the person's next request, because the token holds only their identity. No profiles or permission sets ship with the product, so only a super admin has access until they create some.
+Changes apply on the person's next request, because the token holds only their identity. No profiles ship with the product, so only a super admin has access until they create some.
 
 ### Scope
 
@@ -108,7 +107,6 @@ Every error has the same shape. `fields` appears on validation errors:
 | 401 | `invalid_token`, `token_expired` | The token is bad or expired. Refresh and try again. |
 | 401 | `session_revoked` | The session has ended. Sign in again. |
 | 401 | `account_inactive` | The account has been deactivated |
-| 403 | `password_change_required` | The temporary password must be changed first |
 | 403 | `forbidden` | The caller lacks the permission |
 | 404 | `no_route` | No such route |
 | 422 | `validation_failed` | A field is invalid. See `fields`. |

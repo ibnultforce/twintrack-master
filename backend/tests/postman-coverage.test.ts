@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import type { Application } from 'express';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
+import { oauthProtocolHandlers } from '../src/modules/master/oauth/oauthProtocol.js';
 import { createTestConfig } from './helpers/testConfig.js';
 
 interface PostmanItem {
@@ -57,7 +58,10 @@ describe('Postman collection', () => {
   });
 
   // A mounted router hides its routes from appRoutes, which would let this check pass without testing them.
+  // The OAuth protocol handlers from the MCP SDK are the one allowed exception. oauthProtocol.ts explains why.
   it('sees every route because none are on mounted routers', () => {
-    expect(appStack(createApp(createTestConfig())).filter(({ handle }) => Array.isArray(handle?.stack))).toEqual([]);
+    const mounted = appStack(createApp(createTestConfig())).filter(({ handle }) => Array.isArray(handle?.stack) || (handle && oauthProtocolHandlers.has(handle)));
+    expect(mounted.filter(({ handle }) => !(handle && oauthProtocolHandlers.has(handle)))).toEqual([]);
+    expect(mounted).toHaveLength(5);
   });
 });

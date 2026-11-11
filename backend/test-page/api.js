@@ -59,9 +59,12 @@ async function tokenFor(email) {
 
 async function sendOnce(request) {
   const headers = {};
+  // The MCP endpoint needs clients to say they take both JSON and event streams.
+  if (request.accept) headers.Accept = request.accept;
   if (request.literalToken) headers.Authorization = `Bearer ${request.literalToken}`;
   if (request.as) headers.Authorization = `Bearer ${await tokenFor(request.as)}`;
-  if (request.body) headers['Content-Type'] = 'application/json';
+  // A photo upload names its image type. Everything else sends JSON.
+  if (request.body) headers['Content-Type'] = request.contentType ?? 'application/json';
   const usesCookie = request.cookie || request.path === '/auth/login';
   const response = await fetch(request.path, {
     method: request.method,

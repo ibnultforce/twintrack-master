@@ -215,7 +215,7 @@ export default function OrgRolesPage() {
                     <Row label="People below this role">{peopleCount(peopleBelow)}</Row>
                     <Row label="People above who can see this role">{peopleCount(peopleAbove)}</Row>
                     {directReports !== null ? <Row label="Direct reports of people in this role">{peopleCount(directReports)}</Row> : null}
-                    <p className="note spaced">Someone in {role.name} with a team-scoped permission reaches their direct reports and the records of the {peopleCount(peopleBelow)} in the {rolesBelow.length} {rolesBelow.length === 1 ? 'role' : 'roles'} below it. The tree only decides visibility. Permissions come from profiles and permission sets.</p>
+                    <p className="note spaced">Someone in {role.name} with a team-scoped permission reaches their direct reports and the records of the {peopleCount(peopleBelow)} in the {rolesBelow.length} {rolesBelow.length === 1 ? 'role' : 'roles'} below it. The tree only decides visibility. Permissions come from each person's profile.</p>
                   </Card>
 
                   <Card title="People in this role" aside={<span className="note">{peopleCount(role.peopleCount)}</span>}>

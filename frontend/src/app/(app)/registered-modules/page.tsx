@@ -61,13 +61,13 @@ function ResourceDialog({ module, resource, onSaved, onClose }: { module: Regist
         <ActionChecks legend="Actions" options={ALL_ACTIONS} selected={actions} locked={lockedActions} onChange={setActions} />
         {lockedActions.length > 0 ? (
           <div className="note">
-            <p>Locked because they&apos;re in use. To stop one person doing something, change their profile or permission sets instead.</p>
+            <p>Locked because they&apos;re in use. To stop one person doing something, change their profile instead.</p>
             <ul>{lockedActions.map((action) => <li key={action}>{humanize(action)}: {usersOf(action).join(', ')}</li>)}</ul>
           </div>
         ) : null}
         {isSuperAdmin && removedInUse.length > 0 ? (
           <Notice tone="danger">
-            <p>These are in use. Saving takes them out of every permission set and profile, and the APIs listed can then be used only by super admins.</p>
+            <p>These are in use. Saving takes them out of every profile, and the APIs listed can then be used only by super admins.</p>
             <ul>{removedInUse.map((action) => <li key={action}>{humanize(action)}: {usersOf(action).join(', ')}</li>)}</ul>
           </Notice>
         ) : null}
@@ -269,10 +269,10 @@ export default function RegisteredModulesPage() {
               {dialog?.kind === 'add-object' ? <CustomObjectDialog moduleKey={module.key} onSaved={modules.reload} onClose={closeDialog} /> : null}
               {dialog?.kind === 'edit-object' ? <CustomObjectDialog moduleKey={module.key} existing={dialog.resource} onSaved={modules.reload} onClose={closeDialog} /> : null}
               {dialog?.kind === 'remove-object' ? <ConfirmDialog title={`Remove ${dialog.resource.label}?`} text="It can't be removed while it has records, even in the recycle bin." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeCustomObject(module.key, dialog.resource.key); modules.reload(); }} /> : null}
-              {dialog?.kind === 'remove-module' ? <ConfirmDialog title={`Remove ${module.name}?`} text="People keep their permission sets, and profiles keep their part for it, but neither grants anything unless the module is imported again." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeModule(module.key); setChosenKey(''); modules.reload(); }} /> : null}
+              {dialog?.kind === 'remove-module' ? <ConfirmDialog title={`Remove ${module.name}?`} text="Profiles keep their part for it, which gives nothing until it is imported again." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeModule(module.key); setChosenKey(''); modules.reload(); }} /> : null}
               {dialog?.kind === 'add-resource' ? <ResourceDialog module={module} onSaved={modules.reload} onClose={closeDialog} /> : null}
               {dialog?.kind === 'edit-resource' ? <ResourceDialog module={module} resource={dialog.resource} onSaved={modules.reload} onClose={closeDialog} /> : null}
-              {dialog?.kind === 'remove-resource' ? <ConfirmDialog title={`Remove ${dialog.resource.label}?`} text="It can't be removed while a permission set, profile or route still uses it." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeResource(module.key, dialog.resource.key); modules.reload(); }} /> : null}
+              {dialog?.kind === 'remove-resource' ? <ConfirmDialog title={`Remove ${dialog.resource.label}?`} text="It can't be removed while a profile or route still uses it." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeResource(module.key, dialog.resource.key); modules.reload(); }} /> : null}
             </>
           );
         }}

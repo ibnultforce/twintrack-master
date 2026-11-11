@@ -1,4 +1,4 @@
-import type { FieldAccessMap, Grants, ModuleResource, PermissionMap, ResourceAction, Scope } from './api/types';
+import type { FieldAccessLevel, FieldAccessMap, Grants, ModuleResource, PermissionMap, ResourceAction, Scope } from './api/types';
 
 export const ALL_ACTIONS: ResourceAction[] = ['read', 'create', 'update', 'delete', 'approve', 'share'];
 
@@ -17,13 +17,32 @@ export function readResourceScopes(permissions: PermissionMap, resources: Module
   return scopes;
 }
 
+/** Every field of a resource that field access controls, as the backend counts them. */
+export function listAccessFields(resource: ModuleResource): string[] {
+  const customFields = (resource.fields ?? []).map((field) => field.key);
+  return [...new Set([...(resource.recordFields ?? []), ...(resource.protectedFields ?? []), ...customFields])];
+}
+
+/** The widest level a grant's actions make useful on any field: create needs the create action, edit needs update. */
+export function widestUsefulFieldLevel(actions: string[]): FieldAccessLevel {
+  if (actions.includes('update')) return 'edit';
+  if (actions.includes('create')) return 'create';
+  if (actions.includes('read')) return 'read';
+  return 'hidden';
+}
+
+/** The level a grant's actions give a field it doesn't name. A protected field stays hidden. */
+export function impliedFieldLevel(resource: ModuleResource, field: string, actions: string[]): FieldAccessLevel {
+  return resource.protectedFields?.includes(field) ? 'hidden' : widestUsefulFieldLevel(actions);
+}
+
 /** Builds the grants the API expects. A scope is sent only for resources that have one, because others refuse it. */
 export function buildGrants(selected: Set<string>, scopes: Record<string, Scope>, resources: ModuleResource[], fieldAccess: FieldAccessMap = {}): Grants {
   const grants: Grants = {};
   for (const resource of resources) {
     const actions = resource.actions.filter((action) => selected.has(permissionKey(resource.key, action)));
     if (actions.length === 0) continue;
-    const fields = Object.fromEntries((resource.protectedFields ?? []).flatMap((field) => {
+    const fields = Object.fromEntries(listAccessFields(resource).flatMap((field) => {
       const level = fieldAccess[permissionKey(resource.key, field)];
       return level ? [[field, level]] : [];
     }));
@@ -34,12 +53,6 @@ export function buildGrants(selected: Set<string>, scopes: Record<string, Scope>
     };
   }
   return grants;
-}
-
-/** Makes a permission set's key from its name, such as "Payroll Clerk" to "payroll-clerk". A name with no Latin letters gets a generated key. */
-export function setKeyFromName(name: string): string {
-  const key = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^[^a-z]+/, '').replace(/-+$/, '');
-  return key || `set-${Date.now().toString(36)}`;
 }
 
 /** Adds two permission maps, keeping the wider scope where they overlap. */

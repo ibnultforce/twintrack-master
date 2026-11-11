@@ -1,119 +1,32 @@
 {
-  "permissionSets": {
-    "master": [
-      {
-        "key": "admin",
-        "name": "Access Admin",
-        "description": "Manages people and modules, and gives people roles. Can't change what a role allows.",
-        "grants": {
-          "user": {
-            "actions": [
-              "read",
-              "create",
-              "update"
-            ]
-          },
-          "permissionSet": {
-            "actions": [
-              "read"
-            ]
-          },
-          "module": {
-            "actions": [
-              "read",
-              "create",
-              "delete"
-            ]
-          },
-          "audit": {
-            "actions": [
-              "read"
-            ]
-          },
-          "hrAccess": {
-            "actions": [
-              "read",
-              "update"
-            ]
-          },
-          "orgRole": {
-            "actions": [
-              "read",
-              "create",
-              "update",
-              "delete"
-            ]
-          },
-          "accessProfile": {
-            "actions": [
-              "read"
-            ]
-          }
-        }
-      },
-      {
-        "key": "hr-access",
-        "name": "HR access manager",
-        "description": "HR staff who set each person's HR role and special privileges, and manage field access from the HR panel. Cannot change role templates.",
-        "grants": {
+  "profiles": [
+    {
+      "id": "ap_hr_access",
+      "name": "HR access manager",
+      "description": "Reads people and gives anyone a profile within their own access.",
+      "grants": {
+        "master": {
           "user": {
             "actions": [
               "read"
             ]
           },
-          "hrAccess": {
+          "userProfile": {
             "actions": [
-              "read",
               "update"
-            ]
+            ],
+            "scope": "all"
           }
-        }
-      },
-      {
-        "key": "auditor",
-        "name": "Auditor",
-        "description": "Reads the activity log and who has HR access.",
-        "grants": {
-          "audit": {
-            "actions": [
-              "read"
-            ]
-          },
-          "user": {
-            "actions": [
-              "read"
-            ]
-          },
-          "hrAccess": {
-            "actions": [
-              "read"
-            ]
-          },
-          "orgRole": {
-            "actions": [
-              "read"
-            ]
-          },
-          "accessProfile": {
-            "actions": [
-              "read"
-            ]
-          }
-        }
+        },
+        "hr": {}
       }
-    ],
-    "hr": [
-      {
-        "key": "admin",
-        "name": "HR Admin",
-        "description": "Full control of HR.",
-        "grants": "*"
-      },
-      {
-        "key": "manager",
-        "name": "Manager",
-        "description": "Sees their team and approves their leave.",
-        "grants": {
+    },
+    {
+      "id": "ap_engineering_lead",
+      "name": "Engineering lead",
+      "description": "Sees their team's salaries and runs projects for their team.",
+      "grants": {
+        "hr": {
           "salary": {
             "actions": [
               "read"
@@ -123,27 +36,8 @@
               "amount": "read"
             }
           }
-        }
-      },
-      {
-        "key": "staff",
-        "name": "HR Staff",
-        "description": "Keeps records and attendance up to date.",
-        "grants": {}
-      },
-      {
-        "key": "viewer",
-        "name": "Viewer",
-        "description": "Read-only view of employee records.",
-        "grants": {}
-      }
-    ],
-    "tasks": [
-      {
-        "key": "lead",
-        "name": "Team Lead",
-        "description": "Runs projects for their team: plans, hands to QA, approves and cancels tasks.",
-        "grants": {
+        },
+        "tasks": {
           "project": {
             "actions": [
               "read",
@@ -168,12 +62,92 @@
             }
           }
         }
-      },
-      {
-        "key": "developer",
-        "name": "Developer",
-        "description": "Works on and tests the tasks they are given.",
-        "grants": {
+      }
+    },
+    {
+      "id": "ap_auditor",
+      "name": "Auditor",
+      "description": "Reads the activity log, people and profiles.",
+      "grants": {
+        "master": {
+          "audit": {
+            "actions": [
+              "read"
+            ]
+          },
+          "user": {
+            "actions": [
+              "read"
+            ]
+          },
+          "orgRole": {
+            "actions": [
+              "read"
+            ]
+          },
+          "accessProfile": {
+            "actions": [
+              "read"
+            ]
+          }
+        },
+        "hr": {}
+      }
+    },
+    {
+      "id": "ap_hr_admin",
+      "name": "HR admin",
+      "description": "Everything in HR.",
+      "grants": {
+        "hr": "*"
+      }
+    },
+    {
+      "id": "ap_access_admin",
+      "name": "Access admin",
+      "description": "Manages people, modules and the org tree, and gives anyone a profile within their own access. Also a developer.",
+      "grants": {
+        "master": {
+          "user": {
+            "actions": [
+              "read",
+              "create",
+              "update"
+            ]
+          },
+          "module": {
+            "actions": [
+              "read",
+              "create",
+              "delete"
+            ]
+          },
+          "audit": {
+            "actions": [
+              "read"
+            ]
+          },
+          "orgRole": {
+            "actions": [
+              "read",
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "accessProfile": {
+            "actions": [
+              "read"
+            ]
+          },
+          "userProfile": {
+            "actions": [
+              "update"
+            ],
+            "scope": "all"
+          }
+        },
+        "tasks": {
           "project": {
             "actions": [
               "read"
@@ -188,70 +162,37 @@
           }
         }
       }
-    ]
-  },
-  "people": {
-    "u_03": {
-      "hr": [
-        "staff"
-      ],
-      "master": [
-        "hr-access"
-      ]
     },
-    "u_04": {
-      "hr": [
-        "manager"
-      ],
-      "account": [
-        "viewer"
-      ],
-      "tasks": [
-        "lead"
-      ]
-    },
-    "u_05": {
-      "account": [
-        "admin"
-      ],
-      "hr": [
-        "viewer"
-      ],
-      "master": [
-        "auditor"
-      ]
-    },
-    "u_06": {
-      "account": [
-        "accountant"
-      ],
-      "hr": [
-        "admin"
-      ]
-    },
-    "u_07": {
-      "master": [
-        "admin"
-      ],
-      "tasks": [
-        "developer"
-      ]
-    },
-    "u_12": {
-      "hr": [
-        "admin"
-      ]
-    },
-    "u_09": {
-      "tasks": [
-        "developer"
-      ]
-    },
-    "u_10": {
-      "tasks": [
-        "developer"
-      ]
+    {
+      "id": "ap_developer",
+      "name": "Developer",
+      "description": "Works on and tests the tasks they are given.",
+      "grants": {
+        "tasks": {
+          "project": {
+            "actions": [
+              "read"
+            ],
+            "scope": "own"
+          },
+          "task": {
+            "actions": [
+              "read"
+            ],
+            "scope": "own"
+          }
+        }
+      }
     }
-  },
-  "profiles": []
+  ],
+  "people": {
+    "u_03": "ap_hr_access",
+    "u_04": "ap_engineering_lead",
+    "u_05": "ap_auditor",
+    "u_06": "ap_hr_admin",
+    "u_12": "ap_hr_admin",
+    "u_07": "ap_access_admin",
+    "u_09": "ap_developer",
+    "u_10": "ap_developer"
+  }
 }

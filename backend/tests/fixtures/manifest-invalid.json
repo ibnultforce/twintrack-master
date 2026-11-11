@@ -33,16 +33,5 @@
       "path": "/runs/:id"
     }
   ],
-  "permissionSets": [
-    {
-      "key": "admin",
-      "name": "Admin",
-      "grants": "*"
-    },
-    {
-      "key": "admin",
-      "name": "Admin again",
-      "grants": {}
-    }
-  ]
+  "permissionSets": []
 }

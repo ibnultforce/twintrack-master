@@ -1,6 +1,7 @@
 import { hash } from '@node-rs/argon2';
 import type { Application } from 'express';
 import request from 'supertest';
+import { AccessProfile } from '../../src/modules/master/models/accessProfile.js';
 import { OrgRole } from '../../src/modules/master/models/orgRole.js';
 import { User } from '../../src/modules/master/models/user.js';
 import { validateManifest } from '../../src/modules/master/moduleRegistry/manifest.js';
@@ -12,13 +13,26 @@ export const TEST_PASSWORD = 'correct-password';
 
 const passwordHashPromise = hash(TEST_PASSWORD);
 
-/** Loads the same modules as the seed. Master has to be loaded for any private route to answer. */
+interface ProfileRow {
+  id: string;
+  name: string;
+  description?: string;
+  grants: Record<string, unknown>;
+}
+
+/**
+ * Loads the same modules as the seed, and the test profiles from fixtures/test-access.json, so a person added with
+ * addPerson can hold one through profileId. Master has to be loaded for any private route to answer.
+ */
 export async function importSeedManifests(): Promise<void> {
-  for (const raw of readSeedFiles().manifests) {
+  const files = readSeedFiles();
+  for (const raw of files.manifests) {
     const manifest = validateManifest(raw);
     if (!manifest.ok) throw new Error(JSON.stringify(manifest.errors));
     await importManifest(manifest.value, { allowCore: true });
   }
+  const { profiles } = files.profiles as { profiles: ProfileRow[] };
+  await AccessProfile.insertMany(profiles.map(({ id, ...profile }) => ({ _id: id, ...profile })));
 }
 
 export async function addPerson(id: string, overrides: Record<string, unknown> = {}) {

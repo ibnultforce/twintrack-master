@@ -7,15 +7,18 @@ export const MAX_PASSWORD_LENGTH = 256;
 
 let unmatchablePasswordHash: Promise<string> | undefined;
 
-const TEMPORARY_PASSWORD_BYTES = 12;
+const UNUSABLE_PASSWORD_BYTES = 32;
 
 export function hashPassword(password: string): Promise<string> {
   return hash(password);
 }
 
-/** A random password for an admin to pass on once. The person must replace it before they can do anything else. */
-export function generateTemporaryPassword(): string {
-  return `tmp-${randomBytes(TEMPORARY_PASSWORD_BYTES).toString('base64url')}`;
+/**
+ * A hash of a random password nobody ever sees, for a new account. Nobody can sign in to it until its owner sets a
+ * password from the link they were emailed.
+ */
+export function hashUnusablePassword(): Promise<string> {
+  return hash(randomBytes(UNUSABLE_PASSWORD_BYTES).toString('hex'));
 }
 
 /**

@@ -3,7 +3,7 @@ import type { AuthSettings } from '../../../config.js';
 import { ApiError } from '../../../lib/errors.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import type { SessionDoc } from '../models/session.js';
-import { findUserById, findUserWithPasswordByEmail } from '../users/users.repository.js';
+import { findUserById, findUserWithPasswordByEmail, recordUserSignedIn } from '../users/users.repository.js';
 import { isPasswordCorrect } from './passwords.js';
 import {
   createSession,
@@ -11,7 +11,7 @@ import {
   revokeSession,
   rotateSessionToken,
 } from './session.repository.js';
-import { createAccessToken, createRefreshToken, hashRefreshToken } from './tokens.js';
+import { createAccessToken, createRefreshToken, hashRandomToken } from './tokens.js';
 
 const MILLISECONDS_PER_DAY = 86_400_000;
 
@@ -30,7 +30,6 @@ export interface RefreshCookieValue {
 export interface LoginResult {
   accessToken: string;
   expiresIn: number;
-  mustChangePassword: boolean;
   refreshCookie: RefreshCookieValue;
 }
 
@@ -66,16 +65,16 @@ export async function login(
   await createSession({
     sessionId,
     userId: user._id,
-    tokenHash: hashRefreshToken(refreshToken),
+    tokenHash: hashRandomToken(refreshToken),
     expiresAt,
     absoluteExpiresAt: daysFromNow(settings.sessionMaxDays),
   });
+  await recordUserSignedIn(user._id);
   await recordAudit({ action: 'auth.login', actorId: user._id, actorName: user.name, ip: ipAddress });
 
   return {
     accessToken: await createAccessToken({ userId: user._id, sessionId }, settings),
     expiresIn: settings.accessTokenTtlSeconds,
-    mustChangePassword: user.mustChangePassword,
     refreshCookie: { token: refreshToken, expiresAt },
   };
 }
@@ -127,7 +126,7 @@ export async function refresh(
 ): Promise<RefreshResult> {
   if (!presentedToken) throw new SessionEndedError('no_session', 'Sign in to continue.');
 
-  const presentedHash = hashRefreshToken(presentedToken);
+  const presentedHash = hashRandomToken(presentedToken);
   const session = await findSessionByTokenHash(presentedHash);
   if (!session) throw new SessionEndedError('session_revoked', 'Your session has ended. Sign in again.');
 
@@ -143,7 +142,7 @@ export async function refresh(
     const wasRotated = await rotateSessionToken({
       sessionId: session._id,
       presentedHash,
-      newHash: hashRefreshToken(newToken),
+      newHash: hashRandomToken(newToken),
       expiresAt,
     });
     if (wasRotated) return { accessToken, expiresIn, refreshCookie: { token: newToken, expiresAt } };
@@ -161,7 +160,7 @@ export async function refresh(
 export async function logout(presentedToken: string | undefined, ipAddress: string | undefined): Promise<void> {
   if (!presentedToken) return;
 
-  const session = await findSessionByTokenHash(hashRefreshToken(presentedToken));
+  const session = await findSessionByTokenHash(hashRandomToken(presentedToken));
   if (!session) return;
 
   const wasActive = await revokeSession(session._id);

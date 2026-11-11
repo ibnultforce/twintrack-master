@@ -1,23 +1,40 @@
 import { ApiError } from '../../../lib/errors.js';
 import type { Actor } from '../access/caller.js';
 import type { FieldChange } from '../models/recordHistory.js';
+import { readOwnEntry, type FieldAccessMap } from '../access/permissions.js';
+import { listAccessFields, type FieldAccessLevel, type ManifestResource } from '../moduleRegistry/manifest.js';
 import { findModuleByKey } from '../moduleRegistry/moduleRegistry.repository.js';
 
 /** The fields of one resource that this person may read and edit, worked out once per request. */
 export interface FieldRules {
   hidden: string[];
   readOnly: string[];
+  /** Fields this person may set on a new record but not change afterwards. */
+  createOnly: string[];
 }
 
-/** Protected fields come from the manifest. Access to them comes from the person's profile and permission sets. */
+/** Whether a write makes a new record or changes one that exists, which decides whether create-only fields may be set. */
+export type FieldWrite = 'create' | 'update';
+
+/**
+ * Works out the rules from a resource and the person's field access. Every controlled field without a level, or with
+ * hidden, is hidden. A super admin may edit every field.
+ */
+export function buildFieldRules(resource: ManifestResource | undefined, fieldAccess: FieldAccessMap, isSuperAdmin: boolean): FieldRules {
+  const fields = resource ? listAccessFields(resource) : [];
+  const levelOf = (field: string): FieldAccessLevel | undefined => (isSuperAdmin ? 'edit' : readOwnEntry(fieldAccess, `${resource!.key}.${field}`));
+  return {
+    hidden: fields.filter((field) => (levelOf(field) ?? 'hidden') === 'hidden'),
+    readOnly: fields.filter((field) => levelOf(field) === 'read'),
+    createOnly: fields.filter((field) => levelOf(field) === 'create'),
+  };
+}
+
+/** The fields come from the manifest. Access to them comes from the person's profile. */
 export async function readFieldRules(actor: Actor, moduleKey: string, resourceKey: string): Promise<FieldRules> {
   const module = await findModuleByKey(moduleKey);
-  const protectedFields = module?.resources.find((resource) => resource.key === resourceKey)?.protectedFields ?? [];
-  const levelOf = (field: string) => (actor.user.superAdmin ? 'edit' : actor.fieldAccess[`${resourceKey}.${field}`]);
-  return {
-    hidden: protectedFields.filter((field) => !levelOf(field)),
-    readOnly: protectedFields.filter((field) => levelOf(field) === 'read'),
-  };
+  const resource = module?.resources.find((candidate) => candidate.key === resourceKey);
+  return buildFieldRules(resource, actor.fieldAccess, actor.user.superAdmin);
 }
 
 /** Takes hidden fields out of a record before it's sent. */
@@ -32,10 +49,13 @@ export function redactHistory<Entry extends { changes: FieldChange[] }>(entries:
   return entries.map((entry) => ({ ...entry, changes: entry.changes.filter((change) => !rules.hidden.includes(change.field)) }));
 }
 
-/** Refuses a write that sets a protected field this person can't edit. */
-export function assertMayWriteFields(rules: FieldRules, fields: string[]): void {
-  const refused = fields.filter((field) => rules.hidden.includes(field) || rules.readOnly.includes(field));
+/** Refuses a write that sets a field this person can't set in this kind of write. */
+export function assertMayWriteFields(rules: FieldRules, fields: string[], write: FieldWrite): void {
+  const refused = fields.filter(
+    (field) => rules.hidden.includes(field) || rules.readOnly.includes(field) || (write === 'update' && rules.createOnly.includes(field)),
+  );
   if (refused.length > 0) {
-    throw new ApiError(403, 'field_not_editable', `You can't set ${refused.join(', ')} here. That needs edit access to the field.`);
+    const needed = write === 'create' ? 'create or edit access' : 'edit access';
+    throw new ApiError(403, 'field_not_editable', `You can't set ${refused.join(', ')} here. That needs ${needed} to the field.`);
   }
 }

@@ -23,6 +23,8 @@ const config = loadConfig({
   LOG_LEVEL: 'silent',
   REFRESH_COOKIE_SECURE: 'false',
   JWT_ACCESS_SECRET: randomBytes(48).toString('base64url'),
+  // The collection checks signing in as someone else, which only development allows.
+  IMPERSONATION_ENABLED: 'true',
 });
 
 const uri = new URL(config.mongodbUri);

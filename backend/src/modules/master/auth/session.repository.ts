@@ -7,6 +7,8 @@ export interface NewSession {
   tokenHash: string;
   expiresAt: Date;
   absoluteExpiresAt: Date;
+  impersonatorId?: string;
+  impersonatorSessionId?: string;
 }
 
 export async function createSession({ sessionId, ...session }: NewSession): Promise<void> {
@@ -62,4 +64,8 @@ export async function revokeSession(sessionId: string): Promise<boolean> {
     { $set: { revokedAt: new Date() } },
   );
   return result.modifiedCount > 0;
+}
+
+export async function deleteSessionsOf(userId: string, session: ClientSession): Promise<void> {
+  await Session.deleteMany({ userId }, { session });
 }

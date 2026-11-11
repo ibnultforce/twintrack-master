@@ -3,7 +3,6 @@ import { asArray, asRecord, fieldErrors, type FieldError, type Validated } from 
 
 // People's access is stored in plain objects keyed by module, where "constructor" would find a JavaScript built-in.
 export const MODULE_KEY = /^(?!constructor$)[a-z][a-z0-9-]*$/;
-const PERMISSION_SET_KEY = /^[a-z][a-z0-9-]*$/;
 // Field resources are named after their collection, such as payslip.net.
 const RESOURCE_KEY = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9]+)*$/;
 const SEMVER = /^\d+\.\d+\.\d+$/;
@@ -16,8 +15,14 @@ export type Scope = (typeof SCOPES)[number];
 const action = z.enum(['read', 'create', 'update', 'delete', 'approve', 'share']);
 
 export const SHARING_MODELS = ['private', 'publicRead', 'publicReadWrite'] as const;
-export const FIELD_ACCESS = ['read', 'edit'] as const;
+/**
+ * Narrowest first. Hidden takes a field away. Create lets a person set the field on a new record only; after that it's
+ * read only for them.
+ */
+export const FIELD_ACCESS = ['hidden', 'read', 'create', 'edit'] as const;
 export type FieldAccessLevel = (typeof FIELD_ACCESS)[number];
+
+export const isWiderFieldAccess = (candidate: FieldAccessLevel, current: FieldAccessLevel) => FIELD_ACCESS.indexOf(candidate) > FIELD_ACCESS.indexOf(current);
 const FIELD_NAME = /^[a-zA-Z][a-zA-Z0-9]*$/;
 export type SharingModel = (typeof SHARING_MODELS)[number];
 const method = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
@@ -29,16 +34,22 @@ const resourceSchema = z.looseObject({
   scoped: z.boolean().optional(),
   /** Fields whose changes go in each record's history, such as amount. */
   trackedFields: z.array(z.string().regex(FIELD_NAME, 'must be a field name')).optional(),
-  /** Fields hidden from anyone not given read or edit access to them through fieldAccess, such as amount. */
+  /** The record's fields that field access controls. A grant that doesn't name one gives the level its actions imply. */
+  recordFields: z.array(z.string().regex(FIELD_NAME, 'must be a field name')).optional(),
+  /** Fields hidden from anyone not given read, create or edit access to them through fieldAccess, such as amount. */
   protectedFields: z.array(z.string().regex(FIELD_NAME, 'must be a field name')).optional(),
   /** Who sees a record nobody has shared: only those whose scope reaches it, everyone who can read, or everyone who can edit. */
   sharingModel: z.enum(SHARING_MODELS).optional(),
   /** Set on objects an admin defined in the app. Their records are in custom_records, and their fields are below. */
   custom: z.boolean().optional(),
   fields: z.array(z.looseObject({ key: z.string(), label: z.string(), type: z.string() })).optional(),
-  /** In Master: this resource's update permission lets someone change access in the named module. */
-  managesAccessOf: z.string().optional(),
 });
+
+/** Every field of a resource that field access controls: its record fields, protected fields and custom fields. */
+export function listAccessFields(resource: Pick<Partial<ManifestResource>, 'recordFields' | 'protectedFields' | 'fields'>): string[] {
+  const customFields = (resource.fields ?? []).map((field) => field.key);
+  return [...new Set([...(resource.recordFields ?? []), ...(resource.protectedFields ?? []), ...customFields])];
+}
 
 const routeSchema = z.object({
   method,
@@ -52,7 +63,10 @@ const routeSchema = z.object({
 export const grantSchema = z.object({
   actions: z.array(action).min(1),
   scope: z.enum(SCOPES).optional(),
-  /** Access to the resource's protected fields. A protected field not listed here stays hidden. */
+  /**
+   * Field to level, for any of the resource's fields. A field not listed follows the actions (read gives read, create
+   * gives create, update gives edit), except a protected field, which stays hidden.
+   */
   fieldAccess: z.record(z.string(), z.enum(FIELD_ACCESS)).optional(),
 });
 
@@ -71,14 +85,6 @@ export const grantsSchema = z
   })
   .transform((value) => value as '*' | z.infer<typeof grantsRecordSchema>);
 
-/** A named bundle of permissions in one module, which people are given on top of their profile. */
-const permissionSetSchema = z.object({
-  key: z.string().regex(PERMISSION_SET_KEY, 'must be lowercase letters, numbers and hyphens'),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  grants: grantsSchema,
-});
-
 const manifestSchema = z.looseObject({
   manifestVersion: z.literal(1),
   module: z.object({
@@ -92,14 +98,14 @@ const manifestSchema = z.looseObject({
   }),
   resources: z.array(resourceSchema),
   routes: z.array(routeSchema).default([]),
-  permissionSets: z.array(permissionSetSchema).default([]),
 });
 
 export type Manifest = z.infer<typeof manifestSchema>;
 export type ManifestResource = z.infer<typeof resourceSchema>;
 export type ManifestRoute = z.infer<typeof routeSchema>;
-export type ManifestPermissionSet = z.infer<typeof permissionSetSchema>;
-export type Grants = ManifestPermissionSet['grants'];
+/** What a profile allows in one module: "*" for everything, or resource key to its grant. */
+export type Grants = z.output<typeof grantsSchema>;
+export type Grant = z.infer<typeof grantSchema>;
 
 type ActionsByResource = Map<string, unknown[]>;
 
@@ -180,9 +186,9 @@ export function checkGrants(rawGrants: unknown, resources: unknown[], pathPrefix
     if (scope !== undefined && scope !== 'all' && !scopedResourceKeys.has(resourceKey)) {
       errors.push({ path, message: `"${resourceKey}" isn't scoped, so it can't have the scope "${String(scope)}"` });
     }
-    const protectedFields = asArray(asRecord(resources.map(asRecord).find((resource) => resource.key === resourceKey)).protectedFields);
+    const accessFields = listAccessFields(asRecord(resources.map(asRecord).find((resource) => resource.key === resourceKey)) as Partial<ManifestResource>);
     for (const field of Object.keys(asRecord(asRecord(grant).fieldAccess))) {
-      if (!protectedFields.includes(field)) errors.push({ path: `${path}.fieldAccess.${field}`, message: `"${field}" is not a protected field of "${resourceKey}"` });
+      if (!accessFields.includes(field)) errors.push({ path: `${path}.fieldAccess.${field}`, message: `"${field}" is not a field of "${resourceKey}" that field access controls` });
     }
   }
   return errors;
@@ -193,17 +199,16 @@ function crossChecks(raw: unknown): FieldError[] {
   const manifest = asRecord(raw);
   const resources = asArray(manifest.resources);
   const routes = asArray(manifest.routes);
-  const permissionSets = asArray(manifest.permissionSets);
 
   return [
     ...findDuplicateKeys(resources, 'resources', 'Resource'),
-    ...findDuplicateKeys(permissionSets, 'permissionSets', 'Permission set'),
     ...checkRoutes(routes, readActionsByResource(resources)),
-    ...permissionSets.flatMap((item, index) => checkGrants(asRecord(item).grants, resources, `permissionSets.${index}.grants`)),
-    ...resources.flatMap((item, index) =>
-      asRecord(item).grantable !== undefined ? [{ path: `resources.${index}.grantable`, message: 'grantable was removed: people get extra access through permission sets' }] : [],
-    ),
-    ...(manifest.roles !== undefined ? [{ path: 'roles', message: 'roles were replaced by permissionSets, and people get access through profiles' }] : []),
+    ...resources.flatMap((item, index) => [
+      ...(asRecord(item).grantable !== undefined ? [{ path: `resources.${index}.grantable`, message: 'grantable was removed: people get access through their profile' }] : []),
+      ...(asRecord(item).managesAccessOf !== undefined ? [{ path: `resources.${index}.managesAccessOf`, message: 'managesAccessOf was removed: people get access through their profile' }] : []),
+    ]),
+    ...(manifest.roles !== undefined ? [{ path: 'roles', message: 'roles were removed: people get access through their profile' }] : []),
+    ...(manifest.permissionSets !== undefined ? [{ path: 'permissionSets', message: 'permission sets were removed: people get access through their profile' }] : []),
   ];
 }
 

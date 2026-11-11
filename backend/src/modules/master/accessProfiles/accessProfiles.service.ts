@@ -4,13 +4,13 @@ import { runInTransaction } from '../../../db.js';
 import { ApiError } from '../../../lib/errors.js';
 import type { FieldError } from '../../../lib/validation.js';
 import { actorFields, type Actor } from '../access/caller.js';
-import { listGrantFieldAccess, listGrantPermissions } from '../access/permissions.js';
+import { listGrantPermissions, listStatedFieldAccess } from '../access/permissions.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import type { AccessProfileDoc } from '../models/accessProfile.js';
 import type { ModuleDoc } from '../models/module.js';
 import { checkGrants, grantsSchema, type Grants } from '../moduleRegistry/manifest.js';
 import { findAllModules } from '../moduleRegistry/moduleRegistry.repository.js';
-import { assertGrantsWithinOwnAccess, describeGrants } from '../moduleRegistry/permissionSetEditing.js';
+import { assertGrantsWithinOwnAccess, describeGrants } from '../moduleRegistry/grantEditing.js';
 import {
   countHoldersByProfile,
   countProfileHolders,
@@ -51,7 +51,7 @@ function toProfileView(profile: AccessProfileDoc, modules: ModuleDoc[], holders:
         loaded: Boolean(module),
         grants: module ? describeGrants(grants, module.resources) : [],
         permissions: module ? listGrantPermissions(grants, module.resources) : {},
-        fieldAccess: module ? listGrantFieldAccess(grants, module.resources) : {},
+        fieldAccess: module ? listStatedFieldAccess(grants, module.resources) : {},
       };
     }),
   };
@@ -84,7 +84,7 @@ function validateProfileGrants(actor: Actor, rawGrants: Record<string, unknown>,
   if (errors.length > 0) throw invalidGrants(errors);
 
   for (const [moduleKey, moduleGrants] of Object.entries(grants)) {
-    assertGrantsWithinOwnAccess(actor, modules.find((module) => module.key === moduleKey)!, moduleGrants, 'profile');
+    assertGrantsWithinOwnAccess(actor, modules.find((module) => module.key === moduleKey)!, moduleGrants);
   }
   return grants;
 }
@@ -93,7 +93,7 @@ function validateProfileGrants(actor: Actor, rawGrants: Record<string, unknown>,
 function assertProfileWithinOwnAccess(actor: Actor, profile: AccessProfileDoc, modules: ModuleDoc[]): void {
   for (const [moduleKey, grants] of Object.entries(profile.grants)) {
     const module = modules.find((candidate) => candidate.key === moduleKey);
-    if (module) assertGrantsWithinOwnAccess(actor, module, grants, 'profile');
+    if (module) assertGrantsWithinOwnAccess(actor, module, grants);
     else if (!actor.user.superAdmin) throw new ApiError(403, 'beyond_own_access', `This profile gives access in "${moduleKey}", which isn't loaded, so only a super admin can change it.`);
   }
 }

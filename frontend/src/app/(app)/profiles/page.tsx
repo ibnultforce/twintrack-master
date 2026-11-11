@@ -81,7 +81,7 @@ export default function ProfilesPage() {
 
   return (
     <>
-      <PageHead title="Profiles" subtitle="Each person's baseline access across every module. Permission sets add to it." />
+      <PageHead title="Profiles" subtitle="Each person holds one profile, which decides what they can do in every module." />
       <Loaded state={data}>
         {({ profiles, modules, assignable }) => {
           const profile = profiles.find((candidate) => candidate.id === profileId) ?? profiles[0];

@@ -53,7 +53,10 @@ export function createRefreshToken(): string {
   return randomBytes(REFRESH_TOKEN_BYTES).toString('base64url');
 }
 
-/** Refresh tokens are long and random, so a fast hash is safe. Only this hash is stored. */
-export function hashRefreshToken(refreshToken: string): string {
-  return createHash('sha256').update(refreshToken).digest('hex');
+/**
+ * Hashes a long random token, such as a refresh token or a password link, so only the hash need be stored. The token
+ * is random, not chosen by a person, so a fast hash is safe.
+ */
+export function hashRandomToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
 }

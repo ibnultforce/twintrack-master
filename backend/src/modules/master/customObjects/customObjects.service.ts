@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ApiError } from '../../../lib/errors.js';
 import { fieldErrors } from '../../../lib/validation.js';
 import type { Actor } from '../access/caller.js';
+import { findAllProfiles } from '../accessProfiles/accessProfiles.repository.js';
 import { CustomRecord } from '../models/customRecord.js';
 import type { ModuleDoc } from '../models/module.js';
 import { SHARING_MODELS, type ManifestResource } from '../moduleRegistry/manifest.js';
@@ -10,7 +11,7 @@ import { editModuleRules, saveRules } from '../moduleRegistry/permissionRules.se
 export const FIELD_TYPES = ['text', 'number', 'date', 'boolean', 'select'] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
 
-/** Every custom object offers the same actions, so permission sets and profiles treat it like any other resource. */
+/** Every custom object offers the same actions, so profiles treat it like any other resource. */
 const CUSTOM_OBJECT_ACTIONS: ManifestResource['actions'] = ['read', 'create', 'update', 'delete', 'share'];
 const MAX_FIELDS = 50;
 const MAX_OPTIONS = 50;
@@ -25,7 +26,7 @@ const fieldDefinitionSchema = z
     options: z.array(z.string().trim().min(1).max(100)).max(MAX_OPTIONS).optional(),
     /** Changes go in each record's history. */
     tracked: z.boolean().default(false),
-    /** Hidden unless a profile or permission set gives read or edit access to the field. */
+    /** Hidden unless a profile gives access to the field. */
     protected: z.boolean().default(false),
   })
   .refine((field) => field.type !== 'select' || (field.options?.length ?? 0) > 0, { message: 'a select field needs options', path: ['options'] });
@@ -80,7 +81,7 @@ const objectTarget = (moduleKey: string, resource: Pick<ManifestResource, 'key' 
   targetName: resource.label,
 });
 
-/** Adds a custom object to a module. People reach its records once a profile or permission set gives its permissions. */
+/** Adds a custom object to a module. People reach its records once their profile gives its permissions. */
 export function addCustomObject(actor: Actor, moduleKey: string, objectKey: string, definition: ObjectDefinition) {
   if (!OBJECT_KEY.test(objectKey)) {
     throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', [{ path: 'key', message: 'must be letters and numbers, starting with a lowercase letter' }]);
@@ -117,8 +118,12 @@ export function removeCustomObject(actor: Actor, moduleKey: string, objectKey: s
     const existing = findCustomObject(module, objectKey);
     const records = await CustomRecord.countDocuments({ module: moduleKey, object: objectKey }).setOptions({ withDeleted: true }).session(session);
     if (records > 0) throw new ApiError(409, 'object_in_use', `${records} records use this object. Delete them first.`);
-    const inUse = module.permissionSets.some((permissionSet) => permissionSet.grants !== '*' && Object.hasOwn(permissionSet.grants, objectKey));
-    if (inUse) throw new ApiError(409, 'object_in_use', 'A permission set still gives access to this object. Change it first.');
+    const profiles = await findAllProfiles(session);
+    const inUse = profiles.some((profile) => {
+      const grants = Object.hasOwn(profile.grants, moduleKey) ? profile.grants[moduleKey] : undefined;
+      return grants !== undefined && grants !== '*' && Object.hasOwn(grants, objectKey);
+    });
+    if (inUse) throw new ApiError(409, 'object_in_use', 'A profile still gives access to this object. Change it first.');
     await saveRules(actor, module, { resources: module.resources.filter((candidate) => candidate.key !== objectKey) }, {
       action: 'module.object_removed',
       ...objectTarget(moduleKey, existing),

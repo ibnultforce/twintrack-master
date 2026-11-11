@@ -1,8 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Module } from '../src/modules/master/models/module.js';
-import { User } from '../src/modules/master/models/user.js';
-import { validateManifest, type Manifest } from '../src/modules/master/moduleRegistry/manifest.js';
+import { checkGrants, validateManifest, type Manifest } from '../src/modules/master/moduleRegistry/manifest.js';
 import { CoreModuleError, importManifest } from '../src/modules/master/moduleRegistry/moduleRegistry.service.js';
 import { useTestDatabase } from './helpers/database.js';
 
@@ -18,7 +17,6 @@ const minimal = (overrides: Record<string, unknown> = {}) => ({
   module: { key: 'demo', name: 'Demo', version: '1.0.0' },
   resources: [{ key: 'thing', label: 'Things', actions: ['read', 'approve'], scoped: true }],
   routes: [{ method: 'GET', path: '/things', access: 'private', permission: 'thing.read' }],
-  permissionSets: [{ key: 'viewer', name: 'Viewer', grants: { thing: { actions: ['read'], scope: 'team' } } }],
   ...overrides,
 });
 
@@ -52,19 +50,7 @@ describe('validateManifest', () => {
     expect(text).toMatch(/routes\.0: a private route needs a permission/);
     expect(text).toMatch(/"run\.create" is not an action/);
     expect(text).toMatch(/routes\.2\.method/);
-    expect(text).toMatch(/Permission set "admin" is listed twice/);
-  });
-
-  it('rejects a grant of an action the resource does not have', () => {
-    const permissionSets = [{ key: 'bad', name: 'Bad', grants: { thing: { actions: ['delete'] } } }];
-    expect(messages(minimal({ permissionSets }))).toMatch(/"delete" is not an action of "thing"/);
-  });
-
-  it('rejects a grant on an unknown resource and an unknown scope', () => {
-    const permissionSets = [{ key: 'bad', name: 'Bad', grants: { ghost: { actions: ['read'], scope: 'department' } } }];
-    const text = messages(minimal({ permissionSets }));
-    expect(text).toMatch(/"ghost" is not a resource/);
-    expect(text).toMatch(/permissionSets\.0\.grants\.ghost\.scope/);
+    expect(text).toMatch(/permissionSets: permission sets were removed/);
   });
 
   it('rejects a module key that would find a JavaScript built-in', () => {
@@ -77,27 +63,39 @@ describe('validateManifest', () => {
     expect(messages(minimal({ routes }))).toMatch(new RegExp(`routes\\.0: a ${access} route can't require a permission`));
   });
 
-  it('rejects a narrow scope on a resource that is not scoped, but accepts "all"', () => {
-    const resources = [{ key: 'thing', label: 'Things', actions: ['read'] }];
-    const setsWith = (scope: string) => [{ key: 'viewer', name: 'Viewer', grants: { thing: { actions: ['read'], scope } } }];
-    const routes = [{ method: 'GET', path: '/things', access: 'private', permission: 'thing.read' }];
-    expect(messages(minimal({ resources, routes, permissionSets: setsWith('team') }))).toMatch(/"thing" isn't scoped/);
-    expect(validateManifest(minimal({ resources, routes, permissionSets: setsWith('all') })).ok).toBe(true);
-  });
-
-  it('rejects the old roles and grantable fields, which profiles and permission sets replaced', () => {
-    const resources = [{ key: 'thing', label: 'Things', actions: ['read'], grantable: ['read'] }];
-    const text = messages(minimal({ resources, routes: [], roles: [] }));
+  it('rejects the old roles, grantable, managesAccessOf and permission set fields, which profiles replaced', () => {
+    const resources = [{ key: 'thing', label: 'Things', actions: ['read'], grantable: ['read'], managesAccessOf: 'hr' }];
+    const text = messages(minimal({ resources, routes: [], roles: [], permissionSets: [] }));
     expect(text).toMatch(/resources\.0\.grantable: grantable was removed/);
-    expect(text).toMatch(/roles: roles were replaced by permissionSets/);
+    expect(text).toMatch(/resources\.0\.managesAccessOf: managesAccessOf was removed/);
+    expect(text).toMatch(/roles: roles were removed/);
+    expect(text).toMatch(/permissionSets: permission sets were removed/);
   });
 
   it('accepts dotted field resources and survives non-object input', () => {
     const resources = [{ key: 'payslip.net', label: 'Net pay', actions: ['read'] }];
     const routes = [{ method: 'GET', path: '/net', access: 'private', permission: 'payslip.net.read' }];
-    expect(validateManifest(minimal({ resources, routes, permissionSets: [] })).ok).toBe(true);
+    expect(validateManifest(minimal({ resources, routes })).ok).toBe(true);
     expect(validateManifest(null).ok).toBe(false);
     expect(validateManifest('nope').ok).toBe(false);
+  });
+});
+
+describe('checkGrants, which profiles use', () => {
+  const resources = [
+    { key: 'thing', label: 'Things', actions: ['read', 'approve'], scoped: true },
+    { key: 'plain', label: 'Plain', actions: ['read'] },
+  ];
+  const problems = (grants: unknown) => checkGrants(grants, resources, 'grants').map((error) => `${error.path}: ${error.message}`).join('\n');
+
+  it('rejects an action the resource does not have, and an unknown resource', () => {
+    expect(problems({ thing: { actions: ['delete'] } })).toMatch(/"delete" is not an action of "thing"/);
+    expect(problems({ ghost: { actions: ['read'] } })).toMatch(/"ghost" is not a resource/);
+  });
+
+  it('rejects a narrow scope on a resource that is not scoped, but accepts "all"', () => {
+    expect(problems({ plain: { actions: ['read'], scope: 'team' } })).toMatch(/"plain" isn't scoped/);
+    expect(problems({ plain: { actions: ['read'], scope: 'all' } })).toBe('');
   });
 });
 
@@ -116,18 +114,15 @@ describe('importManifest', () => {
 
   it('keeps dotted resource keys intact when stored', async () => {
     const resources = [{ key: 'payslip.net', label: 'Net pay', actions: ['read'] }];
-    const permissionSets = [{ key: 'viewer', name: 'Viewer', grants: { 'payslip.net': { actions: ['read'] } } }];
-    await importManifest(valid(minimal({ resources, routes: [], permissionSets })));
+    await importManifest(valid(minimal({ resources, routes: [] })));
     const stored = await Module.findOne({ key: 'demo' }).lean();
-    expect(stored?.permissionSets[0]?.grants).toEqual({ 'payslip.net': { actions: ['read'] } });
+    expect(stored?.resources[0]?.key).toBe('payslip.net');
   });
 
-  it('counts people whose permission set disappeared in a new version', async () => {
+  it('drops permission sets a module saved before they were removed', async () => {
+    await Module.collection.insertOne({ key: 'demo', name: 'Demo', version: '0.9.0', core: false, resources: [], routes: [], permissionSets: [{ key: 'old' }] });
     await importManifest(valid(minimal()));
-    await User.create({ _id: 'u1', name: 'A', email: 'a@x.test', passwordHash: 'x', permissionSets: { demo: ['viewer'] } });
-    await User.create({ _id: 'u2', name: 'B', email: 'b@x.test', passwordHash: 'x', permissionSets: { demo: ['gone'] } });
-    const result = await importManifest(valid(minimal()));
-    expect(result.orphanedPermissionSets).toBe(1);
+    expect(await Module.collection.findOne({ key: 'demo' })).not.toHaveProperty('permissionSets');
   });
 
   it('refuses to create or replace a core module without allowCore', async () => {

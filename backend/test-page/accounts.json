@@ -6,7 +6,7 @@
       "name": "Farhana Kabir",
       "email": "farhana@twintrack.test",
       "access": "Super admin",
-      "canDo": "Everything, including building profiles and permission sets, and giving anyone any access."
+      "canDo": "Everything, including building profiles and giving anyone any profile."
     },
     {
       "id": "u_06",

@@ -7,6 +7,7 @@ import { actorFields, type Actor } from '../../master/access/caller.js';
 import { peopleInScope } from '../../master/access/scope.js';
 import { recordAudit } from '../../master/audit/audit.repository.js';
 import type { Scope } from '../../master/moduleRegistry/manifest.js';
+import { assertMayWriteFields, readFieldRules, redactRecord, type FieldRules } from '../../master/records/fieldSecurity.service.js';
 import { assertCanReachRecord, findSharedRecordIds, findSharingModel } from '../../master/records/recordAccess.service.js';
 import { writeRecordHistory } from '../../master/records/recordHistory.service.js';
 import type { ProjectDoc, ProjectStatus } from '../models/project.js';
@@ -25,6 +26,8 @@ import {
 const PROJECT_RESOURCE = 'project';
 
 export type NewProjectDetails = Omit<NewProjectRecord, '_id' | 'leadId' | 'memberIds'> & { leadId?: string; memberIds?: string[] };
+
+const fieldRulesFor = (actor: Actor) => readFieldRules(actor, TASKS_MODULE_KEY, PROJECT_RESOURCE);
 
 const historyRef = (projectId: string) => ({ module: TASKS_MODULE_KEY, object: PROJECT_RESOURCE, recordId: projectId });
 
@@ -49,8 +52,9 @@ export async function requireProject(projectId: string): Promise<ProjectDoc> {
 export const assertCanReachProject = (actor: Actor, scope: Scope, project: ProjectDoc, need: 'read' | 'edit') =>
   assertCanReachRecord(actor, scope, scopedProject(project), need);
 
-function toProjectView(project: ProjectDoc, names: Map<string, string>) {
-  return {
+/** The project as this person may see it: fields they have no access to are left out. */
+function toProjectView(project: ProjectDoc, names: Map<string, string>, rules: FieldRules) {
+  return redactRecord({
     id: project._id,
     name: project.name,
     description: project.description,
@@ -65,7 +69,7 @@ function toProjectView(project: ProjectDoc, names: Map<string, string>) {
     createdAt: project.createdAt,
     updatedBy: project.updatedBy,
     updatedAt: project.updatedAt,
-  };
+  }, rules);
 }
 
 const projectAuditFields = (actor: Actor, project: ProjectDoc) => ({
@@ -82,19 +86,23 @@ export async function listProjects(actor: Actor, scope: Scope, page: PageRequest
   const sharedIds = peopleIds ? await findSharedRecordIds(actor.user, TASKS_MODULE_KEY, PROJECT_RESOURCE, 'read') : [];
   const { projects, total } = await findProjectsPage({ ...page, ...(peopleIds && { peopleIds, sharedIds }) });
   const names = await findPeopleNames(projects.flatMap(projectPeople));
-  return { scope, total, projects: projects.map((project) => toProjectView(project, names)) };
+  const rules = await fieldRulesFor(actor);
+  return { scope, total, projects: projects.map((project) => toProjectView(project, names, rules)) };
 }
 
 export async function getProject(actor: Actor, scope: Scope, projectId: string) {
   const project = await requireProject(projectId);
   await assertCanReachProject(actor, scope, project, 'read');
-  return toProjectView(project, await findPeopleNames(projectPeople(project)));
+  return toProjectView(project, await findPeopleNames(projectPeople(project)), await fieldRulesFor(actor));
 }
 
 export async function createProject(actor: Actor, scope: Scope, details: NewProjectDetails) {
   const leadId = details.leadId ?? actor.user._id;
   const memberIds = distinctMembers(details.memberIds ?? [], leadId);
   await assertPeopleExist({ leadId, ...Object.fromEntries(memberIds.map((memberId, index) => [`memberIds.${index}`, memberId])) });
+
+  const rules = await fieldRulesFor(actor);
+  assertMayWriteFields(rules, Object.keys(details), 'create');
 
   const record: NewProjectRecord = { ...details, _id: `p_${randomUUID()}`, leadId, memberIds };
   // A new project has no shares, so this checks the caller's scope reaches its people.
@@ -106,29 +114,39 @@ export async function createProject(actor: Actor, scope: Scope, details: NewProj
     await recordAudit({ action: 'project.created', ...projectAuditFields(actor, created) }, session);
     return created;
   });
-  return toProjectView(project, await findPeopleNames(projectPeople(project)));
+  return toProjectView(project, await findPeopleNames(projectPeople(project)), rules);
 }
 
-async function changeProject(actor: Actor, scope: Scope, projectId: string, auditAction: string, save: (existing: ProjectDoc, session: ClientSession) => Promise<ProjectDoc>) {
+/** Saves one change to a project in reach. `writes` are the fields the caller sets, which need edit access to each. */
+async function changeProject(
+  actor: Actor,
+  scope: Scope,
+  projectId: string,
+  change: { auditAction: string; writes: string[]; save: (existing: ProjectDoc, session: ClientSession) => Promise<ProjectDoc> },
+) {
   const existing = await requireProject(projectId);
   await assertCanReachProject(actor, scope, existing, 'edit');
+  // After the reach check, so someone outside it learns nothing about the fields.
+  const rules = await fieldRulesFor(actor);
+  assertMayWriteFields(rules, change.writes, 'update');
+  const { auditAction, save } = change;
   const saved = await runInTransaction(async (session) => {
     const result = await save(existing, session);
     await writeRecordHistory(historyRef(projectId), { action: 'updated', actor, before: existing, after: result }, session);
     await recordAudit({ action: auditAction, ...projectAuditFields(actor, result) }, session);
     return result;
   });
-  return toProjectView(saved, await findPeopleNames(projectPeople(saved)));
+  return toProjectView(saved, await findPeopleNames(projectPeople(saved)), rules);
 }
 
 export async function updateProject(actor: Actor, scope: Scope, projectId: string, changes: Omit<ProjectChanges, 'memberIds'> & { version?: number }) {
   const { version, ...fields } = changes;
   if (fields.leadId) await assertPeopleExist({ leadId: fields.leadId });
-  return changeProject(actor, scope, projectId, 'project.updated', (existing, session) => {
+  return changeProject(actor, scope, projectId, { auditAction: 'project.updated', writes: Object.keys(fields), save: (existing, session) => {
     // A new lead stops being listed as a member, because the lead always counts as one.
     const memberIds = fields.leadId ? distinctMembers(existing.memberIds, fields.leadId) : existing.memberIds;
     return saveProjectChanges(projectId, { ...fields, memberIds }, { actorId: actor.user._id, expectedVersion: version, session });
-  });
+  } });
 }
 
 /** Replaces the member list. Someone with open tasks in the project stays until those tasks are reassigned. */
@@ -141,7 +159,9 @@ export async function setProjectMembers(actor: Actor, scope: Scope, projectId: s
   if (removedIds.length > 0 && (await countOpenTasksAssignedTo(projectId, removedIds)) > 0) {
     throw new ApiError(409, 'member_has_open_tasks', 'Someone you removed still has open tasks in this project. Reassign or cancel them first.');
   }
-  return changeProject(actor, scope, projectId, 'project.members_changed', (_existing, session) =>
-    saveProjectChanges(projectId, { memberIds }, { actorId: actor.user._id, expectedVersion: request.version, session }),
-  );
+  return changeProject(actor, scope, projectId, {
+    auditAction: 'project.members_changed',
+    writes: ['memberIds'],
+    save: (_existing, session) => saveProjectChanges(projectId, { memberIds }, { actorId: actor.user._id, expectedVersion: request.version, session }),
+  });
 }

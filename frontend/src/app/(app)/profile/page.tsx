@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { arePasswordsReady, EMPTY_PASSWORDS, PasswordFields } from '@/components/PasswordFields';
+import { PhotoEditor } from '@/components/PhotoEditor';
 import { Card, Notice, PageHead, Row, TextField } from '@/components/ui';
 import { changeMyPassword, updateMyName } from '@/lib/api/account';
 import { describeError } from '@/lib/api/http';
@@ -45,13 +46,15 @@ export default function YourProfilePage() {
       <PageHead title="Your profile" subtitle={profile.email} />
       <div className="pair">
         <Card title="Your details">
-          <form className="form" onSubmit={(event) => void saveName(event)}>
+          <PhotoEditor personId={profile.id} name={profile.name} photoUpdatedAt={profile.photoUpdatedAt} canChange={!profile.impersonatedBy} onChanged={() => void refreshSession()} />
+          <form className="form spaced" onSubmit={(event) => void saveName(event)}>
             <TextField id="own-name" label="Your name" required value={name} onChange={setName} />
             {nameOutcome ? <Notice tone={nameOutcome.tone}>{nameOutcome.text}</Notice> : null}
             <div><button type="submit" className="btn" disabled={name.trim() === profile.name}>Save name</button></div>
           </form>
           <div className="spaced">
             <Row label="Email">{profile.email}</Row>
+            <Row label="Employee number">{profile.employeeNumber ?? '·'}</Row>
             <Row label="Job title">{profile.title ?? '·'}</Row>
             <Row label="Department">{humanize(profile.department)}</Row>
             <Row label="Team">{humanize(profile.team)}</Row>

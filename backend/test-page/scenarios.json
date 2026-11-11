@@ -193,6 +193,38 @@
               }
             }
           ]
+        },
+        {
+          "id": "POST /auth/set-password",
+          "method": "POST",
+          "path": "/auth/set-password",
+          "purpose": "Sets a password from the one-time link emailed to a new person or by a password reset. Uses the link up and ends every session.",
+          "input": "token, newPassword (8 to 256 characters)",
+          "access": "Public. The link token is the credential.",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A link that was never sent, or already used",
+              "expected": 400,
+              "code": "invalid_password_link",
+              "request": {
+                "method": "POST",
+                "path": "/auth/set-password",
+                "body": "{\"token\":\"not-a-real-link\",\"newPassword\":\"a-brand-new-password\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "New password too short",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/auth/set-password",
+                "body": "{\"token\":\"not-a-real-link\",\"newPassword\":\"short\"}"
+              }
+            }
+          ]
         }
       ]
     },
@@ -362,6 +394,162 @@
                 "path": "/auth/change-password",
                 "as": "rahim@twintrack.test",
                 "body": "{\"currentPassword\":\"YOUR_PASSWORD\",\"newPassword\":\"YOUR_PASSWORD-new\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /auth/verify-password",
+          "method": "POST",
+          "path": "/auth/verify-password",
+          "purpose": "Confirms the signed-in person's password again, before showing something sensitive such as a salary. Doesn't change anything.",
+          "input": "password",
+          "access": "Signed in",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Right password",
+              "expected": 200,
+              "request": {
+                "method": "POST",
+                "path": "/auth/verify-password",
+                "as": "karim@twintrack.test",
+                "body": "{\"password\":\"YOUR_PASSWORD\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Wrong password",
+              "expected": 403,
+              "code": "wrong_current_password",
+              "request": {
+                "method": "POST",
+                "path": "/auth/verify-password",
+                "as": "karim@twintrack.test",
+                "body": "{\"password\":\"wrong-password\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "POST",
+                "path": "/auth/verify-password",
+                "body": "{\"password\":\"anything\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /auth/stop-impersonating",
+          "method": "POST",
+          "path": "/auth/stop-impersonating",
+          "purpose": "Ends signing in as someone else and returns a new access token for the super admin's own session.",
+          "input": "no body",
+          "access": "Signed in as someone else",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Back to your own session",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/users/u_08/impersonate",
+                  "as": "farhana@twintrack.test",
+                  "save": {
+                    "impersonationToken": "accessToken"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/auth/stop-impersonating",
+                "literalToken": "{{impersonationToken}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not signed in as someone else",
+              "expected": 409,
+              "code": "not_impersonating",
+              "request": {
+                "method": "POST",
+                "path": "/auth/stop-impersonating",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /me/heartbeat",
+          "method": "POST",
+          "path": "/me/heartbeat",
+          "purpose": "Says the person's app is open, so they show as online for about two minutes. Apps call it every 45 seconds.",
+          "input": "no body",
+          "access": "Signed in",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Reports the app as open",
+              "expected": 204,
+              "request": {
+                "method": "POST",
+                "path": "/me/heartbeat",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "POST",
+                "path": "/me/heartbeat"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /directory",
+          "method": "GET",
+          "path": "/directory",
+          "purpose": "Lists active colleagues with their name, email, job details and photo date. Online status is included only for people the viewer's presence.read scope reaches. Super admins aren't listed.",
+          "input": "page, pageSize, search (all optional)",
+          "access": "Signed in",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Anyone signed in can look colleagues up",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/directory?search=a",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/directory"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Page size too big",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/directory?pageSize=1000",
+                "as": "karim@twintrack.test"
               }
             }
           ]
@@ -716,16 +904,47 @@
           ]
         },
         {
-          "id": "GET /users/access-options",
+          "id": "GET /users/next-employee-number",
           "method": "GET",
-          "path": "/users/access-options",
-          "purpose": "Lists the roles and privileges each module offers.",
+          "path": "/users/next-employee-number",
+          "purpose": "The employee number the next person added will most likely get. Another admin adding someone first takes it.",
           "input": "nothing",
-          "access": "Master access rights, or access.update in that module",
+          "access": "Needs user.create",
           "scenarios": [
             {
               "kind": "success",
-              "title": "Permission sets and canChange per module",
+              "title": "Preview the next number",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/users/next-employee-number",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/users/next-employee-number",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /users/access-options",
+          "method": "GET",
+          "path": "/users/access-options",
+          "purpose": "Lists the loaded modules, for the Access screen.",
+          "input": "nothing",
+          "access": "Needs user.read or userProfile.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists every module",
               "expected": 200,
               "request": {
                 "method": "GET",
@@ -984,6 +1203,109 @@
           ]
         },
         {
+          "id": "DELETE /users/:id",
+          "method": "DELETE",
+          "path": "/users/:id",
+          "purpose": "Removes someone added by mistake. Only works for an account nobody ever signed in to, that no record in any module names. Everyone else can only be deactivated.",
+          "input": "no body",
+          "access": "Needs user.delete",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Someone who never signed in",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "DELETE",
+                "path": "/users/u_06",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone who has signed in",
+              "expected": 409,
+              "code": "has_signed_in",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/auth/login",
+                  "body": "{\"email\":\"kamrul@twintrack.test\",\"password\":\"YOUR_PASSWORD\"}"
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "path": "/users/u_06",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone with salary records",
+              "expected": 409,
+              "code": "user_in_use",
+              "request": {
+                "method": "DELETE",
+                "path": "/users/u_07",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "DELETE",
+                "path": "/users/u_06",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /users/:id/impersonate",
+          "method": "POST",
+          "path": "/users/:id/impersonate",
+          "purpose": "Development only. Gives a super admin a short session as someone else, to see what that person's access shows them. No refresh cookie, so the super admin's own session is untouched. Refused unless IMPERSONATION_ENABLED is true, which production forbids.",
+          "input": "no body",
+          "access": "Super admin, in development",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "See the app as an employee",
+              "expected": 200,
+              "request": {
+                "method": "POST",
+                "path": "/users/u_08/impersonate",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not a super admin",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/users/u_08/impersonate",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Yourself",
+              "expected": 409,
+              "code": "own_account",
+              "request": {
+                "method": "POST",
+                "path": "/users/u_01/impersonate",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
           "id": "PATCH /users/:id/status",
           "method": "PATCH",
           "path": "/users/:id/status",
@@ -1087,22 +1409,155 @@
           ]
         },
         {
-          "id": "POST /users/:id/reset-password",
-          "method": "POST",
-          "path": "/users/:id/reset-password",
-          "purpose": "Signs a person out and returns a new temporary password once.",
+          "id": "GET /users/:id/photo",
+          "method": "GET",
+          "path": "/users/:id/photo",
+          "purpose": "A person's profile photo, as the image itself.",
+          "input": "nothing",
+          "access": "Signed in",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A colleague's photo",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/users/u_08/photo",
+                  "as": "karim@twintrack.test",
+                  "contentType": "image/webp",
+                  "body": "RIFFAAAAWEBPVP8 "
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/users/u_08/photo",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without a photo",
+              "expected": 404,
+              "code": "no_photo",
+              "request": {
+                "method": "GET",
+                "path": "/users/u_04/photo",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PUT /users/:id/photo",
+          "method": "PUT",
+          "path": "/users/:id/photo",
+          "purpose": "Sets a profile photo from a PNG, JPEG or WebP image up to 2 MB, sent as the body with its image content type. People change their own; changing someone else's needs user.update.",
+          "input": "the image bytes",
+          "access": "Signed in. Someone else's needs user.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Your own photo",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_08/photo",
+                "as": "karim@twintrack.test",
+                "contentType": "image/webp",
+                "body": "RIFFAAAAWEBPVP8 "
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not an image",
+              "expected": 415,
+              "code": "unsupported_photo",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_08/photo",
+                "as": "karim@twintrack.test",
+                "contentType": "image/png",
+                "body": "not an image"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone else's, without user.update",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_04/photo",
+                "as": "karim@twintrack.test",
+                "contentType": "image/webp",
+                "body": "RIFFAAAAWEBPVP8 "
+              }
+            }
+          ]
+        },
+        {
+          "id": "DELETE /users/:id/photo",
+          "method": "DELETE",
+          "path": "/users/:id/photo",
+          "purpose": "Removes a profile photo. Same rule as setting one.",
           "input": "no body",
+          "access": "Signed in. Someone else's needs user.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Your own photo",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "DELETE",
+                "path": "/users/u_08/photo",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone else's, without user.update",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "DELETE",
+                "path": "/users/u_04/photo",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /users/password-links",
+          "method": "POST",
+          "path": "/users/password-links",
+          "purpose": "Emails each person a one-time link for setting a new password. Their current password keeps working until they use it. Reports the result for each person.",
+          "input": "userIds (1 to 100)",
           "access": "Needs user.update",
           "scenarios": [
             {
               "kind": "success",
-              "title": "New temporary password, once; signs the person out",
+              "title": "Link emailed to one person",
               "expected": 200,
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/users/u_04/reset-password",
-                "as": "arif@twintrack.test"
+                "path": "/users/password-links",
+                "as": "arif@twintrack.test",
+                "body": "{\"userIds\":[\"u_04\"]}"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Own account and a super admin are reported, not sent",
+              "expected": 200,
+              "request": {
+                "method": "POST",
+                "path": "/users/password-links",
+                "as": "arif@twintrack.test",
+                "body": "{\"userIds\":[\"u_07\",\"u_01\"]}"
               }
             },
             {
@@ -1112,7 +1567,8 @@
               "code": "no_token",
               "request": {
                 "method": "POST",
-                "path": "/users/u_04/reset-password"
+                "path": "/users/password-links",
+                "body": "{\"userIds\":[\"u_04\"]}"
               }
             },
             {
@@ -1122,30 +1578,125 @@
               "code": "forbidden",
               "request": {
                 "method": "POST",
-                "path": "/users/u_04/reset-password",
-                "as": "karim@twintrack.test"
+                "path": "/users/password-links",
+                "as": "karim@twintrack.test",
+                "body": "{\"userIds\":[\"u_04\"]}"
               }
             },
             {
               "kind": "fail",
-              "title": "Your own account",
-              "expected": 403,
-              "code": "own_account",
+              "title": "Nobody named",
+              "expected": 422,
+              "code": "validation_failed",
               "request": {
                 "method": "POST",
-                "path": "/users/u_07/reset-password",
-                "as": "arif@twintrack.test"
+                "path": "/users/password-links",
+                "as": "arif@twintrack.test",
+                "body": "{\"userIds\":[]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PUT /users/:id/profile",
+          "method": "PUT",
+          "path": "/users/:id/profile",
+          "purpose": "Gives a person a profile, replacing any they had, or takes it away with null. The profile is where all of their access comes from.",
+          "input": "profileId (a profile id, or null)",
+          "access": "Needs userProfile.update. Its scope decides whose profile; the profile must stay within your own access",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Super admin builds a profile and gives it",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"People reader\",\"grants\":{\"master\":{\"user\":{\"actions\":[\"read\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_08/profile",
+                "as": "farhana@twintrack.test",
+                "body": "{\"profileId\":\"{{profileId}}\"}"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Takes a profile away with null",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_09/profile",
+                "as": "farhana@twintrack.test",
+                "body": "{\"profileId\":null}"
               }
             },
             {
               "kind": "fail",
-              "title": "Access Admin resetting a super admin",
-              "expected": 403,
-              "code": "super_admin_protected",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
               "request": {
-                "method": "POST",
-                "path": "/users/u_01/reset-password",
-                "as": "arif@twintrack.test"
+                "method": "PUT",
+                "path": "/users/u_08/profile",
+                "body": "{\"profileId\":null}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without userProfile.update",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_08/profile",
+                "as": "karim@twintrack.test",
+                "body": "{\"profileId\":null}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "HR access manager gives a profile beyond their own access",
+              "expected": 403,
+              "code": "beyond_own_access",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_08/profile",
+                "as": "sabbir@twintrack.test",
+                "body": "{\"profileId\":\"ap_hr_admin\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Your own profile",
+              "expected": 403,
+              "code": "own_access",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_07/profile",
+                "as": "arif@twintrack.test",
+                "body": "{\"profileId\":null}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A super admin's profile",
+              "expected": 409,
+              "code": "super_admin",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_01/profile",
+                "as": "arif@twintrack.test",
+                "body": "{\"profileId\":null}"
               }
             },
             {
@@ -1154,9 +1705,34 @@
               "expected": 404,
               "code": "unknown_user",
               "request": {
-                "method": "POST",
-                "path": "/users/nobody/reset-password",
-                "as": "arif@twintrack.test"
+                "method": "PUT",
+                "path": "/users/nobody/profile",
+                "as": "farhana@twintrack.test",
+                "body": "{\"profileId\":null}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Profile does not exist",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_08/profile",
+                "as": "farhana@twintrack.test",
+                "body": "{\"profileId\":\"ap_ghost\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Another field in the body",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PUT",
+                "path": "/users/u_08/profile",
+                "as": "farhana@twintrack.test",
+                "body": "{\"profileId\":null,\"superAdmin\":true}"
               }
             }
           ]
@@ -1165,18 +1741,18 @@
           "id": "GET /modules/:key/people",
           "method": "GET",
           "path": "/modules/:key/people",
-          "purpose": "Lists the people with access to one module, and their role and privileges.",
+          "purpose": "Lists the people whose profile gives them access to one module, with their org role and profile.",
           "input": "module key in the path",
-          "access": "Master user.read, or access.update in that module",
+          "access": "Needs user.read or userProfile.update. Without user.read, only the people your userProfile.update reaches",
           "scenarios": [
             {
               "kind": "success",
-              "title": "HR Admin lists the people with access to HR",
+              "title": "HR access manager lists the people with access to HR",
               "expected": 200,
               "request": {
                 "method": "GET",
                 "path": "/modules/hr/people",
-                "as": "kamrul@twintrack.test"
+                "as": "sabbir@twintrack.test"
               }
             },
             {
@@ -1212,17 +1788,6 @@
             },
             {
               "kind": "fail",
-              "title": "HR Admin can not list another module",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "GET",
-                "path": "/modules/master/people",
-                "as": "kamrul@twintrack.test"
-              }
-            },
-            {
-              "kind": "fail",
               "title": "Module not loaded",
               "expected": 404,
               "code": "unknown_module",
@@ -1238,18 +1803,18 @@
           "id": "GET /modules/:key/addable-people",
           "method": "GET",
           "path": "/modules/:key/addable-people",
-          "purpose": "Lists active people who could be given a role in one module.",
+          "purpose": "Lists active people without access to one module whose profile you may change, to pick someone to give a profile.",
           "input": "module key in the path; page, pageSize (up to 100), search",
-          "access": "Master access rights, or access.update in that module",
+          "access": "Needs userProfile.update",
           "scenarios": [
             {
               "kind": "success",
-              "title": "HR Admin searches who can be added to HR, with no Master role",
+              "title": "HR access manager searches who could be given a profile covering HR",
               "expected": 200,
               "request": {
                 "method": "GET",
                 "path": "/modules/hr/addable-people",
-                "as": "kamrul@twintrack.test"
+                "as": "sabbir@twintrack.test"
               }
             },
             {
@@ -1275,12 +1840,12 @@
             },
             {
               "kind": "fail",
-              "title": "HR Admin can not list for another module",
+              "title": "HR Admin, who gives no profiles",
               "expected": 403,
               "code": "forbidden",
               "request": {
                 "method": "GET",
-                "path": "/modules/master/addable-people",
+                "path": "/modules/hr/addable-people",
                 "as": "kamrul@twintrack.test"
               }
             },
@@ -1293,6 +1858,614 @@
                 "method": "GET",
                 "path": "/modules/account/addable-people",
                 "as": "arif@twintrack.test"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Clients",
+      "routes": [
+        {
+          "id": "GET /clients",
+          "method": "GET",
+          "path": "/clients",
+          "purpose": "Lists clients by name. Clients are shared by every module, so client.read sees them all.",
+          "input": "page, pageSize, search, status (all optional)",
+          "access": "Needs client.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Active clients",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/clients?status=active",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/clients",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Unknown status",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/clients?status=gone",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /clients",
+          "method": "POST",
+          "path": "/clients",
+          "purpose": "Adds a client. Initials, used in invoice numbers, are stored in capitals and must be unique.",
+          "input": "name, plus initials, contactEmail, contactPhone, address, notes (optional)",
+          "access": "Needs client.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "New client",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/clients",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Acme Ltd\",\"initials\":\"ACME\",\"contactEmail\":\"billing@acme.test\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Initials another client uses",
+              "expected": 409,
+              "code": "initials_taken",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Ltd\",\"initials\":\"ACME\"}"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/clients",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Acme Two\",\"initials\":\"acme\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No name",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/clients",
+                "as": "farhana@twintrack.test",
+                "body": "{\"initials\":\"X\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /clients/:id",
+          "method": "GET",
+          "path": "/clients/:id",
+          "purpose": "One client.",
+          "input": "nothing",
+          "access": "Needs client.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A client",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Ltd\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/clients/{{clientId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such client",
+              "expected": 404,
+              "code": "unknown_client",
+              "request": {
+                "method": "GET",
+                "path": "/clients/cl_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /clients/:id",
+          "method": "PATCH",
+          "path": "/clients/:id",
+          "purpose": "Changes a client's details. null clears an optional detail. Send the version you read to refuse an edit made from an old copy.",
+          "input": "any of name, initials, contactEmail, contactPhone, address, notes, plus version (optional)",
+          "access": "Needs client.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "New name",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Ltd\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/clients/{{clientId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Acme Limited\",\"version\":0}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Edited from an old copy",
+              "expected": 409,
+              "code": "version_conflict",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Ltd\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "PATCH",
+                  "path": "/clients/{{clientId}}",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"First change\"}"
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/clients/{{clientId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Second change\",\"version\":0}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /clients/:id/status",
+          "method": "PATCH",
+          "path": "/clients/:id/status",
+          "purpose": "Makes a client inactive or active again. Clients are never deleted, so records that name them stay whole.",
+          "input": "status (active or inactive), version (optional)",
+          "access": "Needs client.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Make a client inactive",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Ltd\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/clients/{{clientId}}/status",
+                "as": "farhana@twintrack.test",
+                "body": "{\"status\":\"inactive\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Unknown status",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PATCH",
+                "path": "/clients/cl_nobody/status",
+                "as": "farhana@twintrack.test",
+                "body": "{\"status\":\"deleted\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /clients/:id/history",
+          "method": "GET",
+          "path": "/clients/:id/history",
+          "purpose": "Changes to a client's tracked fields, newest first.",
+          "input": "page, pageSize (optional)",
+          "access": "Needs client.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A client's history",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Ltd\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/clients/{{clientId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such client",
+              "expected": 404,
+              "code": "unknown_client",
+              "request": {
+                "method": "GET",
+                "path": "/clients/cl_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "API access",
+      "routes": [
+        {
+          "id": "GET /me/api-tokens",
+          "method": "GET",
+          "path": "/me/api-tokens",
+          "purpose": "Your personal API tokens, newest first, without the tokens themselves.",
+          "input": "nothing",
+          "access": "Signed in",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Your tokens",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/me/api-tokens",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/me/api-tokens"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /me/api-tokens",
+          "method": "POST",
+          "path": "/me/api-tokens",
+          "purpose": "Makes a personal API token for a tool such as Claude Code, which acts as you with exactly your access. The token is in this answer only. At most ten active tokens.",
+          "input": "name, expiresInDays (1 to 365, optional: missing means it never expires)",
+          "access": "Signed in, not while signed in as someone else",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A token for 30 days",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/me/api-tokens",
+                "as": "karim@twintrack.test",
+                "body": "{\"name\":\"Claude Code\",\"expiresInDays\":30}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No name",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/me/api-tokens",
+                "as": "karim@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /me/api-tokens/:id/revoke",
+          "method": "POST",
+          "path": "/me/api-tokens/:id/revoke",
+          "purpose": "Stops one of your tokens working, at once.",
+          "input": "no body",
+          "access": "Signed in, your own tokens only",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Revoke a token",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/me/api-tokens",
+                  "as": "karim@twintrack.test",
+                  "body": "{\"name\":\"Old laptop\"}",
+                  "save": {
+                    "tokenId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/me/api-tokens/{{tokenId}}/revoke",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A token that isn't yours",
+              "expected": 404,
+              "code": "unknown_token",
+              "request": {
+                "method": "POST",
+                "path": "/me/api-tokens/at_nobody/revoke",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /me/connected-apps",
+          "method": "GET",
+          "path": "/me/connected-apps",
+          "purpose": "Apps you connected over OAuth, such as a claude.ai connector, that can still act for you.",
+          "input": "nothing",
+          "access": "Signed in",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Your connected apps",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/me/connected-apps",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/me/connected-apps"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /me/connected-apps/:id/revoke",
+          "method": "POST",
+          "path": "/me/connected-apps/:id/revoke",
+          "purpose": "Disconnects one of your apps, which stops its tokens at once.",
+          "input": "no body",
+          "access": "Signed in, your own apps only",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "An app that isn't connected for you",
+              "expected": 404,
+              "code": "unknown_connection",
+              "request": {
+                "method": "POST",
+                "path": "/me/connected-apps/og_nobody/revoke",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /oauth/requests/:id",
+          "method": "GET",
+          "path": "/oauth/requests/:id",
+          "purpose": "For the portal's consent page: which app asks to connect, and the site your browser goes back to. Apps start these at /oauth/authorize.",
+          "input": "nothing",
+          "access": "Signed in",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "No such request",
+              "expected": 404,
+              "code": "unknown_request",
+              "request": {
+                "method": "GET",
+                "path": "/oauth/requests/nope",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /oauth/requests/:id/decision",
+          "method": "POST",
+          "path": "/oauth/requests/:id/decision",
+          "purpose": "Approves or declines an app's request to connect, and returns where to send the browser: back to the app, with a code or a refusal.",
+          "input": "approve (true or false)",
+          "access": "Signed in, not while signed in as someone else",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "No such request",
+              "expected": 404,
+              "code": "unknown_request",
+              "request": {
+                "method": "POST",
+                "path": "/oauth/requests/nope/decision",
+                "as": "karim@twintrack.test",
+                "body": "{\"approve\":true}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No answer given",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/oauth/requests/nope/decision",
+                "as": "karim@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /mcp",
+          "method": "POST",
+          "path": "/mcp",
+          "purpose": "The MCP endpoint for AI apps. Takes a personal API token or an OAuth access token, never a session, and acts as its person. Clients must accept both application/json and text/event-stream.",
+          "input": "an MCP JSON-RPC message",
+          "access": "An API token or OAuth access token",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "List the tools",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/me/api-tokens",
+                  "as": "karim@twintrack.test",
+                  "body": "{\"name\":\"Claude Code\"}",
+                  "save": {
+                    "mcpToken": "token"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/mcp",
+                "literalToken": "{{mcpToken}}",
+                "accept": "application/json, text/event-stream",
+                "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "POST",
+                "path": "/mcp",
+                "accept": "application/json, text/event-stream",
+                "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A session token instead of an API token",
+              "expected": 401,
+              "code": "invalid_token",
+              "request": {
+                "method": "POST",
+                "path": "/mcp",
+                "literalToken": "eyJhbGciOiJIUzI1NiJ9.e30.x",
+                "accept": "application/json, text/event-stream",
+                "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /mcp",
+          "method": "GET",
+          "path": "/mcp",
+          "purpose": "Not used: the endpoint is stateless, so there is no stream to open.",
+          "input": "nothing",
+          "access": "Public",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Takes POST only",
+              "expected": 405,
+              "code": "method_not_allowed",
+              "request": {
+                "method": "GET",
+                "path": "/mcp"
+              }
+            }
+          ]
+        },
+        {
+          "id": "DELETE /mcp",
+          "method": "DELETE",
+          "path": "/mcp",
+          "purpose": "Not used: the endpoint is stateless, so there is no session to end.",
+          "input": "nothing",
+          "access": "Public",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Takes POST only",
+              "expected": 405,
+              "code": "method_not_allowed",
+              "request": {
+                "method": "DELETE",
+                "path": "/mcp"
               }
             }
           ]
@@ -1602,7 +2775,7 @@
       ]
     },
     {
-      "name": "Profiles and permission sets",
+      "name": "Profiles",
       "routes": [
         {
           "id": "GET /access-profiles",
@@ -1877,619 +3050,6 @@
               }
             }
           ]
-        },
-        {
-          "id": "PUT /users/:id/permission-sets",
-          "method": "PUT",
-          "path": "/users/:id/permission-sets",
-          "purpose": "Replaces the permission sets a person holds in one module. Giving a new one needs a reason.",
-          "input": "module, permissionSets (a list of keys, empty takes them all away), and reason when giving a new one",
-          "access": "user.update, the module's access.update, or a Master resource that manages access in that module",
-          "scenarios": [
-            {
-              "kind": "success",
-              "title": "Sets a permission set",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"manager\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "null removes a permission set",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_04/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[]}"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "HR access manager sets an HR permission set",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "sabbir@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"staff\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "Removes a permission set in a module that is not loaded",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_04/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"account\",\"permissionSets\":[]}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "No access token",
-              "expected": 401,
-              "code": "no_token",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_04/permission-sets"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Signed in, but without the permission",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_04/permission-sets",
-                "as": "karim@twintrack.test"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Auditor has neither permission",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "rumana@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"staff\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "HR access manager setting a Master permission set",
-              "expected": 403,
-              "code": "module_access_only",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "sabbir@twintrack.test",
-                "body": "{\"module\":\"master\",\"permissionSets\":[\"admin\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Your own access",
-              "expected": 403,
-              "code": "own_access",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_03/permission-sets",
-                "as": "sabbir@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"admin\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "A super admin",
-              "expected": 409,
-              "code": "super_admin",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_01/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"admin\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "No such person",
-              "expected": 404,
-              "code": "unknown_user",
-              "request": {
-                "method": "PUT",
-                "path": "/users/nobody/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"admin\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Module not loaded",
-              "expected": 404,
-              "code": "unknown_module",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"account\",\"permissionSets\":[\"viewer\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Permission set the module does not have",
-              "expected": 422,
-              "code": "unknown_permission_set",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"emperor\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Module key with a dot (field path injection)",
-              "expected": 422,
-              "code": "validation_failed",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"hr.admin\",\"permissionSets\":[\"admin\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "Super admin changes their own permission set",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_01/permission-sets",
-                "as": "farhana@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"viewer\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "HR Admin changes someone already in HR, with no Master permission set",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_04/permission-sets",
-                "as": "kamrul@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"staff\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "HR Admin adds someone new to HR, with no Master permission set",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "kamrul@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"staff\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "HR Admin can not change a Master permission set",
-              "expected": 403,
-              "code": "module_access_only",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_04/permission-sets",
-                "as": "kamrul@twintrack.test",
-                "body": "{\"module\":\"master\",\"permissionSets\":[\"admin\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Module key \"constructor\" (reserved)",
-              "expected": 422,
-              "code": "validation_failed",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"constructor\",\"permissionSets\":[]}"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "Jasmin clears Karim's HR permission sets",
-              "expected": 200,
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "jasmin@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[]}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Jasmin can not change a Master permission set",
-              "expected": 403,
-              "code": "module_access_only",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_13/permission-sets",
-                "as": "jasmin@twintrack.test",
-                "body": "{\"module\":\"master\",\"permissionSets\":[\"admin\"],\"reason\":\"Covers the team this month\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Giving a new permission set with no reason",
-              "expected": 422,
-              "code": "validation_failed",
-              "request": {
-                "method": "PUT",
-                "path": "/users/u_08/permission-sets",
-                "as": "arif@twintrack.test",
-                "body": "{\"module\":\"hr\",\"permissionSets\":[\"manager\"]}"
-              }
-            }
-          ]
-        },
-        {
-          "id": "POST /permission-sets/:module",
-          "method": "POST",
-          "path": "/permission-sets/:module",
-          "purpose": "Adds a permission set to a module.",
-          "input": "key, name, grants, and optionally description",
-          "access": "permission set.create in that module",
-          "scenarios": [
-            {
-              "kind": "success",
-              "title": "Adds a permission set that can be given straight away",
-              "expected": 201,
-              "changesData": true,
-              "request": {
-                "method": "POST",
-                "path": "/permission-sets/hr",
-                "as": "farhana@twintrack.test",
-                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"read\"]}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "No access token",
-              "expected": 401,
-              "code": "no_token",
-              "request": {
-                "method": "POST",
-                "path": "/permission-sets/hr"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Signed in, but without the permission",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "POST",
-                "path": "/permission-sets/hr",
-                "as": "karim@twintrack.test"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Access Admin has no permission set.update",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "POST",
-                "path": "/permission-sets/hr",
-                "as": "arif@twintrack.test",
-                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"read\"]}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "A key already used",
-              "expected": 422,
-              "code": "validation_failed",
-              "request": {
-                "method": "POST",
-                "path": "/permission-sets/hr",
-                "as": "farhana@twintrack.test",
-                "body": "{\"key\":\"manager\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"read\"]}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "A permission the module does not have",
-              "expected": 422,
-              "code": "validation_failed",
-              "request": {
-                "method": "POST",
-                "path": "/permission-sets/hr",
-                "as": "farhana@twintrack.test",
-                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"fly\"]}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Module not loaded",
-              "expected": 404,
-              "code": "unknown_module",
-              "request": {
-                "method": "POST",
-                "path": "/permission-sets/account",
-                "as": "farhana@twintrack.test",
-                "body": "{\"key\":\"lead\",\"name\":\"Team Lead\",\"grants\":{\"salary\":{\"actions\":[\"read\"]}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Someone who is not a super admin asks for everything",
-              "expected": 403,
-              "code": "beyond_own_access",
-              "request": {
-                "method": "POST",
-                "path": "/permission-sets/hr",
-                "as": "kamrul@twintrack.test",
-                "body": "{\"key\":\"all-hr\",\"name\":\"All of HR\",\"grants\":\"*\"}"
-              }
-            }
-          ]
-        },
-        {
-          "id": "PATCH /permission-sets/:module/:key",
-          "method": "PATCH",
-          "path": "/permission-sets/:module/:key",
-          "purpose": "Changes what a permission set template allows.",
-          "input": "any of name, description, grants",
-          "access": "permission set.update in that module",
-          "scenarios": [
-            {
-              "kind": "success",
-              "title": "Super admin changes what a permission set allows",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/manager",
-                "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "Super admin renames a permission set",
-              "expected": 200,
-              "changesData": true,
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/manager",
-                "as": "farhana@twintrack.test",
-                "body": "{\"name\":\"Team Lead\"}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "No access token",
-              "expected": 401,
-              "code": "no_token",
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/manager"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Signed in, but without the permission",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/manager",
-                "as": "karim@twintrack.test"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Access Admin has no permission set.update",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/manager",
-                "as": "arif@twintrack.test",
-                "body": "{\"grants\":{\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "A resource the module does not have",
-              "expected": 422,
-              "code": "validation_failed",
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/manager",
-                "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"ghost\":{\"actions\":[\"read\"]}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "A narrow scope on an unscoped resource",
-              "expected": 422,
-              "code": "validation_failed",
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/manager",
-                "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"access\":{\"actions\":[\"read\"],\"scope\":\"team\"}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "No fields sent",
-              "expected": 422,
-              "code": "validation_failed",
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/manager",
-                "as": "farhana@twintrack.test",
-                "body": "{}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Permission set does not exist",
-              "expected": 404,
-              "code": "unknown_permission_set",
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/hr/emperor",
-                "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Module not loaded",
-              "expected": 404,
-              "code": "unknown_module",
-              "request": {
-                "method": "PATCH",
-                "path": "/permission-sets/account/viewer",
-                "as": "farhana@twintrack.test",
-                "body": "{\"grants\":{\"salary\":{\"actions\":[\"read\",\"update\"]}}}"
-              }
-            }
-          ]
-        },
-        {
-          "id": "DELETE /permission-sets/:module/:key",
-          "method": "DELETE",
-          "path": "/permission-sets/:module/:key",
-          "purpose": "Removes a permission set nobody holds.",
-          "input": "module and role key in the path",
-          "access": "permission set.delete in that module",
-          "scenarios": [
-            {
-              "kind": "fail",
-              "title": "No access token",
-              "expected": 401,
-              "code": "no_token",
-              "request": {
-                "method": "DELETE",
-                "path": "/permission-sets/hr/manager"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Signed in, but without the permission",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "DELETE",
-                "path": "/permission-sets/hr/manager",
-                "as": "karim@twintrack.test"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Someone still holds the permission set",
-              "expected": 409,
-              "code": "permission_set_in_use",
-              "request": {
-                "method": "DELETE",
-                "path": "/permission-sets/hr/manager",
-                "as": "farhana@twintrack.test"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Permission set does not exist",
-              "expected": 404,
-              "code": "unknown_permission_set",
-              "request": {
-                "method": "DELETE",
-                "path": "/permission-sets/hr/emperor",
-                "as": "farhana@twintrack.test"
-              }
-            },
-            {
-              "kind": "success",
-              "title": "Removes a permission set nobody holds",
-              "expected": 200,
-              "setup": [
-                {
-                  "method": "POST",
-                  "path": "/permission-sets/hr",
-                  "as": "farhana@twintrack.test",
-                  "body": "{\"key\":\"demo-set\",\"name\":\"Demo set\",\"grants\":{\"salary\":{\"actions\":[\"read\"],\"scope\":\"own\"}}}"
-                }
-              ],
-              "changesData": true,
-              "request": {
-                "method": "DELETE",
-                "path": "/permission-sets/hr/demo-set",
-                "as": "farhana@twintrack.test"
-              }
-            }
-          ]
-        },
-        {
-          "id": "GET /permission-sets",
-          "method": "GET",
-          "path": "/permission-sets",
-          "purpose": "Lists the modules you can edit permission sets in, what you may put in a permission set, and the APIs each permission opens.",
-          "input": "nothing",
-          "access": "Any permission set permission in at least one module",
-          "scenarios": [
-            {
-              "kind": "success",
-              "title": "Someone with permission set.update in HR",
-              "expected": 200,
-              "request": {
-                "method": "GET",
-                "path": "/permission-sets",
-                "as": "kamrul@twintrack.test"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "No access token",
-              "expected": 401,
-              "code": "no_token",
-              "request": {
-                "method": "GET",
-                "path": "/permission-sets"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Signed in, but without the permission",
-              "expected": 403,
-              "code": "forbidden",
-              "request": {
-                "method": "GET",
-                "path": "/permission-sets",
-                "as": "karim@twintrack.test"
-              }
-            }
-          ]
         }
       ]
     },
@@ -2565,7 +3125,7 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"inventory\",\"name\":\"Inventory\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[],\"permissionSets\":[]}}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"inventory\",\"name\":\"Inventory\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[]}}"
               }
             },
             {
@@ -2578,18 +3138,6 @@
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
                 "body": "{\"password\":\"not-the-password\",\"manifest\":{}}"
-              }
-            },
-            {
-              "kind": "fail",
-              "title": "Adding a role needs a super admin",
-              "expected": 403,
-              "code": "beyond_own_access",
-              "request": {
-                "method": "POST",
-                "path": "/modules/import",
-                "as": "arif@twintrack.test",
-                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"inventory\",\"name\":\"Inventory\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[],\"permissionSets\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}}"
               }
             },
             {
@@ -2634,7 +3182,7 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"master\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[],\"permissionSets\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"master\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[]}}"
               }
             },
             {
@@ -2646,7 +3194,7 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"inventory\",\"name\":\"Inventory\",\"version\":\"1.0.0\",\"core\":true},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[],\"permissionSets\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"inventory\",\"name\":\"Inventory\",\"version\":\"1.0.0\",\"core\":true},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[]}}"
               }
             },
             {
@@ -2658,7 +3206,7 @@
                 "method": "POST",
                 "path": "/modules/import",
                 "as": "arif@twintrack.test",
-                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"constructor\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[],\"permissionSets\":[{\"key\":\"lead\",\"name\":\"Lead\",\"grants\":\"*\"}]}}"
+                "body": "{\"password\":\"YOUR_PASSWORD\",\"manifest\":{\"manifestVersion\":1,\"module\":{\"key\":\"constructor\",\"name\":\"Tasks\",\"version\":\"1.0.0\"},\"resources\":[{\"key\":\"task\",\"label\":\"Tasks\",\"actions\":[\"read\",\"create\"]}],\"routes\":[]}}"
               }
             }
           ]
@@ -3097,6 +3645,33 @@
                 "path": "/hr/salaries?deleted=true",
                 "as": "rahim@twintrack.test"
               }
+            },
+            {
+              "kind": "success",
+              "title": "Fields set to hidden are left out: no amount (protected) and no currency",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"No Currency\",\"grants\":{\"hr\":{\"salary\":{\"actions\":[\"read\"],\"scope\":\"all\",\"fieldAccess\":{\"currency\":\"hidden\"}}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/hr/salaries",
+                "as": "mehedi@twintrack.test"
+              }
             }
           ]
         },
@@ -3176,6 +3751,35 @@
                 "as": "kamrul@twintrack.test",
                 "body": "{\"employeeId\":\"u_08\",\"amount\":99000,\"effectiveFrom\":\"2027-01-01\",\"status\":\"approved\"}"
               }
+            },
+            {
+              "kind": "success",
+              "title": "Create-only access to amount lets a clerk set it on a new salary",
+              "expected": 201,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Salary Clerk\",\"grants\":{\"hr\":{\"salary\":{\"actions\":[\"read\",\"create\",\"update\"],\"scope\":\"all\",\"fieldAccess\":{\"amount\":\"create\"}}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/hr/salaries",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"employeeId\":\"u_08\",\"amount\":99000,\"effectiveFrom\":\"2027-01-01\"}"
+              }
             }
           ]
         },
@@ -3243,6 +3847,64 @@
                 "path": "/hr/salaries/s_08",
                 "as": "kamrul@twintrack.test",
                 "body": "{\"amount\":100000,\"version\":7}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Create-only access to amount refuses changing it later",
+              "expected": 403,
+              "code": "field_not_editable",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Salary Clerk\",\"grants\":{\"hr\":{\"salary\":{\"actions\":[\"read\",\"create\",\"update\"],\"scope\":\"all\",\"fieldAccess\":{\"amount\":\"create\"}}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/hr/salaries/s_08",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"amount\":1}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A field set to read only can't be changed, even with salary.update",
+              "expected": 403,
+              "code": "field_not_editable",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Dates Only\",\"grants\":{\"hr\":{\"salary\":{\"actions\":[\"read\",\"update\"],\"scope\":\"all\",\"fieldAccess\":{\"currency\":\"read\"}}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/hr/salaries/s_08",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"currency\":\"USD\"}"
               }
             }
           ]

@@ -1,9 +1,8 @@
 import { apiRequest } from './http';
-import type { AccessProfile, AuditEntry, Grants, ManageableModule, OrgRole, RegisteredModule, ResourceAction } from './types';
+import type { AccessProfile, AuditEntry, Grants, OrgRole, RegisteredModule, ResourceAction } from './types';
 
 const segment = encodeURIComponent;
 const resourcePath = (moduleKey: string, resourceKey: string) => `/modules/${segment(moduleKey)}/resources/${segment(resourceKey)}`;
-const permissionSetPath = (moduleKey: string, setKey: string) => `/permission-sets/${segment(moduleKey)}/${segment(setKey)}`;
 const profilePath = (profileId: string) => `/access-profiles/${segment(profileId)}`;
 
 export async function listModules(): Promise<RegisteredModule[]> {
@@ -28,26 +27,6 @@ export const saveResource = (moduleKey: string, resourceKey: string, details: Re
 
 export const removeResource = (moduleKey: string, resourceKey: string) =>
   apiRequest(resourcePath(moduleKey, resourceKey), { method: 'DELETE' });
-
-/** The modules whose permission sets this person can reach, with what they may put in a set. */
-export async function getManageablePermissionSets(): Promise<ManageableModule[]> {
-  return (await apiRequest<{ modules: ManageableModule[] }>('/permission-sets')).modules;
-}
-
-export interface NewPermissionSet {
-  key: string;
-  name: string;
-  description?: string;
-  grants: Grants;
-}
-
-export const addPermissionSet = (moduleKey: string, permissionSet: NewPermissionSet) =>
-  apiRequest(`/permission-sets/${segment(moduleKey)}`, { method: 'POST', body: permissionSet });
-
-export const updatePermissionSet = (moduleKey: string, setKey: string, changes: Partial<Omit<NewPermissionSet, 'key'>>) =>
-  apiRequest(permissionSetPath(moduleKey, setKey), { method: 'PATCH', body: changes });
-
-export const removePermissionSet = (moduleKey: string, setKey: string) => apiRequest(permissionSetPath(moduleKey, setKey), { method: 'DELETE' });
 
 export async function listProfiles(): Promise<AccessProfile[]> {
   return (await apiRequest<{ profiles: AccessProfile[] }>('/access-profiles')).profiles;

@@ -8,7 +8,6 @@ export interface UserDoc {
   name: string;
   email: string;
   passwordHash: string;
-  mustChangePassword: boolean;
   title?: string;
   department?: string;
   team?: string;
@@ -18,10 +17,16 @@ export interface UserDoc {
   /** The person's place in the organisation tree, which decides whose records they see. */
   orgRoleId?: string;
   superAdmin: boolean;
-  /** The person's one access profile, which sets their baseline permissions across every module. */
+  /** The person's one access profile, which is where all of their permissions in every module come from. */
   profileId?: string;
-  /** Module key to the keys of permission sets given on top of the profile, for example { hr: ['salary-approver'] }. */
-  permissionSets: Record<string, string[]>;
+  /** A short number HR and payroll use to refer to someone. Handed out in order when a person is added. */
+  employeeNumber?: number;
+  /** When the profile photo last changed. Missing means there's no photo. */
+  photoUpdatedAt?: Date;
+  /** Missing means the person has never signed in, so their account is still waiting to be set up. */
+  lastSignedInAt?: Date;
+  /** The last time an open app said the person was there, which decides whether they show as online. */
+  lastSeenAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,7 +37,6 @@ const userSchema = new Schema<UserDoc>(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true, select: false },
-    mustChangePassword: { type: Boolean, default: false },
     title: String,
     department: String,
     team: String,
@@ -42,7 +46,10 @@ const userSchema = new Schema<UserDoc>(
     orgRoleId: { type: String, index: true },
     superAdmin: { type: Boolean, default: false },
     profileId: { type: String, index: true },
-    permissionSets: { type: Schema.Types.Mixed, default: {} },
+    employeeNumber: { type: Number, min: 1, unique: true, sparse: true },
+    photoUpdatedAt: Date,
+    lastSignedInAt: Date,
+    lastSeenAt: Date,
   },
   { timestamps: true, minimize: false },
 );

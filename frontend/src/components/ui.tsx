@@ -1,7 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import type { Contract, UserStatus } from '@/lib/api/types';
+import type { KeyboardEvent, ReactNode } from 'react';
+import type { ClientStatus, Contract, UserStatus } from '@/lib/api/types';
 import { humanize, initials } from '@/lib/format';
 import type { LoadState } from '@/lib/useLoad';
 
@@ -16,6 +16,8 @@ const CONTRACT_TONES: Record<Contract, PillTone> = { permanent: 'accent', intern
 export const ContractPill = ({ contract }: { contract: Contract }) => <Pill tone={CONTRACT_TONES[contract]}>{humanize(contract)}</Pill>;
 
 export const StatusPill = ({ status }: { status: UserStatus }) => (status === 'active' ? <Pill tone="good">Active</Pill> : <Pill tone="danger">Deactivated</Pill>);
+
+export const ClientStatusPill = ({ status }: { status: ClientStatus }) => (status === 'active' ? <Pill tone="good">Active</Pill> : <Pill tone="neutral">Inactive</Pill>);
 
 export function PageHead({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
@@ -54,6 +56,51 @@ export function Row({ label, children }: { label: string; children: ReactNode })
 
 export function Notice({ tone, children }: { tone: 'good' | 'danger' | 'warning'; children: ReactNode }) {
   return <p className={`notice notice-${tone}`} role={tone === 'danger' ? 'alert' : 'status'}>{children}</p>;
+}
+
+/**
+ * A row of tabs that switches what's shown below it. Arrow keys move between tabs, as screen readers expect.
+ * The panel it controls should have id `${id}-panel` and role="tabpanel".
+ */
+export function Tabs<Value extends string>({ id, label, options, value, onChange }: {
+  id: string;
+  label: string;
+  options: { value: Value; label: string; count?: number }[];
+  value: Value;
+  onChange: (value: Value) => void;
+}) {
+  const moveFocus = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const next = options[(index + step + options.length) % options.length]!;
+    onChange(next.value);
+    document.getElementById(`${id}-tab-${next.value}`)?.focus();
+  };
+  return (
+    <div className="tabs" role="tablist" aria-label={label}>
+      {options.map((option, index) => {
+        const isSelected = option.value === value;
+        return (
+          <button
+            key={option.value}
+            id={`${id}-tab-${option.value}`}
+            type="button"
+            role="tab"
+            className="tab"
+            aria-selected={isSelected}
+            aria-controls={`${id}-panel`}
+            tabIndex={isSelected ? 0 : -1}
+            onClick={() => onChange(option.value)}
+            onKeyDown={(event) => moveFocus(event, index)}
+          >
+            {option.label}
+            {option.count !== undefined ? <span className="tab-count">{option.count}</span> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function Chips<Value extends string>({ label, options, value, onChange }: {

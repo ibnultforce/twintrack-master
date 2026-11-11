@@ -116,7 +116,7 @@ export async function createSalary(actor: Actor, scope: Scope, details: NewSalar
   }
   await assertInScope(actor, scope, employee._id);
   const rules = await fieldRulesFor(actor);
-  assertMayWriteFields(rules, Object.keys(details));
+  assertMayWriteFields(rules, Object.keys(details), 'create');
 
   const salary = await runInTransaction(async (session) => {
     const created = await insertSalary({ _id: `s_${randomUUID()}`, ...details, currency: details.currency ?? DEFAULT_CURRENCY }, actor.user._id, session);
@@ -139,7 +139,7 @@ async function changeSalary(
     need?: RecordNeed;
     withDeleted?: boolean;
     save: (session: ClientSession) => Promise<SalaryDoc>;
-    /** Fields the change sets, which need edit access when they're protected. */
+    /** Fields the change sets, which need edit access when they're protected. Create access isn't enough here. */
     writes?: string[];
   },
 ) {
@@ -148,7 +148,7 @@ async function changeSalary(
   else await assertInScope(actor, scope, existing.employeeId);
   // After the reach check, so someone outside it learns nothing about the fields.
   const rules = await fieldRulesFor(actor);
-  assertMayWriteFields(rules, change.writes ?? []);
+  assertMayWriteFields(rules, change.writes ?? [], 'update');
   const employee = await findUserById(existing.employeeId);
 
   const saved = await runInTransaction(async (session) => {

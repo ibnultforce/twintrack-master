@@ -4,9 +4,9 @@ Salaries are the only part of HR built so far. Every route starts with `/hr`. Re
 
 ## Getting access
 
-A person reaches HR through their profile, or through an HR permission set given with `PUT /users/:id/permission-sets`, using `"module": "hr"`. See [Changing someone's access](master.md#changing-someones-access).
+A person reaches HR through their profile, given with `PUT /users/:id/profile`. See [Changing someone's access](master.md#changing-someones-access).
 
-No profiles or permission sets ship with the product, so a super admin creates them first. These permissions control salaries: `salary.read`, `salary.create`, `salary.update` and `salary.approve`. Holding `access.update` in HR lets someone give or take away anyone's HR permission sets.
+No profiles ship with the product, so a super admin creates them first. These permissions control salaries: `salary.read`, `salary.create`, `salary.update`, `salary.approve`, `salary.delete` and `salary.share`.
 
 The scope decides whose salaries the caller reaches. A salary outside it is refused with `403 out_of_scope`.
 
@@ -65,7 +65,7 @@ curl -X POST "$API/hr/salaries" \
 
 ## Sharing
 
-`amount` is a protected field. Someone needs `fieldAccess: { "amount": "read" }` in a profile or permission set to see it, and `edit` to set it, which also means creating a salary. Without read access it's left out of salaries and their history, and writing it returns `403 field_not_editable`.
+Field access controls `amount`, `currency`, `effectiveFrom` and `status`. `currency`, `effectiveFrom` and `status` follow the grant's actions unless it names them. `amount` is a protected field. Someone needs `fieldAccess: { "amount": "read" }` in their profile to see it, `create` to set it when creating a salary only, and `edit` to set it when creating or changing one. Without read access it's left out of salaries and their history, and writing it returns `403 field_not_editable`.
 
 A share lets someone's salary.read permission reach one salary beyond their scope. It never adds a permission: without `salary.read` a share does nothing. A `read` share counts for reading, the history and the share list. An `edit` share also counts for changing it. Approving, deleting and restoring always follow the scope alone.
 

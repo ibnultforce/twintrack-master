@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { ActivityTable } from '@/components/ActivityTable';
 import { Card, Loaded, PageHead } from '@/components/ui';
 import { listActivity, listProfiles } from '@/lib/api/modules';
-import type { AccessOption, AccessProfile, AuditEntry, User } from '@/lib/api/types';
-import { getAccessOptions, listAllUsers } from '@/lib/api/users';
+import type { AccessModule, AccessProfile, AuditEntry, User } from '@/lib/api/types';
+import { listAccessModules, listAllUsers } from '@/lib/api/users';
 import { longDate, peopleCount } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useSession } from '@/session/SessionProvider';
@@ -14,15 +14,15 @@ const RECENT_ACTIVITY_SIZE = 6;
 
 interface OverviewData {
   people: User[];
-  modules: AccessOption[];
+  modules: AccessModule[];
   profiles: AccessProfile[];
   activity: AuditEntry[];
 }
 
-/** Access through a permission set, or through a profile that gives something in the module. */
+/** Access through a profile that gives something in the module. */
 function hasAccessIn(person: User, moduleKey: string, profiles: AccessProfile[]): boolean {
   const profile = profiles.find((candidate) => candidate.id === person.profileId);
-  return (person.permissionSets[moduleKey]?.length ?? 0) > 0 || Boolean(profile?.modules.some((module) => module.key === moduleKey));
+  return Boolean(profile?.modules.some((module) => module.key === moduleKey));
 }
 
 function listAttentionItems({ people, modules, profiles }: OverviewData): { tone: 'danger' | 'warning'; text: string }[] {
@@ -30,11 +30,11 @@ function listAttentionItems({ people, modules, profiles }: OverviewData): { tone
   const active = people.filter((person) => person.status === 'active');
   const deactivatedWithRoles = people.filter((person) => person.status === 'inactive' && holdsAnything(person)).length;
   const noAccess = active.filter((person) => !person.superAdmin && !holdsAnything(person)).length;
-  const temporary = active.filter((person) => person.mustChangePassword).length;
+  const neverSignedIn = active.filter((person) => !person.lastSignedInAt).length;
 
   const items: { tone: 'danger' | 'warning'; text: string }[] = [];
   if (deactivatedWithRoles) items.push({ tone: 'danger', text: `${peopleCount(deactivatedWithRoles)} deactivated but still holding access` });
-  if (temporary) items.push({ tone: 'warning', text: `${peopleCount(temporary)} still on a temporary password` });
+  if (neverSignedIn) items.push({ tone: 'warning', text: `${peopleCount(neverSignedIn)} never signed in, so their invitation may need sending again` });
   if (noAccess) items.push({ tone: 'warning', text: `${peopleCount(noAccess)} with no access to any module` });
   return items;
 }
@@ -47,7 +47,7 @@ export default function OverviewPage() {
   const overview = useLoad<OverviewData>(async () => {
     const [people, modules, profiles, activity] = await Promise.all([
       listAllUsers(),
-      getAccessOptions(),
+      listAccessModules(),
       canReadProfiles ? listProfiles() : Promise.resolve<AccessProfile[]>([]),
       canReadActivity ? listActivity({ page: 1, pageSize: RECENT_ACTIVITY_SIZE }) : Promise.resolve({ entries: [], total: 0 }),
     ]);

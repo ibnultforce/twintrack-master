@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { describeError } from '@/lib/api/http';
-import { Notice } from './ui';
+import type { PasswordLinkError, PasswordLinkResult } from '@/lib/api/types';
+import { Notice, Pill } from './ui';
 
 /** A modal built on the native dialog element, which handles focus and the Escape key. */
 export function Dialog({ title, onClose, children, isWide = false }: { title: string; onClose: () => void; children: ReactNode; isWide?: boolean }) {
@@ -56,23 +57,52 @@ export function ConfirmDialog({ title, text, confirmLabel, isDanger, onConfirm, 
   );
 }
 
-/** Temporary passwords are returned only once, so this stays open until the admin closes it. */
-export function TemporaryPasswordDialog({ name, password, onClose }: { name: string; password: string; onClose: () => void }) {
+/** For a secret the API returns only once, such as a new API token, so this stays open until it's closed. */
+export function OneTimeSecretDialog({ title, text, secret, onClose }: { title: string; text: string; secret: string; onClose: () => void }) {
   const [copyState, setCopyState] = useState('Copy');
 
   const copy = () => {
-    navigator.clipboard.writeText(password).then(
+    navigator.clipboard.writeText(secret).then(
       () => setCopyState('Copied'),
       () => setCopyState('Copy it by hand'),
     );
   };
 
   return (
-    <Dialog title="Temporary password" onClose={onClose}>
-      <p>Give this to {name}. It won&apos;t be shown again, and they&apos;ll replace it when they first sign in.</p>
-      <code className="temporary">{password}</code>
+    <Dialog title={title} onClose={onClose}>
+      <p>{text}</p>
+      <code className="temporary">{secret}</code>
       <div className="dialog-actions">
         <button type="button" className="btn" onClick={copy}>{copyState}</button>
+        <button type="button" className="btn btn-primary" onClick={onClose}>Done</button>
+      </div>
+    </Dialog>
+  );
+}
+
+const LINK_ERRORS: Record<PasswordLinkError, string> = {
+  unknown_user: 'No longer exists',
+  account_inactive: 'Deactivated, so not sent',
+  super_admin_protected: 'Only a super admin can send this',
+  own_account: 'Your own account: change your password on Your profile',
+  email_failed: "The email couldn't be sent. Try again later",
+};
+
+/** What happened for each person after sending password links. */
+export function PasswordLinkResultsDialog({ results, names, onClose }: { results: PasswordLinkResult[]; names: Map<string, string>; onClose: () => void }) {
+  const sentCount = results.filter((result) => result.sent).length;
+  return (
+    <Dialog title="Password links" onClose={onClose}>
+      <p>{sentCount === results.length ? 'Every link was sent.' : `${sentCount} of ${results.length} sent.`} Each link works once, and only for a limited time.</p>
+      <ul className="result-list spaced">
+        {results.map((result) => (
+          <li key={result.userId}>
+            <span>{names.get(result.userId) ?? result.email ?? result.userId}</span>
+            {result.sent ? <Pill tone="good">Sent</Pill> : <Pill tone="danger">{LINK_ERRORS[result.error ?? 'email_failed']}</Pill>}
+          </li>
+        ))}
+      </ul>
+      <div className="dialog-actions">
         <button type="button" className="btn btn-primary" onClick={onClose}>Done</button>
       </div>
     </Dialog>

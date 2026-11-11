@@ -11,10 +11,14 @@ import { Notice, TextField } from './ui';
 
 const CONTRACTS: Contract[] = ['permanent', 'intern', 'contractor'];
 
-/** The shared form for adding and editing a person. Submits every field, with blank optional ones as null. */
-export function PersonFormDialog({ title, submitLabel, person, onSubmit, onClose }: {
+/**
+ * The shared form for adding and editing a person. Submits every field, with blank optional ones as null. The employee
+ * number is handed out when someone is added, so it only shows when editing, and is sent only when changed.
+ */
+export function PersonFormDialog({ title, submitLabel, intro, person, onSubmit, onClose }: {
   title: string;
   submitLabel: string;
+  intro?: string;
   person?: User;
   onSubmit: (details: UserDetails) => Promise<void>;
   onClose: () => void;
@@ -27,6 +31,7 @@ export function PersonFormDialog({ title, submitLabel, person, onSubmit, onClose
   const [contract, setContract] = useState<Contract>(person?.contract ?? 'permanent');
   const [managerId, setManagerId] = useState(person?.managerId ?? '');
   const [orgRoleId, setOrgRoleId] = useState(person?.orgRoleId ?? '');
+  const [employeeNumber, setEmployeeNumber] = useState(person?.employeeNumber ? String(person.employeeNumber) : '');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const everyone = useLoad(listAllUsers, []);
@@ -46,6 +51,7 @@ export function PersonFormDialog({ title, submitLabel, person, onSubmit, onClose
         contract,
         managerId: managerId || null,
         orgRoleId,
+        ...(employeeNumber && Number(employeeNumber) !== person?.employeeNumber && { employeeNumber: Number(employeeNumber) }),
       });
       onClose();
     } catch (failure) {
@@ -57,11 +63,16 @@ export function PersonFormDialog({ title, submitLabel, person, onSubmit, onClose
   return (
     <Dialog title={title} onClose={onClose}>
       <form className="form" onSubmit={(event) => void submit(event)}>
+        {intro ? <p className="note">{intro}</p> : null}
+        <p className="required-legend">Fields marked <span aria-hidden="true">*</span> are required.</p>
         <TextField id="person-name" label="Name" required value={name} onChange={setName} />
         <TextField id="person-email" label="Email" type="email" required value={email} onChange={setEmail} />
         <TextField id="person-title" label="Job title" value={jobTitle} onChange={setJobTitle} />
         <TextField id="person-department" label="Department" value={department} onChange={setDepartment} />
         <TextField id="person-team" label="Team" value={team} onChange={setTeam} />
+        {person ? (
+          <TextField id="person-number" label="Employee number" type="number" hint="Must be unique. New people get the next one." value={employeeNumber} onChange={setEmployeeNumber} />
+        ) : null}
         <div className="field">
           <label htmlFor="person-contract">Contract</label>
           <select className="input" id="person-contract" value={contract} onChange={(event) => setContract(event.target.value as Contract)}>

@@ -171,7 +171,7 @@ async function runScenario(button) {
   try {
     const saved = {};
     const fillIn = (text) => text?.replace(/\{\{(\w+)\}\}/g, (match, name) => saved[name] ?? match);
-    const filled = (step) => ({ ...step, path: fillIn(step.path), body: fillIn(step.body) });
+    const filled = (step) => ({ ...step, path: fillIn(step.path), body: fillIn(step.body), literalToken: fillIn(step.literalToken) });
     for (const step of setup) {
       if (step.cookie) await signIn(COOKIE_HOLDER_EMAIL);
       const answer = await send(filled(step), 200);

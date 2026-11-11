@@ -21,26 +21,21 @@ function createSessionCheck(settings: AuthSettings): RequestHandler {
     const { userId, sessionId } = await verifyAccessToken(header.slice(BEARER_PREFIX.length), settings);
     const [session, user] = await Promise.all([findSessionById(sessionId), findUserById(userId)]);
 
-    if (!session || session.userId !== userId || session.revokedAt || hasSessionExpired(session)) {
+    // An impersonation session stops working as soon as impersonation is switched off.
+    const isRefusedImpersonation = Boolean(session?.impersonatorId) && !settings.isImpersonationEnabled;
+    if (!session || session.userId !== userId || session.revokedAt || hasSessionExpired(session) || isRefusedImpersonation) {
       throw new ApiError(401, 'session_revoked', 'Your session has ended. Sign in again.');
     }
     if (user?.status !== 'active') {
       throw new ApiError(401, 'account_inactive', 'This account has been deactivated. Contact HR.');
     }
 
-    req.caller = { user, profile: await findProfileOf(user), sessionId };
+    req.caller = { user, profile: await findProfileOf(user), sessionId, impersonatorId: session.impersonatorId };
     next();
   };
 }
 
-const requirePasswordChanged: RequestHandler = (req, _res, next) => {
-  if (getCaller(req).user.mustChangePassword) {
-    throw new ApiError(403, 'password_change_required', 'Change your temporary password to continue.');
-  }
-  next();
-};
-
-/** Profiles and permission sets are read from the database on each call, so a change applies on the next request. */
+/** Profiles are read from the database on each call, so a change applies on the next request. */
 function createPermissionCheck(route: ApiRoute, moduleKey: string): RequestHandler {
   const acceptedPermissions = route.permission ? [route.permission] : (route.anyPermission ?? []);
 
@@ -59,16 +54,13 @@ function createPermissionCheck(route: ApiRoute, moduleKey: string): RequestHandl
   };
 }
 
-/** Enforces each route's declared access: the session, then any pending password change, then the permission. */
+/** Enforces each route's declared access: the session, then the permission. */
 export function createAccessMiddleware(settings: AuthSettings, moduleKey: string): AccessMiddlewareFor {
   const requireSession = createSessionCheck(settings);
 
   return (route) => {
     if (route.access === 'public') return [];
 
-    const checks = [requireSession];
-    if (!route.allowedDuringPasswordChange) checks.push(requirePasswordChanged);
-    if (route.access === 'private') checks.push(createPermissionCheck(route, moduleKey));
-    return checks;
+    return route.access === 'private' ? [requireSession, createPermissionCheck(route, moduleKey)] : [requireSession];
   };
 }

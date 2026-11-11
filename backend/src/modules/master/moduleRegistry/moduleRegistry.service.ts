@@ -1,15 +1,14 @@
-import { isDeepStrictEqual } from 'node:util';
 import type { ClientSession } from 'mongoose';
 import { runInTransaction } from '../../../db.js';
 import { ApiError } from '../../../lib/errors.js';
 import { actorFields, type Actor } from '../access/caller.js';
-import { findAllProfiles } from '../accessProfiles/accessProfiles.repository.js';
+import { findAllProfiles, findProfileIdsGranting } from '../accessProfiles/accessProfiles.repository.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import type { ModuleDoc } from '../models/module.js';
-import { countUsersWithPermissionSetsIn, countUsersWithPermissionSetOutside } from '../users/users.repository.js';
+import { countUsersWithProfiles } from '../users/users.repository.js';
 import { validateManifest, type Manifest } from './manifest.js';
 import { deleteModule, findAllModules, findModuleByKey, saveModule } from './moduleRegistry.repository.js';
-import { canDoToPermissionSetsIn, listPermissionApis, listPermissionUsers } from './permissionSetEditing.js';
+import { listPermissionApis, listPermissionUsers } from './grantEditing.js';
 
 export class CoreModuleError extends ApiError {
   constructor(key: string, problem: string) {
@@ -21,8 +20,6 @@ export interface ImportResult {
   key: string;
   version: string;
   created: boolean;
-  /** People holding a permission set this module no longer has. It gives them nothing until it's added again. */
-  orphanedPermissionSets: number;
 }
 
 export interface RegisteredModule {
@@ -35,26 +32,11 @@ export interface RegisteredModule {
   frontendUrl: string | null;
 }
 
-/** Someone who can't edit a module's resources and permission sets mustn't undo those edits by importing or removing the module. */
+/** Someone who can't edit a module's resources mustn't undo those edits by importing or removing the module. */
 function assertMayReplaceEdits(actor: Actor, module: ModuleDoc | null): void {
   if (!module?.permissionsEditedAt || actor.user.superAdmin) return;
-  if (!actor.permissions['module.update'] || !canDoToPermissionSetsIn(actor, module, 'update')) {
-    throw new ApiError(409, 'permissions_edited', `${module.name}'s permissions have been edited, so replacing or removing it needs module.update and permissionSet.update in that module.`);
-  }
-}
-
-const addsOrChangesPermissionSets = (manifest: Manifest, existing: ModuleDoc | null) =>
-  manifest.permissionSets.some((permissionSet) => {
-    const existingSet = existing?.permissionSets.find((candidate) => candidate.key === permissionSet.key);
-    return !existingSet || !isDeepStrictEqual(permissionSet.grants, existingSet.grants);
-  });
-
-/** An import mustn't do what the permission set routes refuse, and removing a module first mustn't get around that. */
-function assertMayImportOver(actor: Actor, manifest: Manifest, existing: ModuleDoc | null): void {
-  if (actor.user.superAdmin) return;
-  assertMayReplaceEdits(actor, existing);
-  if (addsOrChangesPermissionSets(manifest, existing)) {
-    throw new ApiError(403, 'beyond_own_access', 'Only a super admin can import a manifest that adds or changes permission sets.');
+  if (!actor.permissions['module.update']) {
+    throw new ApiError(409, 'permissions_edited', `${module.name}'s resources have been edited, so replacing or removing it needs module.update.`);
   }
 }
 
@@ -77,10 +59,7 @@ export async function importManifest(
   const fileResourceKeys = new Set(manifest.resources.map((resource) => resource.key));
   const customResources = (existing?.resources ?? []).filter((resource) => resource.custom === true && !fileResourceKeys.has(resource.key));
   const created = await saveModule({ ...manifest, resources: [...manifest.resources, ...customResources] }, isCore, session);
-  const setKeys = manifest.permissionSets.map((permissionSet) => permissionSet.key);
-  const orphanedPermissionSets = await countUsersWithPermissionSetOutside(key, setKeys, session);
-
-  return { key, version, created, orphanedPermissionSets };
+  return { key, version, created };
 }
 
 function toRegisteredModule(
@@ -119,7 +98,7 @@ export async function importModuleFromRequest(
 
   const result = await runInTransaction(async (session) => {
     const previousVersion = (await findModuleByKey(manifest.module.key, session))?.version ?? null;
-    const imported = await importManifest(manifest, { assertMayReplace: (existing) => assertMayImportOver(actor, manifest, existing), session });
+    const imported = await importManifest(manifest, { assertMayReplace: (existing) => assertMayReplaceEdits(actor, existing), session });
     await recordAudit(
       {
         action: 'module.imported',
@@ -142,23 +121,23 @@ export async function importModuleFromRequest(
 export async function exportModuleManifest(key: string) {
   const module = await findModuleByKey(key);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
-  const { name, version, description, repository, baseUrl, core, resources, routes, permissionSets } = module;
+  const { name, version, description, repository, baseUrl, core, resources, routes } = module;
   return {
     manifestVersion: 1,
     module: { key, name, version, description, repository, baseUrl, ...(core && { core }) },
     resources,
     routes,
-    permissionSets,
   };
 }
 
-/** People keep their permission sets in a removed module, and profiles keep their part for it. Neither grants anything unless it's imported again. */
+/** Profiles keep their part for a removed module, which grants nothing unless it's imported again. Counts the people whose profile covers it. */
 export async function removeModule(actor: Actor, key: string): Promise<{ removed: true; key: string; affectedUsers: number }> {
   const module = await findModuleByKey(key);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
   if (module.core) throw new CoreModuleError(key, 'removed');
   assertMayReplaceEdits(actor, module);
 
+  const profileIds = await findProfileIdsGranting(key);
   const affectedUsers = await runInTransaction(async (session) => {
     await deleteModule(key, session);
     await recordAudit(
@@ -173,7 +152,7 @@ export async function removeModule(actor: Actor, key: string): Promise<{ removed
       },
       session,
     );
-    return countUsersWithPermissionSetsIn(key, session);
+    return countUsersWithProfiles(profileIds, session);
   });
   return { removed: true, key, affectedUsers };
 }

@@ -32,9 +32,9 @@ describe('sharing records', () => {
     await seedDatabase({ files: readSeedFiles(), password: PASSWORD, nodeEnv: 'test' });
     const farhana = await as('farhana');
     // Reading and editing your own salary only, so anything more has to come from a share.
-    await farhana.post('/permission-sets/hr', { key: 'own-editor', name: 'Own salary editor', grants: { salary: { actions: ['read', 'update'], scope: 'own', fieldAccess: { amount: 'edit' } } } });
+    const ownEditor = await farhana.post('/access-profiles', { name: 'Own salary editor', grants: { hr: { salary: { actions: ['read', 'update'], scope: 'own', fieldAccess: { amount: 'edit' } } } } });
     for (const personId of [ID.MEHEDI, ID.KARIM, ID.ARIF]) {
-      await farhana.put(`/users/${personId}/permission-sets`, { module: 'hr', permissionSets: ['own-editor'], reason: 'Testing' });
+      await farhana.put(`/users/${personId}/profile`, { profileId: ownEditor.body.id });
     }
   });
 
@@ -135,8 +135,8 @@ describe('sharing records', () => {
     });
 
     it('keeps approving and deleting to the scope, whatever is shared', async () => {
-      await (await as('farhana')).post('/permission-sets/hr', { key: 'own-approver', name: 'Own approver', grants: { salary: { actions: ['read', 'approve', 'delete'], scope: 'own' } } });
-      await (await as('farhana')).put(`/users/${ID.MEHEDI}/permission-sets`, { module: 'hr', permissionSets: ['own-approver'], reason: 'Testing' });
+      const ownApprover = await (await as('farhana')).post('/access-profiles', { name: 'Own approver', grants: { hr: { salary: { actions: ['read', 'approve', 'delete'], scope: 'own' } } } });
+      await (await as('farhana')).put(`/users/${ID.MEHEDI}/profile`, { profileId: ownApprover.body.id });
       await (await as('kamrul')).post(`/hr/salaries/s_07/shares`, { granteeType: 'user', granteeId: ID.MEHEDI, access: 'edit' });
 
       const mehedi = await as('mehedi');

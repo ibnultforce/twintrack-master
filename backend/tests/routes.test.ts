@@ -1,3 +1,4 @@
+import { resolveDependencies } from '../src/appDependencies.js';
 import { readFileSync } from 'node:fs';
 import express, { type RequestHandler } from 'express';
 import request from 'supertest';
@@ -25,7 +26,7 @@ const byMethodAndPath = (first: { method: string; path: string }, second: { meth
 describe('Master route table', () => {
   it('matches the routes the manifest says are built, including their access rules', () => {
     const builtRoutes = manifest.value.routes.filter((route) => !route.planned);
-    const tableRoutes = createMasterRoutes(createTestConfig());
+    const tableRoutes = createMasterRoutes(createTestConfig(), resolveDependencies(createTestConfig()));
     expect(tableRoutes.map(accessRules).sort(byMethodAndPath)).toEqual(builtRoutes.map(accessRules).sort(byMethodAndPath));
   });
 

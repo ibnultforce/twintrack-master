@@ -93,7 +93,7 @@ export function CustomObjectDialog({ moduleKey, existing, onSaved, onClose }: { 
           ))}
           <button type="button" className="link" onClick={() => setFields([...fields, emptyField()])}>+ Add a field</button>
         </fieldset>
-        <p className="note">A protected field is hidden unless a profile or permission set gives read or edit access to it. History keeps every change to the fields ticked.</p>
+        <p className="note">A protected field is hidden unless a profile gives access to it. History keeps every change to the fields ticked.</p>
         {error ? <Notice tone="danger">{error}</Notice> : null}
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>Cancel</button>

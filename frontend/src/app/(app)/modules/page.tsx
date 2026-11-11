@@ -12,9 +12,9 @@ import { useSession } from '@/session/SessionProvider';
 const MASTER_MODULE_KEY = 'master';
 
 export default function YourModulesPage() {
-  const { can, canChangeAccess, canEditPermissionSets } = useSession();
+  const { can, canChangeAccess } = useSession();
   const modules = useLoad(getMyModules, []);
-  const consoleHref = firstConsoleHref({ can, canChangeAccess, canEditPermissionSets });
+  const consoleHref = firstConsoleHref({ can, canChangeAccess });
 
   const openAction = (module: MyModule) => {
     if (module.key === MASTER_MODULE_KEY) return consoleHref ? <Link className="btn btn-primary" href={consoleHref}>Open</Link> : null;
@@ -34,7 +34,7 @@ export default function YourModulesPage() {
                 <article className="card module-card" key={module.key}>
                   <div className="card-head">
                     <h2>{module.name}</h2>
-                    <Pill tone={module.profileName ? 'accent' : 'neutral'}>{module.profileName ?? 'Permission sets'}</Pill>
+                    <Pill tone={module.profileName ? 'accent' : 'neutral'}>{module.profileName ?? 'Super admin'}</Pill>
                   </div>
                   <p>{module.description}</p>
                   <div className="bottom">{openAction(module)}</div>

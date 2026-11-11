@@ -1,6 +1,6 @@
 import { runInTransaction } from '../../../db.js';
 import { ApiError } from '../../../lib/errors.js';
-import type { Caller } from '../access/caller.js';
+import { assertNotImpersonating, type Caller } from '../access/caller.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import type { UserDoc } from '../models/user.js';
 import { findUserById, findUserWithPasswordById, updateUserName, updateUserPassword } from '../users/users.repository.js';
@@ -16,14 +16,23 @@ export interface Profile {
   team?: string;
   contract: UserDoc['contract'];
   superAdmin: boolean;
-  mustChangePassword: boolean;
   /** The person's place in the organisation tree. */
   orgRoleId?: string;
   manager: { id: string; name: string } | null;
+  employeeNumber?: number;
+  photoUpdatedAt?: Date;
+  /** The super admin seeing the app as this person, when that is what this session is. */
+  impersonatedBy?: { id: string; name: string };
+  /** Whether this session may start signing in as someone else, which only a super admin can, in development. */
+  canImpersonate: boolean;
 }
 
-export async function getProfile(user: UserDoc): Promise<Profile> {
-  const manager = user.managerId ? await findUserById(user.managerId) : null;
+export async function getProfile(user: UserDoc, session: { impersonatorId?: string; isImpersonationEnabled?: boolean } = {}): Promise<Profile> {
+  const { impersonatorId, isImpersonationEnabled = false } = session;
+  const [manager, impersonator] = await Promise.all([
+    user.managerId ? findUserById(user.managerId) : null,
+    impersonatorId ? findUserById(impersonatorId) : null,
+  ]);
   return {
     id: user._id,
     name: user.name,
@@ -33,14 +42,18 @@ export async function getProfile(user: UserDoc): Promise<Profile> {
     team: user.team,
     contract: user.contract,
     superAdmin: user.superAdmin,
-    mustChangePassword: user.mustChangePassword,
     orgRoleId: user.orgRoleId,
     manager: manager ? { id: manager._id, name: manager.name } : null,
+    employeeNumber: user.employeeNumber,
+    photoUpdatedAt: user.photoUpdatedAt,
+    ...(impersonator && { impersonatedBy: { id: impersonator._id, name: impersonator.name } }),
+    canImpersonate: user.superAdmin && isImpersonationEnabled && !impersonatorId,
   };
 }
 
 /** People can change only their own name. HR owns job details such as title and department. */
 export async function updateOwnName(caller: Caller, name: string, ipAddress: string | undefined): Promise<Profile> {
+  assertNotImpersonating(caller);
   const { user } = caller;
   const updatedUser = await updateUserName(user._id, name);
   if (!updatedUser) throw new ApiError(404, 'unknown_user', 'No such user.');
@@ -76,6 +89,7 @@ export async function changeOwnPassword(
   passwords: { currentPassword: string; newPassword: string },
   ipAddress: string | undefined,
 ): Promise<void> {
+  assertNotImpersonating(caller);
   const { user, sessionId } = caller;
   await assertOwnPassword(user._id, passwords.currentPassword);
 

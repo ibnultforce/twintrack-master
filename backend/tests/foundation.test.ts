@@ -43,11 +43,40 @@ describe('environment validation', () => {
     expect(() => loadConfig({ ...validEnv, JWT_ACCESS_SECRET: 'too-short' })).toThrow(/JWT_ACCESS_SECRET/);
   });
 
+  const productionEnv = {
+    ...validEnv,
+    NODE_ENV: 'production',
+    RESEND_API_KEY: 're_test',
+    PORTAL_URL: 'https://twintrack.com',
+    PUBLIC_API_URL: 'https://api.twintrack.com',
+    ENCRYPTION_KEY: 'a'.repeat(64),
+  };
+
   it('secures the refresh cookie in production and refuses to turn that off', () => {
-    expect(loadConfig({ ...validEnv, NODE_ENV: 'production' }).auth.isRefreshCookieSecure).toBe(true);
-    expect(() => loadConfig({ ...validEnv, NODE_ENV: 'production', REFRESH_COOKIE_SECURE: 'false' })).toThrow(
-      /REFRESH_COOKIE_SECURE/,
-    );
+    expect(loadConfig(productionEnv).auth.isRefreshCookieSecure).toBe(true);
+    expect(() => loadConfig({ ...productionEnv, REFRESH_COOKIE_SECURE: 'false' })).toThrow(/REFRESH_COOKIE_SECURE/);
+  });
+
+  it('needs a Resend key and the portal address in production, so links are emailed and point somewhere real', () => {
+    expect(() => loadConfig({ ...productionEnv, RESEND_API_KEY: '' })).toThrow(/RESEND_API_KEY/);
+    expect(() => loadConfig({ ...productionEnv, PORTAL_URL: undefined })).toThrow(/PORTAL_URL/);
+    const fromModuleUrls = loadConfig({ ...productionEnv, PORTAL_URL: undefined, MODULE_FRONTEND_URLS: 'master=http://twintrack.localhost:3100' });
+    expect(fromModuleUrls.email.portalUrl).toBe('http://twintrack.localhost:3100');
+  });
+
+  it('applies the email defaults outside production', () => {
+    expect(loadConfig(validEnv).email).toEqual({
+      resendApiKey: undefined,
+      from: 'TwinTrack <no-reply@twintrack.com>',
+      portalUrl: 'http://twintrack.localhost:3100',
+      passwordLinkTtlHours: 24,
+    });
+  });
+
+  it('keeps impersonation off unless asked for, and never allows it in production', () => {
+    expect(loadConfig(validEnv).auth.isImpersonationEnabled).toBe(false);
+    expect(loadConfig({ ...validEnv, IMPERSONATION_ENABLED: 'true' }).auth.isImpersonationEnabled).toBe(true);
+    expect(() => loadConfig({ ...productionEnv, IMPERSONATION_ENABLED: 'true' })).toThrow(/IMPERSONATION_ENABLED/);
   });
 
   it('reads module frontend addresses', () => {

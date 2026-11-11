@@ -48,7 +48,7 @@ export async function seedDatabase(options: {
   const profiles = options.files.profiles === undefined ? { ok: true as const, value: [] } : validateProfilesFile(options.files.profiles, manifests);
   if (!profiles.ok) throw new ValidationFailure('Seed profiles file is invalid', profiles.errors);
   const profileIds = new Set(profiles.value.map((profile) => profile._id));
-  const users = validateUsersFile(options.files.users, manifests, { orgRoleIds, profileIds });
+  const users = validateUsersFile(options.files.users, { orgRoleIds, profileIds });
   if (!users.ok) throw new ValidationFailure('Seed users file is invalid', users.errors);
   const salaries = options.files.salaries === undefined
     ? { ok: true as const, value: [] }
