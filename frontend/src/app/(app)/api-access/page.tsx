@@ -8,9 +8,10 @@ import { describeError } from '@/lib/api/http';
 import type { ApiToken, ConnectedApp } from '@/lib/api/types';
 import { formatTime } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
-import { useProfile } from '@/session/SessionProvider';
+import { useProfile, useSession } from '@/session/SessionProvider';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+const CREATE_TOKEN_PERMISSION = 'apiToken.create';
 const EXPIRY_CHOICES = [
   { value: '30', label: '30 days' },
   { value: '90', label: '90 days' },
@@ -59,6 +60,7 @@ function NewTokenForm({ onCreated }: { onCreated: (token: string) => void }) {
 /** Personal API tokens for tools such as Claude Code, and apps connected over OAuth, such as claude.ai. */
 export default function ApiAccessPage() {
   const profile = useProfile();
+  const { can } = useSession();
   const [newToken, setNewToken] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<ApiToken | null>(null);
   const [disconnecting, setDisconnecting] = useState<ConnectedApp | null>(null);
@@ -99,7 +101,13 @@ export default function ApiAccessPage() {
                   </table>
                 </div>
               )}
-              <div className="spaced"><NewTokenForm onCreated={(token) => { setNewToken(token); access.reload(); }} /></div>
+              <div className="spaced">
+                {can(CREATE_TOKEN_PERMISSION) ? (
+                  <NewTokenForm onCreated={(token) => { setNewToken(token); access.reload(); }} />
+                ) : (
+                  <Notice tone="warning">Your profile doesn&apos;t let you make tokens or connect apps. Ask an admin if you need API access. You can still revoke the ones you have.</Notice>
+                )}
+              </div>
             </Card>
             <Card title="Connected apps">
               <p className="note">Apps you allowed to connect, such as a claude.ai connector. Disconnecting one stops it at once.</p>

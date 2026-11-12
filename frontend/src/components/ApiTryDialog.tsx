@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { Dialog } from '@/components/Dialog';
 import { describeConnectionProblem, tryApiRequest, type TryResult } from '@/lib/api/http';
+import type { ApiExample, ApiGuide } from '@/lib/api/types';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 const METHODS_WITH_BODY = new Set<Method>(['POST', 'PUT', 'PATCH']);
@@ -51,11 +52,54 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+/** The answer a sample expects, such as "201" or "403 out_of_scope". */
+const expectedAnswer = (example: ApiExample) => `${example.expectedStatus}${example.expectedCode ? ` ${example.expectedCode}` : ''}`;
+
+/** Sample requests to fill the form from, each saying what the API should answer and who sends it in the example data. */
+function SampleList({ examples, chosen, onChoose }: { examples: ApiExample[]; chosen: ApiExample | null; onChoose: (example: ApiExample) => void }) {
+  return (
+    <div className="field">
+      <span className="label-text">Samples</span>
+      <ul className="try-samples">
+        {examples.map((example) => (
+          <li key={example.title}>
+            <button type="button" className="try-sample" aria-pressed={example === chosen} onClick={() => onChoose(example)}>
+              <span className={`try-status ${example.outcome === 'accepted' ? 'good' : 'warning'}`}>{expectedAnswer(example)}</span>
+              <span>{example.title}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** What the chosen sample needs and expects, so a different answer when sent as yourself makes sense. */
+function SampleNotes({ example }: { example: ApiExample }) {
+  return (
+    <div className="try-sample-notes">
+      <p>
+        Expected: <span className={`try-status ${example.outcome === 'accepted' ? 'good' : 'warning'}`}>{expectedAnswer(example)}</span>
+        {example.sentBy ? <> when {example.sentBy} sends it in the example data. Sent as you, your own access decides.</> : null}
+      </p>
+      {example.sendFirst.length > 0 ? (
+        <p>The example sends first: {example.sendFirst.map((step, index) => <span key={`${step}-${index}`}>{index > 0 ? ', then ' : ''}<code>{step}</code></span>)}.</p>
+      ) : null}
+      {example.needs.length > 0 ? (
+        <p>Fill in first: {example.needs.map((need, index) => (
+          <span key={need.value}>{index > 0 ? ', ' : ''}<code>{need.value}</code> from <code>{need.madeBy}</code></span>
+        ))}.</p>
+      ) : null}
+      {example.changesData ? <p>This sample changes data.</p> : null}
+    </div>
+  );
+}
+
 /**
  * Sends one API as the signed-in person, with their own access token, and shows the answer. Requests run for real,
- * so a change it makes is saved.
+ * so a change it makes is saved. Samples from the API's tested scenarios can fill the form.
  */
-export function ApiTryDialog({ api, permission, onClose }: { api: string; permission: string; onClose: () => void }) {
+export function ApiTryDialog({ api, permission, guide, onClose }: { api: string; permission: string; guide?: ApiGuide; onClose: () => void }) {
   const { method, path, parameters } = parseApi(api);
   const hasBody = METHODS_WITH_BODY.has(method);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -64,6 +108,16 @@ export function ApiTryDialog({ api, permission, onClose }: { api: string; permis
   const [result, setResult] = useState<TryResult | null>(null);
   const [problem, setProblem] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [chosen, setChosen] = useState<ApiExample | null>(null);
+
+  const applySample = (example: ApiExample) => {
+    setChosen(example);
+    setValues(example.parameters);
+    setQuery(example.query);
+    if (hasBody) setBodyText(example.body || '{\n  \n}');
+    setResult(null);
+    setProblem('');
+  };
 
   const missing = parameters.filter((name) => !values[name]?.trim());
   const finalPath = buildPath(path, values, query);
@@ -94,6 +148,9 @@ export function ApiTryDialog({ api, permission, onClose }: { api: string; permis
     <Dialog title={`Try ${api}`} onClose={onClose}>
       <form className="form" onSubmit={(event) => void send(event)}>
         <p className="note">Opened by <code>{permission}</code>. This sends a real request with your access, so anything it changes is saved.</p>
+        {guide?.purpose ? <p>{guide.purpose}{guide.input ? <span className="meta"> Takes: {guide.input}.</span> : null}</p> : null}
+        {guide && guide.examples.length > 0 ? <SampleList examples={guide.examples} chosen={chosen} onChoose={applySample} /> : null}
+        {chosen ? <SampleNotes example={chosen} /> : null}
         {parameters.map((name) => (
           <div className="field" key={name}>
             <label htmlFor={`try-${name}`}>{name}</label>

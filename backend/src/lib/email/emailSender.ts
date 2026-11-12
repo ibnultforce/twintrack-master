@@ -19,8 +19,18 @@ export class EmailDeliveryError extends Error {}
 
 const RESEND_EMAILS_URL = 'https://api.resend.com/emails';
 
-/** Sends through Resend's HTTP API: https://resend.com/docs/api-reference/emails/send-email */
-export function createResendEmailSender(apiKey: string, from: string): EmailSender {
+/** Resend's own explanation of a refusal, such as an unverified domain. It never contains the key. */
+async function readResendRefusal(response: Response): Promise<string> {
+  const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+  return typeof body?.message === 'string' ? body.message : 'no reason given';
+}
+
+/**
+ * Sends through Resend's HTTP API: https://resend.com/docs/api-reference/emails/send-email
+ * A refusal is logged with Resend's reason, so an admin can see why, without the email's text or links.
+ */
+export function createResendEmailSender(apiKey: string, from: string, logLevel: string): EmailSender {
+  const logger = pino({ level: logLevel });
   return {
     async send(message) {
       let response: Response;
@@ -31,9 +41,14 @@ export function createResendEmailSender(apiKey: string, from: string): EmailSend
           body: JSON.stringify({ from, to: [message.to], subject: message.subject, html: message.html, text: message.text }),
         });
       } catch (error) {
+        logger.warn({ to: message.to, reason: (error as Error).message }, 'Could not reach Resend');
         throw new EmailDeliveryError(`Could not reach Resend: ${(error as Error).message}`);
       }
-      if (!response.ok) throw new EmailDeliveryError(`Resend refused the email with status ${response.status}.`);
+      if (!response.ok) {
+        const reason = await readResendRefusal(response);
+        logger.warn({ to: message.to, status: response.status, reason }, 'Resend refused the email');
+        throw new EmailDeliveryError(`Resend refused the email with status ${response.status}: ${reason}`);
+      }
     },
   };
 }
@@ -52,5 +67,5 @@ export function createLogEmailSender(logLevel: string): EmailSender {
 }
 
 export function createEmailSender(settings: EmailSettings, logLevel: string): EmailSender {
-  return settings.resendApiKey ? createResendEmailSender(settings.resendApiKey, settings.from) : createLogEmailSender(logLevel);
+  return settings.resendApiKey ? createResendEmailSender(settings.resendApiKey, settings.from, logLevel) : createLogEmailSender(logLevel);
 }

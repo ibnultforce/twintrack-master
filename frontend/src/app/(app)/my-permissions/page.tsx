@@ -5,7 +5,7 @@ import { ApiTryDialog } from '@/components/ApiTryDialog';
 import { FIELD_LEVEL_LABELS } from '@/components/FieldAccessPanel';
 import { Card, Chips, Loaded, PageHead, Pill, Tabs } from '@/components/ui';
 import { getMyModuleAccess, getMyModules } from '@/lib/api/account';
-import type { FieldAccessMap, ModuleAccess, Scope } from '@/lib/api/types';
+import type { ApiGuide, FieldAccessMap, ModuleAccess, Scope } from '@/lib/api/types';
 import { humanize, SCOPE_LABELS, SCOPE_LEGEND } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 
@@ -127,7 +127,7 @@ function ModuleApis({ moduleKey, access, onTry }: { moduleKey: string; access: M
 export default function YourPermissionsPage() {
   const access = useLoad(loadMyAccess, []);
   const [chosenModule, setChosenModule] = useState('');
-  const [trying, setTrying] = useState<{ api: string; permission: string } | null>(null);
+  const [trying, setTrying] = useState<{ api: string; permission: string; guide?: ApiGuide } | null>(null);
 
   return (
     <>
@@ -145,7 +145,7 @@ export default function YourPermissionsPage() {
                 title={current.module.name}
                 aside={<span className="note">{current.access.profileName ? `Profile: ${current.access.profileName}` : 'No profile'} · {apiCount} {apiCount === 1 ? 'API' : 'APIs'}</span>}
               >
-                <ModuleApis moduleKey={current.module.key} access={current.access} onTry={(api, permission) => setTrying({ api, permission })} />
+                <ModuleApis moduleKey={current.module.key} access={current.access} onTry={(api, permission) => setTrying({ api, permission, guide: current.access.guides?.[api] })} />
                 <FieldAccessDetails fieldAccess={current.access.fieldAccess} />
               </Card>
               <p className="note spaced">{SCOPE_LEGEND}</p>
@@ -153,7 +153,14 @@ export default function YourPermissionsPage() {
           );
         }}
       </Loaded>
-      {trying ? <ApiTryDialog api={trying.api} permission={trying.permission} onClose={() => setTrying(null)} /> : null}
+      {trying ? (
+        <ApiTryDialog
+          api={trying.api}
+          permission={trying.permission}
+          guide={trying.guide}
+          onClose={() => setTrying(null)}
+        />
+      ) : null}
     </>
   );
 }

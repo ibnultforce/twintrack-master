@@ -40,7 +40,7 @@ describe('API tokens, OAuth and MCP', () => {
   beforeEach(async () => {
     await importSeedManifests();
     await addOrgRole('or_root');
-    await AccessProfile.create({ _id: 'ap_clients', name: 'Client reader', grants: { master: { client: { actions: ['read'] } } } });
+    await AccessProfile.create({ _id: 'ap_clients', name: 'Client reader', grants: { master: { client: { actions: ['read'] }, apiToken: { actions: ['create'], scope: 'own' } } } });
     await addPerson('farhana', { name: 'Farhana Kabir', superAdmin: true, orgRoleId: 'or_root' });
     await addPerson('karim', { name: 'Karim Ahmed', title: 'Backend Developer', profileId: 'ap_developer', orgRoleId: 'or_root' });
     await addPerson('sara', { name: 'Sara Sales', profileId: 'ap_clients', orgRoleId: 'or_root' });
@@ -92,6 +92,66 @@ describe('API tokens, OAuth and MCP', () => {
     });
   });
 
+  describe("who may make tokens, and seeing everyone's", () => {
+    beforeEach(async () => {
+      await addOrgRole('or_lead', 'or_root');
+      await addOrgRole('or_team', 'or_lead');
+      await AccessProfile.create({ _id: 'ap_token_lead', name: 'Token lead', grants: { master: { apiToken: { actions: ['read', 'delete'], scope: 'team' } } } });
+      await AccessProfile.create({ _id: 'ap_nothing', name: 'Nothing', grants: {} });
+      await addPerson('lena', { name: 'Lena Lead', profileId: 'ap_token_lead', orgRoleId: 'or_lead' });
+      await addPerson('tom', { name: 'Tom Team', profileId: 'ap_developer', orgRoleId: 'or_team' });
+      await addPerson('nina', { name: 'Nina None', profileId: 'ap_nothing', orgRoleId: 'or_team' });
+    });
+
+    it('needs apiToken.create to make a token, but anyone may list and revoke their own', async () => {
+      const nina = await as('nina');
+      expect((await nina.post('/me/api-tokens', { name: 'Script' })).body.error.code).toBe('forbidden');
+      expect((await nina.get('/me/api-tokens')).status).toBe(200);
+
+      const { id } = await makeToken('tom');
+      await User.updateOne({ _id: 'tom' }, { $set: { profileId: 'ap_nothing' } });
+      expect((await (await as('tom')).post(`/me/api-tokens/${id}/revoke`)).body.revokedAt).toEqual(expect.any(String));
+    });
+
+    it("lists the tokens of the people in the admin's scope, with their owners", async () => {
+      await makeToken('tom');
+      await makeToken('karim');
+      const lena = await as('lena');
+      const { tokens, total } = (await lena.get('/api-tokens')).body;
+      expect(total).toBe(1);
+      expect(tokens).toEqual([expect.objectContaining({ name: 'Claude Code', owner: { id: 'tom', name: 'Tom Team' } })]);
+      expect(tokens[0]).not.toHaveProperty('token');
+      expect((await lena.get('/api-tokens').query({ userId: 'karim' })).body).toEqual({ total: 0, tokens: [] });
+      expect((await (await as('farhana')).get('/api-tokens')).body.total).toBe(2);
+    });
+
+    it("revokes a token in scope, which stops it at once, and treats others' as not found", async () => {
+      const tom = await makeToken('tom');
+      const karim = await makeToken('karim');
+      const lena = await as('lena');
+      expect((await lena.post(`/api-tokens/${tom.id}/revoke`)).body.revokedAt).toEqual(expect.any(String));
+      expect((await callMcp(app, tom.token, 'tools/list')).status).toBe(401);
+      expect((await lena.post(`/api-tokens/${karim.id}/revoke`)).body.error.code).toBe('unknown_token');
+      expect(await AuditLog.findOne({ action: 'apiToken.revoked', actorId: 'lena' }).lean()).toMatchObject({ targetId: tom.id });
+    });
+
+    it("keeps a super admin's tokens out of everyone else's reach", async () => {
+      const { id } = await makeToken('farhana');
+      await AccessProfile.updateOne({ _id: 'ap_token_lead' }, { $set: { 'grants.master.apiToken.scope': 'all' } });
+      const lena = await as('lena');
+      expect((await lena.get('/api-tokens')).body.tokens.map((token: { owner: { id: string } }) => token.owner.id)).not.toContain('farhana');
+      expect((await lena.post(`/api-tokens/${id}/revoke`)).status).toBe(404);
+    });
+
+    it('needs apiToken.read and apiToken.delete for the admin routes', async () => {
+      const nina = await as('nina');
+      expect((await nina.get('/api-tokens')).status).toBe(403);
+      expect((await nina.get('/connected-apps')).status).toBe(403);
+      expect((await nina.post('/api-tokens/at_x/revoke')).status).toBe(403);
+      expect((await nina.post('/connected-apps/x/revoke')).status).toBe(403);
+    });
+  });
+
   describe('the MCP endpoint', () => {
     it('asks for a token, and says where to start OAuth', async () => {
       const response = await callMcp(app, null, 'tools/list');
@@ -111,7 +171,7 @@ describe('API tokens, OAuth and MCP', () => {
       expect(tools).toEqual(expect.arrayContaining(['whoami', 'my_permissions', 'find_colleagues', 'list_clients']));
 
       const whoami = toolData(await callTool(app, token, 'whoami'));
-      expect(whoami).toMatchObject({ id: 'karim', name: 'Karim Ahmed', modules: [{ key: 'tasks' }] });
+      expect(whoami).toMatchObject({ id: 'karim', name: 'Karim Ahmed', modules: [{ key: 'master' }, { key: 'tasks' }] });
       expect(toolData(await callTool(app, token, 'my_permissions', { module: 'tasks' }))).toMatchObject({ hasAccess: true, permissions: { 'task.read': 'own' } });
       expect(toolData(await callTool(app, token, 'find_colleagues', { search: 'sara' })).people.map((person: { id: string }) => person.id)).toEqual(['sara']);
       expect((await ApiToken.findOne().lean())?.lastUsedAt).toBeInstanceOf(Date);
@@ -255,6 +315,29 @@ describe('API tokens, OAuth and MCP', () => {
       expect((await callMcp(app, tokens.access_token, 'tools/list')).status).toBe(401);
       expect((await karim.get('/me/connected-apps')).body.apps).toEqual([]);
       expect((await (await as('sara')).post(`/me/connected-apps/${connected.id}/revoke`)).status).toBe(404);
+    });
+
+    it('needs apiToken.create to approve an app, but anyone may decline', async () => {
+      await AccessProfile.create({ _id: 'ap_nothing', name: 'Nothing', grants: {} });
+      await addPerson('nina', { name: 'Nina None', profileId: 'ap_nothing', orgRoleId: 'or_root' });
+      const client = await registerClient();
+      const nina = await as('nina');
+      const requestId = await startAuthorization(client.client_id);
+      expect((await nina.post(`/oauth/requests/${requestId}/decision`, { approve: true })).body.error.code).toBe('forbidden');
+      const { redirectUrl } = (await nina.post(`/oauth/requests/${requestId}/decision`, { approve: false })).body;
+      expect(new URL(redirectUrl).searchParams.get('error')).toBe('access_denied');
+    });
+
+    it("lets an admin see and disconnect the apps of people in their scope", async () => {
+      const { tokens } = await connectKarim();
+      const farhana = await as('farhana');
+      const { apps, total } = (await farhana.get('/connected-apps')).body;
+      expect(total).toBe(1);
+      expect(apps[0]).toMatchObject({ clientName: 'Claude', owner: { id: 'karim', name: 'Karim Ahmed' } });
+      expect((await (await as('sara')).get('/connected-apps')).status).toBe(403);
+      expect((await farhana.post(`/connected-apps/${apps[0].id}/revoke`)).body).toEqual({ id: apps[0].id, revoked: true });
+      expect((await callMcp(app, tokens.access_token, 'tools/list')).status).toBe(401);
+      expect((await farhana.post('/connected-apps/nope/revoke')).body.error.code).toBe('unknown_connection');
     });
 
     it('answers 404 for a request that does not exist, and needs a session', async () => {

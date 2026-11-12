@@ -1,20 +1,25 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { ApiError } from '../../../lib/errors.js';
-import { assertNotImpersonating, type Caller } from '../access/caller.js';
+import type { PageRequest } from '../../../lib/query.js';
+import { assertNotImpersonating, type Actor, type Caller } from '../access/caller.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import { hashRandomToken } from '../auth/tokens.js';
 import type { ApiTokenDoc } from '../models/apiToken.js';
 import type { UserDoc } from '../models/user.js';
-import { findUserById } from '../users/users.repository.js';
+import type { Scope } from '../moduleRegistry/manifest.js';
+import { findUserById, findUsersByIds } from '../users/users.repository.js';
 import {
   countActiveApiTokensOf,
+  findApiTokenById,
   findApiTokenByHash,
   findApiTokenOf,
+  findApiTokenPage,
   findApiTokensOf,
   insertApiToken,
   markApiTokenRevoked,
   recordApiTokenUsed,
 } from './apiTokens.repository.js';
+import { findTokenOwnerReach, ownerReachCondition, reachesOwner } from './tokenOwnerReach.js';
 
 export const API_TOKEN_PREFIX = 'tt_pat_';
 const TOKEN_BYTES = 32;
@@ -47,7 +52,7 @@ const toApiTokenView = (token: ApiTokenDoc): ApiTokenView => ({
 
 const unknownToken = () => new ApiError(404, 'unknown_token', 'No such token.');
 
-const auditFields = (caller: Caller, token: Pick<ApiTokenDoc, '_id' | 'name'>, ipAddress: string | undefined) => ({
+const auditFields = (caller: { user: Pick<UserDoc, '_id' | 'name'> }, token: Pick<ApiTokenDoc, '_id' | 'name'>, ipAddress: string | undefined) => ({
   actorId: caller.user._id,
   actorName: caller.user.name,
   targetType: 'apiToken',
@@ -91,10 +96,38 @@ export async function revokeApiToken(caller: Caller, tokenId: string, ipAddress:
   if (!token) throw unknownToken();
   if (token.revokedAt) return toApiTokenView(token);
 
-  const revoked = await markApiTokenRevoked(tokenId);
+  return markRevoked(caller, token, ipAddress);
+}
+
+async function markRevoked(revokedBy: { user: Pick<UserDoc, '_id' | 'name'> }, token: ApiTokenDoc, ipAddress: string | undefined) {
+  const revoked = await markApiTokenRevoked(token._id);
   if (!revoked) throw unknownToken();
-  await recordAudit({ action: 'apiToken.revoked', ...auditFields(caller, token, ipAddress) });
+  await recordAudit({ action: 'apiToken.revoked', ...auditFields(revokedBy, token, ipAddress) });
   return toApiTokenView(revoked);
+}
+
+export type ApiTokenAdminView = ApiTokenView & { owner: { id: string; name: string } };
+
+/** One page of the tokens of everyone apiToken.read reaches, newest first. userId narrows it to one person. */
+export async function listApiTokensInScope(actor: Actor, scope: Scope, query: PageRequest & { userId?: string }) {
+  const reach = await findTokenOwnerReach(actor, scope);
+  if (query.userId && !reachesOwner(reach, query.userId)) return { total: 0, tokens: [] };
+
+  const { tokens, total } = await findApiTokenPage(query.userId ?? ownerReachCondition(reach), query);
+  const owners = new Map((await findUsersByIds([...new Set(tokens.map((token) => token.userId))])).map((user) => [user._id, user.name]));
+  const views: ApiTokenAdminView[] = tokens.map((token) => ({
+    ...toApiTokenView(token),
+    owner: { id: token.userId, name: owners.get(token.userId) ?? 'Removed person' },
+  }));
+  return { total, tokens: views };
+}
+
+/** Revokes anyone's token that apiToken.delete reaches. Tokens out of reach answer as not found. */
+export async function revokeApiTokenInScope(actor: Actor, scope: Scope, tokenId: string): Promise<ApiTokenView> {
+  const token = await findApiTokenById(tokenId);
+  if (!token || !reachesOwner(await findTokenOwnerReach(actor, scope), token.userId)) throw unknownToken();
+  if (token.revokedAt) return toApiTokenView(token);
+  return markRevoked(actor, token, actor.ipAddress);
 }
 
 export const isApiToken = (presented: string) => presented.startsWith(API_TOKEN_PREFIX);

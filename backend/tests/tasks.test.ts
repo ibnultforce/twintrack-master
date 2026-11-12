@@ -2,9 +2,11 @@ import { readFileSync } from 'node:fs';
 import type { Application } from 'express';
 import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { resolveDependencies } from '../src/appDependencies.js';
 import { createApp } from '../src/app.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
-import { tasksRoutes } from '../src/modules/tasks/tasks.routes.js';
+import { Task } from '../src/modules/tasks/models/task.js';
+import { createTasksRoutes } from '../src/modules/tasks/tasks.routes.js';
 import { formatTaskNumber, secondsWorked } from '../src/modules/tasks/task/taskLifecycle.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { useTestDatabase } from './helpers/database.js';
@@ -55,7 +57,7 @@ describe('Tasks module', () => {
     };
     const describeRoute = (route: { method: string; path: string; access: string; permission?: string }) => `${route.method} ${route.path} ${route.access} ${route.permission}`;
     const built = manifest.routes.filter((route) => !route.planned).map((route) => describeRoute({ ...route, path: `${manifest.module.baseUrl}${route.path}` }));
-    expect(built.sort()).toEqual(tasksRoutes.map(describeRoute).sort());
+    expect(built.sort()).toEqual(createTasksRoutes(createTestConfig(), resolveDependencies(createTestConfig())).map(describeRoute).sort());
   });
 
   describe('lifecycle rules', () => {
@@ -127,7 +129,9 @@ describe('Tasks module', () => {
     });
 
     it('lists overdue tasks', async () => {
-      const { rahim } = await setUpProjectWithTask({ dueDate: '2020-01-01' });
+      // A new task can't be due in the past, so this one becomes overdue the way real ones do: its date passes.
+      const { rahim, taskId } = await setUpProjectWithTask();
+      await Task.updateOne({ _id: taskId }, { $set: { dueDate: new Date('2020-01-01') } });
       expect((await rahim.get('/tasks/tasks?overdue=true')).body.total).toBe(1);
     });
 
@@ -209,7 +213,7 @@ describe('Tasks module', () => {
     it('needs QA hours when approving a task that went through QA', async () => {
       const { rahim, taskId } = await setUpProjectWithTask();
       await workThrough(taskId);
-      await rahim.post(`/tasks/tasks/${taskId}/qa-handover`, { qaId: ID.MEHEDI });
+      await rahim.post(`/tasks/tasks/${taskId}/qa-handover`, { qaId: ID.MEHEDI, qaEstimatedHours: 2 });
       const mehedi = await as('mehedi');
       await mehedi.post(`/tasks/tasks/${taskId}/qa-start`);
       await mehedi.post(`/tasks/tasks/${taskId}/qa-complete`, { result: 'pass' });

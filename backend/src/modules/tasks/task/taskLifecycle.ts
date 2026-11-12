@@ -8,6 +8,14 @@ import { CLOSED_TASK_STATUSES, type TaskStatus } from '../models/task.js';
 
 export const TASK_NUMBER_DIGITS = 5;
 
+/** Career points per hour of work. A task's points are its hours times this. */
+export const POINTS_PER_HOUR = 50;
+/** A revert takes this share of the task's points from whoever did the work. */
+export const REVERT_PENALTY_SHARE = 0.05;
+
+export const pointsForHours = (hours: number) => Math.round(hours * POINTS_PER_HOUR);
+export const revertPenaltyFor = (pointValue: number) => Math.round(pointValue * REVERT_PENALTY_SHARE);
+
 /** The number people see, such as T-00102. */
 export const formatTaskNumber = (taskNumber: number) => `T-${String(taskNumber).padStart(TASK_NUMBER_DIGITS, '0')}`;
 
@@ -17,6 +25,7 @@ export const STEP_STARTS_FROM = {
   pause: ['in_progress'],
   complete: ['in_progress'],
   qaHandover: ['pending_approval'],
+  qaEstimate: ['qa_todo', 'qa_in_progress'],
   qaStart: ['qa_todo', 'qa_in_progress'],
   qaPause: ['qa_in_progress'],
   qaComplete: ['qa_in_progress'],

@@ -14,6 +14,8 @@ export interface ProjectDoc extends RecordFields {
   deadline?: Date;
   leadId: string;
   memberIds: string[];
+  /** The Master client the work is for, which invoices bill. Optional, for internal projects. */
+  clientId?: string;
 }
 
 const projectSchema = new Schema<ProjectDoc>(
@@ -26,6 +28,7 @@ const projectSchema = new Schema<ProjectDoc>(
     deadline: Date,
     leadId: { type: String, required: true, index: true },
     memberIds: { type: [String], default: [], index: true },
+    clientId: { type: String, index: true },
   },
   { timestamps: true },
 );

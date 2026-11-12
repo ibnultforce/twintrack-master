@@ -7,6 +7,7 @@ import { getActor } from '../../master/access/caller.js';
 import { getPermissionScope as scopeOf } from '../../master/access/scope.js';
 import { PROJECT_STATUSES } from '../models/project.js';
 import { createProject, getProject, listProjects, setProjectMembers, updateProject } from './project.service.js';
+import { getProjectsHealth, getRoster } from './projectReports.service.js';
 
 const MAX_ID_LENGTH = 100;
 const MAX_NAME_LENGTH = 200;
@@ -29,7 +30,11 @@ const createBodySchema = z.strictObject({
   deadline: dateField.optional(),
   leadId: personIdField.optional(),
   memberIds: z.array(personIdField).max(MAX_MEMBERS).optional(),
+  clientId: personIdField.optional(),
 });
+
+// Only one lead's projects, such as your own.
+const reportQuerySchema = z.object({ leadId: personIdField.optional() });
 
 const updateBodySchema = z
   .strictObject({
@@ -39,6 +44,7 @@ const updateBodySchema = z
     deadline: dateField.optional(),
     leadId: personIdField.optional(),
     status: z.enum(PROJECT_STATUSES).optional(),
+    clientId: personIdField.optional(),
     version: versionField.optional(),
   })
   .refine(({ version: _version, ...changes }) => Object.keys(changes).length > 0, { message: 'send at least one field to change' });
@@ -61,14 +67,28 @@ const handleUpdate: RequestHandler = async (req, res) => {
   res.json(await updateProject(getActor(req), scopeOf(req), String(req.params.id), parseRequestBody(updateBodySchema, req.body)));
 };
 
+const handleRoster: RequestHandler = async (req, res) => {
+  res.json(await getRoster(getActor(req), scopeOf(req), parseRequestQuery(reportQuerySchema, req.query).leadId));
+};
+
 const handleSetMembers: RequestHandler = async (req, res) => {
   res.json(await setProjectMembers(getActor(req), scopeOf(req), String(req.params.id), parseRequestBody(membersBodySchema, req.body)));
 };
 
-export const projectRoutes: ApiRoute[] = [
-  { method: 'GET', path: '/tasks/projects', access: 'private', permission: 'project.read', handler: handleList },
-  { method: 'POST', path: '/tasks/projects', access: 'private', permission: 'project.create', handler: handleCreate },
-  { method: 'GET', path: '/tasks/projects/:id', access: 'private', permission: 'project.read', handler: handleGet },
-  { method: 'PATCH', path: '/tasks/projects/:id', access: 'private', permission: 'project.update', handler: handleUpdate },
-  { method: 'PUT', path: '/tasks/projects/:id/members', access: 'private', permission: 'project.update', handler: handleSetMembers },
-];
+/** defaultHourlyRate prices this month's incentives in project health, for leads with no rate of their own. */
+export function createProjectRoutes(defaultHourlyRate: number): ApiRoute[] {
+  const handleHealth: RequestHandler = async (req, res) => {
+    res.json(await getProjectsHealth(getActor(req), scopeOf(req), defaultHourlyRate, parseRequestQuery(reportQuerySchema, req.query).leadId));
+  };
+
+  return [
+    { method: 'GET', path: '/tasks/projects', access: 'private', permission: 'project.read', handler: handleList },
+    { method: 'POST', path: '/tasks/projects', access: 'private', permission: 'project.create', handler: handleCreate },
+    // Registered before /tasks/projects/:id, which would otherwise read these names as project ids.
+    { method: 'GET', path: '/tasks/projects/health', access: 'private', permission: 'project.read', handler: handleHealth },
+    { method: 'GET', path: '/tasks/projects/roster', access: 'private', permission: 'project.read', handler: handleRoster },
+    { method: 'GET', path: '/tasks/projects/:id', access: 'private', permission: 'project.read', handler: handleGet },
+    { method: 'PATCH', path: '/tasks/projects/:id', access: 'private', permission: 'project.update', handler: handleUpdate },
+    { method: 'PUT', path: '/tasks/projects/:id/members', access: 'private', permission: 'project.update', handler: handleSetMembers },
+  ];
+}

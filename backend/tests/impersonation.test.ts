@@ -43,7 +43,8 @@ describe('signing in as someone else, in development', () => {
     const asKarim = requestsAs(app, response.body.accessToken);
     expect((await asKarim.get('/auth/me')).body).toMatchObject({ id: 'karim', impersonatedBy: { id: 'farhana', name: 'Farhana Kabir' } });
     expect((await asKarim.get('/users')).status).toBe(403);
-    expect((await asKarim.get('/me/permissions/tasks')).body.permissions).toEqual({ 'project.read': 'own', 'task.read': 'own' });
+    expect((await asKarim.get('/me/permissions/tasks')).body.permissions).toMatchObject({ 'project.read': 'own', 'task.read': 'own' });
+    expect((await asKarim.get('/me/permissions/tasks')).body.permissions).not.toHaveProperty('task.create');
     expect(await AuditLog.exists({ action: 'auth.impersonation_started', actorId: 'farhana', targetId: 'karim' })).toBeTruthy();
   });
 

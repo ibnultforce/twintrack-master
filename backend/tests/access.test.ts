@@ -319,6 +319,7 @@ describe('access checks', () => {
       expect(response.status).toBe(200);
       expect(response.body.modules).toEqual([
         { key: 'hr', name: 'HR', description: expect.any(String) as string, frontendUrl: HR_ORIGIN, profileName: 'Engineering lead' },
+        { key: 'master', name: 'Master', description: expect.any(String) as string, frontendUrl: null, profileName: 'Engineering lead' },
         { key: 'tasks', name: 'Tasks', description: expect.any(String) as string, frontendUrl: null, profileName: 'Engineering lead' },
       ]);
     });
@@ -367,6 +368,19 @@ describe('access checks', () => {
       const { body } = await getAs(await signIn('rahim@twintrack.test'), '/me/permissions/hr');
       expect(body.apis['salary.read']).toEqual(expect.arrayContaining(['GET /hr/salaries', 'GET /hr/salaries/:id/history']));
       expect(Object.keys(body.apis)).toEqual(['salary.read']);
+    });
+
+    it('gives each API it lists a purpose and samples from the tested scenarios, leaving out token-only ones', async () => {
+      const { body } = await getAs(await signIn('rahim@twintrack.test'), '/me/permissions/hr');
+      expect(Object.keys(body.guides).sort()).toEqual([...body.apis['salary.read']].sort());
+      const history = body.guides['GET /hr/salaries/:id/history'];
+      expect(history.purpose).toEqual(expect.any(String));
+      expect(history.examples.length).toBeGreaterThan(0);
+      expect(history.examples[0]).toMatchObject({ outcome: 'accepted', expectedStatus: 200, parameters: { id: expect.any(String) } });
+      for (const example of (Object.values(body.guides) as { examples: { expectedCode?: string }[] }[]).flatMap((guide) => guide.examples)) {
+        expect(example.expectedCode ?? '').not.toMatch(/token/);
+        expect(Object.keys(example)).not.toContain('as');
+      }
     });
 
     it('answers normally for someone with no access to the module', async () => {

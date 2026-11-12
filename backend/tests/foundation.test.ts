@@ -50,7 +50,18 @@ describe('environment validation', () => {
     PORTAL_URL: 'https://twintrack.com',
     PUBLIC_API_URL: 'https://api.twintrack.com',
     ENCRYPTION_KEY: 'a'.repeat(64),
+    R2_ACCOUNT_ID: 'account',
+    R2_ACCESS_KEY_ID: 'key',
+    R2_SECRET_ACCESS_KEY: 'secret',
+    R2_BUCKET: 'bucket',
   };
+
+  it('needs R2 in production, and all four R2 settings together', () => {
+    expect(() => loadConfig({ ...productionEnv, R2_BUCKET: undefined })).toThrow(/R2_BUCKET/);
+    expect(() => loadConfig({ ...validEnv, R2_BUCKET: 'only-one' })).toThrow(/go together/);
+    expect(loadConfig(validEnv).storage).toEqual({ localDirectory: 'uploads' });
+    expect(loadConfig(productionEnv).storage.r2).toEqual({ accountId: 'account', accessKeyId: 'key', secretAccessKey: 'secret', bucket: 'bucket' });
+  });
 
   it('secures the refresh cookie in production and refuses to turn that off', () => {
     expect(loadConfig(productionEnv).auth.isRefreshCookieSecure).toBe(true);

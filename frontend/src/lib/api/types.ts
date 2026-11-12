@@ -44,6 +44,32 @@ export interface ModuleAccess {
   fieldAccess: FieldAccessMap;
   /** Each permission held and the APIs it opens, as "METHOD /path". */
   apis: Record<string, string[]>;
+  /** For each of those APIs, what it is for and sample requests, keyed like apis' values. */
+  guides: Record<string, ApiGuide>;
+}
+
+/** A sample request for one API, taken from the scenarios the API's tests replay. */
+export interface ApiExample {
+  title: string;
+  outcome: 'accepted' | 'refused';
+  expectedStatus: number;
+  expectedCode?: string;
+  /** Who sends it in the example data. The answer depends on their access, which may differ from yours. */
+  sentBy?: string;
+  /** Requests the example data sends first, as "METHOD /path". */
+  sendFirst: string[];
+  /** Path parameter values. An empty one comes from an earlier request, named in needs. */
+  parameters: Record<string, string>;
+  query: string;
+  body: string;
+  needs: { value: string; madeBy: string }[];
+  changesData: boolean;
+}
+
+export interface ApiGuide {
+  purpose?: string;
+  input?: string;
+  examples: ApiExample[];
 }
 
 export interface User {
@@ -151,6 +177,15 @@ export interface ConnectedApp {
   createdAt: string;
   lastUsedAt?: string;
 }
+
+/** Whose token or connected app it is, on the admin screen. */
+export interface TokenOwner {
+  id: string;
+  name: string;
+}
+
+export type OwnedApiToken = ApiToken & { owner: TokenOwner };
+export type OwnedConnectedApp = ConnectedApp & { owner: TokenOwner };
 
 /** An app asking to connect, as the consent page shows it. */
 export interface OAuthRequest {

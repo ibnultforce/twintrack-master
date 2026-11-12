@@ -1,3 +1,4 @@
+import { pageOffset, type PageRequest } from '../../../lib/query.js';
 import {
   OAuthAuthorizationRequest,
   OAuthClient,
@@ -82,9 +83,23 @@ export async function recordGrantUsed(grantId: string, staleBefore: Date): Promi
   );
 }
 
+const liveGrantFilter = () => ({ revokedAt: { $exists: false }, refreshTokenExpiresAt: { $gt: new Date() } });
+
 /** A person's connections that still work: not revoked, and still able to refresh. */
 export const findLiveGrantsOf = (userId: string) =>
-  OAuthGrant.find({ userId, revokedAt: { $exists: false }, refreshTokenExpiresAt: { $gt: new Date() } }).sort({ createdAt: -1 }).lean();
+  OAuthGrant.find({ userId, ...liveGrantFilter() }).sort({ createdAt: -1 }).lean();
+
+/** One page of live connections, newest first, for one person (an id) or the people a condition matches. */
+export async function findLiveGrantPage(userIdCondition: string | object, page: PageRequest) {
+  const filter = { userId: userIdCondition, ...liveGrantFilter() };
+  const [grants, total] = await Promise.all([
+    OAuthGrant.find(filter).sort({ createdAt: -1, _id: -1 }).skip(pageOffset(page)).limit(page.pageSize).lean(),
+    OAuthGrant.countDocuments(filter),
+  ]);
+  return { grants, total };
+}
+
+export const findGrantById = (grantId: string) => OAuthGrant.findById(grantId).lean();
 
 export const findGrantOf = (userId: string, grantId: string) => OAuthGrant.findOne({ _id: grantId, userId }).lean();
 

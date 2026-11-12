@@ -12,3 +12,6 @@ manifests/
 .env.local
 *.log
 .DS_Store
+
+# Files uploaded in development, when R2 isn't set up.
+backend/uploads/

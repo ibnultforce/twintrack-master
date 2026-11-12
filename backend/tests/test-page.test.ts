@@ -6,7 +6,7 @@ import { createApp } from '../src/app.js';
 import { ConfigError, loadConfig } from '../src/config.js';
 import { hrRoutes } from '../src/modules/hr/hr.routes.js';
 import { createMasterRoutes } from '../src/modules/master/master.routes.js';
-import { tasksRoutes } from '../src/modules/tasks/tasks.routes.js';
+import { createTasksRoutes } from '../src/modules/tasks/tasks.routes.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { readSeedFiles } from './helpers/testAccess.js';
 import { useTestDatabase } from './helpers/database.js';
@@ -164,7 +164,7 @@ describe('test page', () => {
   });
 
   describe('scenarios', () => {
-    const builtRouteIds = [...createMasterRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...hrRoutes, ...tasksRoutes].map((route) => `${route.method} ${route.path}`);
+    const builtRouteIds = [...createMasterRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...hrRoutes, ...createTasksRoutes(createTestConfig(), resolveDependencies(createTestConfig()))].map((route) => `${route.method} ${route.path}`);
     const routesWith = (kind: Scenario['kind']) => routes.filter((route) => route.scenarios.some((scenario) => scenario.kind === kind)).map((route) => route.id);
 
     // Succeeding on these needs something neither this replay nor someone using the page can get: a link that only
@@ -176,8 +176,15 @@ describe('test page', () => {
       'GET /oauth/requests/:id',
       'POST /oauth/requests/:id/decision',
       'POST /me/connected-apps/:id/revoke',
+      'POST /connected-apps/:id/revoke',
       'GET /mcp',
       'DELETE /mcp',
+      // Uploads need a part's ETag header, and file links come from the storage, which a replay can't follow.
+      // attachments.test.ts and the Postman collection cover their success.
+      'POST /tasks/tasks/:id/attachments/:attachmentId/complete',
+      'GET /tasks/tasks/:id/attachments/:attachmentId/url',
+      'PUT /files/parts',
+      'GET /files/content',
     ];
 
     it.each(['success', 'fail'] as const)('give every built route in every module a %s scenario', (kind) => {
@@ -215,7 +222,8 @@ describe('test page', () => {
       for (const step of setup) {
         const answer = await sendRequest(step);
         expect(answer.status, `setup ${step.method} ${step.path}: ${JSON.stringify(answer.body)}`).toBeLessThan(300);
-        for (const [name, field] of Object.entries(step.save ?? {})) saved[name] = String(answer.body[field]);
+        // A field may be nested, such as attachment.id.
+        for (const [name, field] of Object.entries(step.save ?? {})) saved[name] = String(field.split('.').reduce<unknown>((value, key) => (value as Record<string, unknown>)?.[key], answer.body));
       }
 
       const response = await sendRequest(sent);

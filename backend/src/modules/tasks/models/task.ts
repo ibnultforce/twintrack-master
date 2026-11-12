@@ -14,11 +14,19 @@ export const CLOSED_TASK_STATUSES: readonly TaskStatus[] = ['done', 'cancelled']
 export const QA_RESULTS = ['pass', 'fail'] as const;
 export type QaResult = (typeof QA_RESULTS)[number];
 
+/**
+ * What the work is. A QA task is a tester's own work, such as writing test cases: it needs no estimate when its
+ * tester adds it for themselves, records pass or fail when it's completed, and is never handed to QA.
+ */
+export const TASK_KINDS = ['development', 'qa'] as const;
+export type TaskKind = (typeof TASK_KINDS)[number];
+
 export interface TaskDoc extends RecordFields {
   _id: string;
   /** From a counter, never reused. Shown as T-00102. */
   taskNumber: number;
   projectId: string;
+  kind: TaskKind;
   title: string;
   description?: string;
   assignedDevId: string;
@@ -30,6 +38,13 @@ export interface TaskDoc extends RecordFields {
   actualHours?: number;
   /** Chosen by the approver. */
   approvedHours?: number;
+  /** Career points the work is worth: the estimate until approval, then the approved hours. */
+  pointValue: number;
+  /** Whether the hours are billed to the client. Internal work, such as meetings or rework, isn't. */
+  billable: boolean;
+  /** Raised for a follow-up, such as by HR, with a note saying why. Works at any status. */
+  flagged: boolean;
+  flagNote?: string;
   startedAt?: Date;
   completedAt?: Date;
   approvedBy?: string;
@@ -44,6 +59,8 @@ export interface TaskDoc extends RecordFields {
   qaEstimatedHours?: number;
   qaActualHours?: number;
   qaApprovedHours?: number;
+  /** Career points the QA pass is worth, worked out the same way. */
+  qaPointValue?: number;
   qaPaused: boolean;
   qaResumedAt?: Date;
   qaAccumulatedSeconds: number;
@@ -60,6 +77,7 @@ const taskSchema = new Schema<TaskDoc>(
     _id: { type: String, required: true },
     taskNumber: { type: Number, required: true, unique: true },
     projectId: { type: String, required: true, index: true },
+    kind: { type: String, enum: TASK_KINDS, default: 'development' },
     title: { type: String, required: true },
     description: String,
     assignedDevId: { type: String, required: true, index: true },
@@ -69,6 +87,10 @@ const taskSchema = new Schema<TaskDoc>(
     estimatedHours: { type: Number, required: true, min: 0 },
     actualHours: Number,
     approvedHours: Number,
+    pointValue: { type: Number, default: 0 },
+    billable: { type: Boolean, default: true },
+    flagged: { type: Boolean, default: false, index: true },
+    flagNote: String,
     startedAt: Date,
     completedAt: Date,
     approvedBy: String,
@@ -81,6 +103,7 @@ const taskSchema = new Schema<TaskDoc>(
     qaEstimatedHours: Number,
     qaActualHours: Number,
     qaApprovedHours: Number,
+    qaPointValue: Number,
     qaPaused: { type: Boolean, default: false },
     qaResumedAt: Date,
     qaAccumulatedSeconds: { type: Number, default: 0 },

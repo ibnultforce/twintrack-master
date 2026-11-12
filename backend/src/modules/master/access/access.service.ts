@@ -1,3 +1,4 @@
+import { findApiGuides, type ApiGuide } from '../../../lib/apiExamples.js';
 import { ApiError } from '../../../lib/errors.js';
 import type { AccessProfileDoc } from '../models/accessProfile.js';
 import type { UserDoc } from '../models/user.js';
@@ -35,14 +36,17 @@ export async function listModulesForUser(grantee: Grantee, frontendUrls: Map<str
 
 /**
  * What this person can do in one module, and the APIs each permission they hold opens, as "METHOD /path", so they can
- * try them.
+ * try them, with each API's purpose and sample requests in guides.
  */
-export async function getModuleAccessForUser(grantee: Grantee, moduleKey: string): Promise<ModuleAccess & { apis: Record<string, string[]> }> {
+export async function getModuleAccessForUser(
+  grantee: Grantee,
+  moduleKey: string,
+): Promise<ModuleAccess & { apis: Record<string, string[]>; guides: Record<string, ApiGuide> }> {
   const module = await findModuleByKey(moduleKey);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
   const access = resolveModuleAccess(grantee, module);
   const apis = Object.fromEntries(Object.entries(listPermissionApis(module)).filter(([permission]) => Boolean(access.permissions[permission])));
-  return { ...access, apis };
+  return { ...access, apis, guides: findApiGuides([...new Set(Object.values(apis).flat())]) };
 }
 
 /** What this person can do in one module, for signed routes whose services decide the access. Empty if it isn't loaded. */

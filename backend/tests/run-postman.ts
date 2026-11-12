@@ -1,5 +1,7 @@
 // Runs the Postman collection with Newman against its own copy of the API, on a free port and in its own database.
 import { randomBytes } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import newman from 'newman';
@@ -25,6 +27,8 @@ const config = loadConfig({
   JWT_ACCESS_SECRET: randomBytes(48).toString('base64url'),
   // The collection checks signing in as someone else, which only development allows.
   IMPERSONATION_ENABLED: 'true',
+  // Files the collection uploads go to a temporary folder, never the repository.
+  STORAGE_DIR: join(tmpdir(), 'twintrack-postman-uploads'),
 });
 
 const uri = new URL(config.mongodbUri);

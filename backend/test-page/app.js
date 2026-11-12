@@ -176,7 +176,8 @@ async function runScenario(button) {
       if (step.cookie) await signIn(COOKIE_HOLDER_EMAIL);
       const answer = await send(filled(step), 200);
       if (answer.status >= 300) throw new SetupFailed(`${step.method} ${step.path} answered ${answer.status}${answer.body?.error ? ` ${answer.body.error.code}` : ''}.`);
-      for (const [name, field] of Object.entries(step.save ?? {})) saved[name] = String(answer.body[field]);
+      // A field may be nested, such as attachment.id.
+      for (const [name, field] of Object.entries(step.save ?? {})) saved[name] = String(field.split('.').reduce((value, key) => value?.[key], answer.body));
     }
     if (request.cookie) await signIn(COOKIE_HOLDER_EMAIL);
     const { status, body, text } = await send(filled(request), scenario.expected);

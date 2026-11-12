@@ -1,14 +1,20 @@
 import { randomBytes } from 'node:crypto';
 import { ApiError } from '../../../lib/errors.js';
-import { assertNotImpersonating, type Caller } from '../access/caller.js';
+import type { PageRequest } from '../../../lib/query.js';
+import { findPermissionsIn } from '../access/access.service.js';
+import { assertNotImpersonating, type Actor, type Caller } from '../access/caller.js';
+import { findTokenOwnerReach, ownerReachCondition, reachesOwner } from '../apiTokens/tokenOwnerReach.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import { hashRandomToken } from '../auth/tokens.js';
-import type { OAuthClientDoc } from '../models/oauth.js';
+import type { OAuthClientDoc, OAuthGrantDoc } from '../models/oauth.js';
 import type { UserDoc } from '../models/user.js';
-import { findUserById } from '../users/users.repository.js';
+import { MASTER_MODULE_KEY, type Scope } from '../moduleRegistry/manifest.js';
+import { findUserById, findUsersByIds } from '../users/users.repository.js';
 import {
   findAuthorizationRequest,
+  findGrantById,
   findGrantOf,
+  findLiveGrantPage,
   findLiveGrantsOf,
   findOAuthClient,
   findOAuthClientsByIds,
@@ -19,6 +25,8 @@ import {
 import { findUsableGrant, OAUTH_ACCESS_TOKEN_PREFIX } from './oauthProvider.js';
 
 const CODE_BYTES = 32;
+/** Connecting an app gives it a credential that acts as the person, like making an API token. */
+const CONNECT_APP_PERMISSION = 'apiToken.create';
 const LAST_USED_WRITE_INTERVAL_MS = 60_000;
 
 /** Apps name themselves when they register, so this is a claim, shown next to where the browser goes next. */
@@ -50,6 +58,10 @@ export async function getAuthorizationRequest(requestId: string) {
 export async function decideAuthorizationRequest(caller: Caller, requestId: string, approve: boolean, ipAddress: string | undefined) {
   assertNotImpersonating(caller);
   const request = await requirePendingRequest(requestId);
+  // Declining is always allowed, so nobody is left with a request they can't close.
+  if (approve && !(await findPermissionsIn(caller, MASTER_MODULE_KEY))[CONNECT_APP_PERMISSION]) {
+    throw new ApiError(403, 'forbidden', 'You do not have permission to connect apps. Ask an admin for API access.');
+  }
 
   const code = approve ? randomBytes(CODE_BYTES).toString('base64url') : null;
   if (!(await recordAuthorizationDecision(requestId, caller.user._id, code && hashRandomToken(code)))) {
@@ -90,20 +102,57 @@ export async function listConnectedApps(userId: string) {
 /** Disconnects one of the person's apps. Someone else's answers as not found, so ids can't be probed. */
 export async function revokeConnectedApp(caller: Caller, grantId: string, ipAddress: string | undefined) {
   const grant = await findGrantOf(caller.user._id, grantId);
-  if (!grant) throw new ApiError(404, 'unknown_connection', 'No such connected app.');
+  if (!grant) throw unknownConnection();
+  return disconnect(caller.user, grant, ipAddress);
+}
+
+const unknownConnection = () => new ApiError(404, 'unknown_connection', 'No such connected app.');
+
+async function disconnect(actorUser: Pick<UserDoc, '_id' | 'name'>, grant: OAuthGrantDoc, ipAddress: string | undefined) {
   if (!grant.revokedAt) {
-    await markGrantRevoked(grantId);
+    await markGrantRevoked(grant._id);
     await recordAudit({
       action: 'oauth.app_disconnected',
-      actorId: caller.user._id,
-      actorName: caller.user.name,
+      actorId: actorUser._id,
+      actorName: actorUser.name,
       targetType: 'oauthClient',
       targetId: grant.clientId,
       targetName: clientNameOf(await findOAuthClient(grant.clientId)),
       ip: ipAddress,
     });
   }
-  return { id: grantId, revoked: true };
+  return { id: grant._id, revoked: true };
+}
+
+/** One page of the connected apps of everyone apiToken.read reaches, newest first. userId narrows it to one person. */
+export async function listConnectedAppsInScope(actor: Actor, scope: Scope, query: PageRequest & { userId?: string }) {
+  const reach = await findTokenOwnerReach(actor, scope);
+  if (query.userId && !reachesOwner(reach, query.userId)) return { total: 0, apps: [] };
+
+  const { grants, total } = await findLiveGrantPage(query.userId ?? ownerReachCondition(reach), query);
+  const [clients, owners] = await Promise.all([
+    findOAuthClientsByIds([...new Set(grants.map((grant) => grant.clientId))]),
+    findUsersByIds([...new Set(grants.map((grant) => grant.userId))]),
+  ]);
+  const clientsById = new Map(clients.map((client) => [client._id, client]));
+  const ownerNames = new Map(owners.map((owner) => [owner._id, owner.name]));
+  return {
+    total,
+    apps: grants.map((grant) => ({
+      id: grant._id,
+      clientName: clientNameOf(clientsById.get(grant.clientId)),
+      createdAt: grant.createdAt,
+      lastUsedAt: grant.lastUsedAt,
+      owner: { id: grant.userId, name: ownerNames.get(grant.userId) ?? 'Removed person' },
+    })),
+  };
+}
+
+/** Disconnects anyone's app that apiToken.delete reaches. Apps out of reach answer as not found. */
+export async function revokeConnectedAppInScope(actor: Actor, scope: Scope, grantId: string) {
+  const grant = await findGrantById(grantId);
+  if (!grant || !reachesOwner(await findTokenOwnerReach(actor, scope), grant.userId)) throw unknownConnection();
+  return disconnect(actor.user, grant, actor.ipAddress);
 }
 
 export const isOAuthAccessToken = (presented: string) => presented.startsWith(OAUTH_ACCESS_TOKEN_PREFIX);

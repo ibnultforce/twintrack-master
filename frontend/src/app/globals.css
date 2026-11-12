@@ -337,7 +337,8 @@ dialog h2 { margin-bottom: 14px; font-size: 17px; font-weight: 600; }
 }
 
 /* The APIs a permission opens, listed under its resource on the Roles screen. */
-.api-list { margin: 6px 0 0; padding: 0; list-style: none; color: var(--ink-muted); font-size: 12px; text-align: left; }
+/* A resource with many routes scrolls its list instead of stretching the whole matrix row. */
+.api-list { margin: 6px 0 0; padding: 0 8px 0 0; list-style: none; color: var(--ink-muted); font-size: 12px; text-align: left; max-height: 200px; overflow-y: auto; overscroll-behavior: contain; }
 .api-list span { display: inline-block; min-width: 52px; }
 .api-list code { font-size: 12px; }
 .side-empty { padding: 8px; }
@@ -348,10 +349,11 @@ dialog h2 { margin-bottom: 14px; font-size: 17px; font-weight: 600; }
 .field-panel summary { cursor: pointer; color: var(--accent); font-weight: 600; }
 .field-panel[open] summary { margin-bottom: 8px; }
 .field-panel .note { margin: 0 0 10px; }
-.field-access-list { display: grid; grid-template-columns: 1fr; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); margin-bottom: 10px; }
+/* Long field lists scroll inside the panel; "All fields" stays pinned at the bottom. */
+.field-access-list { display: grid; grid-template-columns: 1fr; border: 1px solid var(--border); border-radius: 8px; max-height: 360px; overflow-y: auto; overscroll-behavior: contain; background: var(--surface); margin-bottom: 10px; }
 .field-item { display: grid; grid-template-columns: minmax(160px, 260px) 1fr; align-items: center; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--border); }
 .field-item:first-child { border-top: 0; }
-.field-item-all { background: var(--surface-muted); border-top: 1px solid var(--border-strong); }
+.field-item-all { position: sticky; bottom: 0; z-index: 1; background: var(--surface-muted); border-top: 1px solid var(--border-strong); }
 .field-item .segmented { justify-self: start; display: grid; grid-template-columns: 132px repeat(4, 96px); }
 .field-item .segmented button { text-align: center; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 760px) { .field-item { grid-template-columns: 1fr; gap: 6px; } .field-item .segmented { grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; } }
@@ -429,3 +431,13 @@ dialog.dialog-wide { width: min(640px, calc(100vw - 32px)); }
 .result-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .result-list li { display: flex; justify-content: space-between; gap: 12px; }
 
+
+/* Samples in the Try dialog */
+.label-text { font-weight: 600; font-size: 14px; }
+.try-samples { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 220px; overflow-y: auto; }
+.try-sample { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.try-sample:hover { border-color: var(--border-strong); }
+.try-sample[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.try-sample .try-status { flex: none; min-width: 52px; text-align: center; }
+.try-sample-notes { display: grid; gap: 4px; padding: 8px 12px; border-radius: 8px; background: var(--surface-muted); font-size: 13px; }
+.try-sample-notes p { margin: 0; }

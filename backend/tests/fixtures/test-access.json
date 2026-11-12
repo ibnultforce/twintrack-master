@@ -58,8 +58,42 @@
             "fieldAccess": {
               "qaEstimatedHours": "edit",
               "qaActualHours": "edit",
-              "qaApprovedHours": "edit"
+              "qaApprovedHours": "edit",
+              "qaPointValue": "read"
             }
+          },
+          "points": {
+            "actions": [
+              "read"
+            ],
+            "scope": "team"
+          },
+          "credential": {
+            "actions": [
+              "read",
+              "create",
+              "update",
+              "delete"
+            ],
+            "scope": "team"
+          },
+          "incentive": {
+            "actions": [
+              "read",
+              "create",
+              "update"
+            ],
+            "scope": "team"
+          }
+        },
+        "master": {
+          "apiToken": {
+            "actions": [
+              "read",
+              "create",
+              "delete"
+            ],
+            "scope": "team"
           }
         }
       }
@@ -145,6 +179,14 @@
               "update"
             ],
             "scope": "all"
+          },
+          "apiToken": {
+            "actions": [
+              "read",
+              "create",
+              "delete"
+            ],
+            "scope": "all"
           }
         },
         "tasks": {
@@ -159,6 +201,25 @@
               "read"
             ],
             "scope": "own"
+          },
+          "points": {
+            "actions": [
+              "read"
+            ],
+            "scope": "all"
+          },
+          "credential": {
+            "actions": [
+              "read",
+              "create"
+            ],
+            "scope": "all"
+          },
+          "incentive": {
+            "actions": [
+              "read"
+            ],
+            "scope": "all"
           }
         }
       }
@@ -178,6 +239,33 @@
           "task": {
             "actions": [
               "read"
+            ],
+            "scope": "own"
+          },
+          "points": {
+            "actions": [
+              "read"
+            ],
+            "scope": "own"
+          },
+          "credential": {
+            "actions": [
+              "read",
+              "create"
+            ],
+            "scope": "own"
+          },
+          "incentive": {
+            "actions": [
+              "read"
+            ],
+            "scope": "own"
+          }
+        },
+        "master": {
+          "apiToken": {
+            "actions": [
+              "create"
             ],
             "scope": "own"
           }

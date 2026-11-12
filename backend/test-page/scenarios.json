@@ -2195,7 +2195,7 @@
           "path": "/me/api-tokens",
           "purpose": "Makes a personal API token for a tool such as Claude Code, which acts as you with exactly your access. The token is in this answer only. At most ten active tokens.",
           "input": "name, expiresInDays (1 to 365, optional: missing means it never expires)",
-          "access": "Signed in, not while signed in as someone else",
+          "access": "apiToken.create in Master, not while signed in as someone else",
           "scenarios": [
             {
               "kind": "success",
@@ -2205,7 +2205,7 @@
               "request": {
                 "method": "POST",
                 "path": "/me/api-tokens",
-                "as": "karim@twintrack.test",
+                "as": "mehedi@twintrack.test",
                 "body": "{\"name\":\"Claude Code\",\"expiresInDays\":30}"
               }
             },
@@ -2217,8 +2217,20 @@
               "request": {
                 "method": "POST",
                 "path": "/me/api-tokens",
-                "as": "karim@twintrack.test",
+                "as": "mehedi@twintrack.test",
                 "body": "{}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No apiToken.create permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/me/api-tokens",
+                "as": "karim@twintrack.test",
+                "body": "{\"name\":\"Script\"}"
               }
             }
           ]
@@ -2240,7 +2252,7 @@
                 {
                   "method": "POST",
                   "path": "/me/api-tokens",
-                  "as": "karim@twintrack.test",
+                  "as": "mehedi@twintrack.test",
                   "body": "{\"name\":\"Old laptop\"}",
                   "save": {
                     "tokenId": "id"
@@ -2250,7 +2262,7 @@
               "request": {
                 "method": "POST",
                 "path": "/me/api-tokens/{{tokenId}}/revoke",
-                "as": "karim@twintrack.test"
+                "as": "mehedi@twintrack.test"
               }
             },
             {
@@ -2262,6 +2274,112 @@
                 "method": "POST",
                 "path": "/me/api-tokens/at_nobody/revoke",
                 "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /api-tokens",
+          "method": "GET",
+          "path": "/api-tokens",
+          "purpose": "Everyone's API tokens that your apiToken.read scope reaches, newest first, with each owner. Never the tokens themselves. Super admins' tokens are left out unless you are one.",
+          "input": "page, pageSize, userId (optional: one person)",
+          "access": "apiToken.read in Master, scoped",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Everyone's tokens, as an access admin",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/me/api-tokens",
+                  "as": "mehedi@twintrack.test",
+                  "body": "{\"name\":\"Laptop\"}",
+                  "save": {
+                    "tokenId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/api-tokens",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Your team's tokens, as an engineering lead",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/api-tokens",
+                "as": "rahim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No apiToken.read permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/api-tokens",
+                "as": "mehedi@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /api-tokens/:id/revoke",
+          "method": "POST",
+          "path": "/api-tokens/:id/revoke",
+          "purpose": "Stops anyone's token in your apiToken.delete scope, at once. Tokens out of reach answer as not found.",
+          "input": "no body",
+          "access": "apiToken.delete in Master, scoped",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Revoke a developer's token",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/me/api-tokens",
+                  "as": "mehedi@twintrack.test",
+                  "body": "{\"name\":\"Laptop\"}",
+                  "save": {
+                    "tokenId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/api-tokens/{{tokenId}}/revoke",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A token out of reach",
+              "expected": 404,
+              "code": "unknown_token",
+              "request": {
+                "method": "POST",
+                "path": "/api-tokens/at_nobody/revoke",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No apiToken.delete permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/api-tokens/at_nobody/revoke",
+                "as": "mehedi@twintrack.test"
               }
             }
           ]
@@ -2313,6 +2431,69 @@
                 "method": "POST",
                 "path": "/me/connected-apps/og_nobody/revoke",
                 "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /connected-apps",
+          "method": "GET",
+          "path": "/connected-apps",
+          "purpose": "Everyone's connected OAuth apps that your apiToken.read scope reaches, newest first, with each owner.",
+          "input": "page, pageSize, userId (optional: one person)",
+          "access": "apiToken.read in Master, scoped",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Everyone's connected apps, as an access admin",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/connected-apps",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No apiToken.read permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/connected-apps",
+                "as": "mehedi@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /connected-apps/:id/revoke",
+          "method": "POST",
+          "path": "/connected-apps/:id/revoke",
+          "purpose": "Disconnects anyone's app in your apiToken.delete scope, which stops its tokens at once.",
+          "input": "no body",
+          "access": "apiToken.delete in Master, scoped",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "An app out of reach",
+              "expected": 404,
+              "code": "unknown_connection",
+              "request": {
+                "method": "POST",
+                "path": "/connected-apps/og_nobody/revoke",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No apiToken.delete permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/connected-apps/og_nobody/revoke",
+                "as": "mehedi@twintrack.test"
               }
             }
           ]
@@ -2388,7 +2569,7 @@
                 {
                   "method": "POST",
                   "path": "/me/api-tokens",
-                  "as": "karim@twintrack.test",
+                  "as": "mehedi@twintrack.test",
                   "body": "{\"name\":\"Claude Code\"}",
                   "save": {
                     "mcpToken": "token"
@@ -2466,6 +2647,46 @@
               "request": {
                 "method": "DELETE",
                 "path": "/mcp"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PUT /files/parts",
+          "method": "PUT",
+          "path": "/files/parts",
+          "purpose": "Development only: saves one upload part to the API's disk, standing in for R2. The token in the address is the credential.",
+          "input": "the part bytes, token in the query",
+          "access": "Public, with a signed token",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Forged token",
+              "expected": 403,
+              "code": "invalid_file_link",
+              "request": {
+                "method": "PUT",
+                "path": "/files/parts?token=forged.token"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /files/content",
+          "method": "GET",
+          "path": "/files/content",
+          "purpose": "Development only: serves a stored file, standing in for R2's signed addresses.",
+          "input": "token in the query",
+          "access": "Public, with a signed token",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Forged token",
+              "expected": 403,
+              "code": "invalid_file_link",
+              "request": {
+                "method": "GET",
+                "path": "/files/content?token=forged.token"
               }
             }
           ]
@@ -6734,6 +6955,1615 @@
                 "as": "rahim@twintrack.test",
                 "body": "{\"taskIds\":[\"{{otherTaskId}}\"]}"
               }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/tasks/summary",
+          "method": "GET",
+          "path": "/tasks/tasks/summary",
+          "purpose": "Totals over the tasks the filters match within your scope: count, estimated, actual and variance hours, and points.",
+          "input": "The list filters",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Totals for a project",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/summary?projectId={{projectId}}",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/summary",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/tasks/export",
+          "method": "GET",
+          "path": "/tasks/tasks/export",
+          "purpose": "The filtered tasks as a CSV file, one row per task, with fields you may not see left empty. At most 5,000 rows.",
+          "input": "The list filters",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Export a project",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/export?projectId={{projectId}}",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Bad filter",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/export?flagged=maybe",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/tasks/search",
+          "method": "GET",
+          "path": "/tasks/tasks/search",
+          "purpose": "Up to 15 tasks matching a title or number (T-00102, 00102 or 102), for pickers.",
+          "input": "search",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Find by title",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/search?search=demo",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Nothing to search for",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/search",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /tasks/tasks/:id/qa-estimate",
+          "method": "PATCH",
+          "path": "/tasks/tasks/:id/qa-estimate",
+          "purpose": "Sets or changes the QA estimate, before QA starts. QA can only start once there is one.",
+          "input": "qaEstimatedHours, version (optional)",
+          "access": "Needs task.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Set the estimate",
+              "expected": 200,
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/tasks/{{taskId}}/qa-estimate",
+                "as": "rahim@twintrack.test",
+                "body": "{\"qaEstimatedHours\":2}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "as": "arif@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "as": "arif@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/qa-handover",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"qaId\":\"u_09\"}"
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Task not in QA yet",
+              "expected": 409,
+              "code": "invalid_status",
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/tasks/{{taskId}}/qa-estimate",
+                "as": "rahim@twintrack.test",
+                "body": "{\"qaEstimatedHours\":2}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "PATCH /tasks/tasks/:id/flag",
+          "method": "PATCH",
+          "path": "/tasks/tasks/:id/flag",
+          "purpose": "Raises or clears a flag for follow-up, with a note, at any status. Field access to flagged decides who, so HR can be given flagging alone.",
+          "input": "flagged, flagNote (optional)",
+          "access": "Needs task.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Flag for follow-up",
+              "expected": 200,
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/tasks/{{taskId}}/flag",
+                "as": "rahim@twintrack.test",
+                "body": "{\"flagged\":true,\"flagNote\":\"Check the hours\"}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Developer without update",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/tasks/t_missing/flag",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"flagged\":true}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /tasks/tasks/:id/billable",
+          "method": "PATCH",
+          "path": "/tasks/tasks/:id/billable",
+          "purpose": "Marks the hours as billed to the client or not.",
+          "input": "billable",
+          "access": "Needs task.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Not billable",
+              "expected": 200,
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/tasks/{{taskId}}/billable",
+                "as": "rahim@twintrack.test",
+                "body": "{\"billable\":false}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "No such task",
+              "expected": 404,
+              "code": "unknown_task",
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/tasks/t_missing/billable",
+                "as": "rahim@twintrack.test",
+                "body": "{\"billable\":false}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /tasks/tasks/:id/actual-hours",
+          "method": "PATCH",
+          "path": "/tasks/tasks/:id/actual-hours",
+          "purpose": "Corrects the hours the timer recorded, once there are some. Approved hours and points stay as they were.",
+          "input": "actualHours, version (optional)",
+          "access": "Needs task.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Correct the hours",
+              "expected": 200,
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/tasks/{{taskId}}/actual-hours",
+                "as": "rahim@twintrack.test",
+                "body": "{\"actualHours\":7.5}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "as": "arif@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "as": "arif@twintrack.test"
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "No hours yet",
+              "expected": 409,
+              "code": "no_actual_hours",
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/tasks/{{taskId}}/actual-hours",
+                "as": "rahim@twintrack.test",
+                "body": "{\"actualHours\":3}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/tasks/:id/attachments",
+          "method": "GET",
+          "path": "/tasks/tasks/:id/attachments",
+          "purpose": "A task's files, with the space they take out of 5 GB.",
+          "input": "nothing",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A task's files",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/{{taskId}}/attachments",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "No such task",
+              "expected": 404,
+              "code": "unknown_task",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/t_missing/attachments",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /tasks/tasks/:id/attachments",
+          "method": "POST",
+          "path": "/tasks/tasks/:id/attachments",
+          "purpose": "Starts uploading a file of any type: reserves its space, and says how to split it into 64 MB parts.",
+          "input": "fileName, mimeType (optional), sizeBytes",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Start an upload",
+              "expected": 201,
+              "request": {
+                "method": "POST",
+                "path": "/tasks/tasks/{{taskId}}/attachments",
+                "as": "rahim@twintrack.test",
+                "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Over the 5 GB limit",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/tasks/tasks/{{taskId}}/attachments",
+                "as": "rahim@twintrack.test",
+                "body": "{\"fileName\":\"huge.iso\",\"sizeBytes\":6442450944}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "POST /tasks/tasks/:id/attachments/:attachmentId/part-urls",
+          "method": "POST",
+          "path": "/tasks/tasks/:id/attachments/:attachmentId/part-urls",
+          "purpose": "Short-lived addresses the browser PUTs each part to. Only for whoever started the upload.",
+          "input": "partNumbers",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Address for part 1",
+              "expected": 200,
+              "request": {
+                "method": "POST",
+                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}/part-urls",
+                "as": "rahim@twintrack.test",
+                "body": "{\"partNumbers\":[1]}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
+                  "save": {
+                    "attachmentId": "attachment.id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Someone else's upload",
+              "expected": 403,
+              "code": "not_your_upload",
+              "request": {
+                "method": "POST",
+                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}/part-urls",
+                "as": "arif@twintrack.test",
+                "body": "{\"partNumbers\":[1]}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
+                  "save": {
+                    "attachmentId": "attachment.id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "POST /tasks/tasks/:id/attachments/:attachmentId/complete",
+          "method": "POST",
+          "path": "/tasks/tasks/:id/attachments/:attachmentId/complete",
+          "purpose": "Joins the uploaded parts, using each part's ETag, and checks the size.",
+          "input": "parts (partNumber and etag each)",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Upload that does not exist",
+              "expected": 404,
+              "code": "unknown_attachment",
+              "request": {
+                "method": "POST",
+                "path": "/tasks/tasks/{{taskId}}/attachments/ta_missing/complete",
+                "as": "rahim@twintrack.test",
+                "body": "{\"parts\":[{\"partNumber\":1,\"etag\":\"\\\"x\\\"\"}]}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/tasks/:id/attachments/:attachmentId/url",
+          "method": "GET",
+          "path": "/tasks/tasks/:id/attachments/:attachmentId/url",
+          "purpose": "A short-lived address that shows the file, or downloads it. Files a browser could run always download.",
+          "input": "mode (view or download)",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Upload not finished",
+              "expected": 404,
+              "code": "unknown_attachment",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}/url",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
+                  "save": {
+                    "attachmentId": "attachment.id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "DELETE /tasks/tasks/:id/attachments/:attachmentId",
+          "method": "DELETE",
+          "path": "/tasks/tasks/:id/attachments/:attachmentId",
+          "purpose": "Removes a file, or cancels an unfinished upload. A file can be removed by its uploader or someone who can edit the task.",
+          "input": "nothing",
+          "access": "Needs task.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Cancel your own upload",
+              "expected": 200,
+              "request": {
+                "method": "DELETE",
+                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
+                  "save": {
+                    "attachmentId": "attachment.id"
+                  }
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Someone else's unfinished upload",
+              "expected": 403,
+              "code": "not_your_upload",
+              "request": {
+                "method": "DELETE",
+                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}",
+                "as": "arif@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
+                  "save": {
+                    "attachmentId": "attachment.id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/projects/health",
+          "method": "GET",
+          "path": "/tasks/projects/health",
+          "purpose": "Each project in reach: hours used against allocated, open tasks, this month's lead hours and their incentive cost.",
+          "input": "leadId (optional)",
+          "access": "Needs project.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Your projects",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/projects/health",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/projects/health",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/projects/roster",
+          "method": "GET",
+          "path": "/tasks/projects/roster",
+          "purpose": "Leads and developers on the projects in reach, with their stats and career points.",
+          "input": "leadId (optional)",
+          "access": "Needs project.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Your team",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/projects/roster",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/tasks",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
+                  "save": {
+                    "taskId": "id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/projects/roster",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/projects/:id/credentials",
+          "method": "GET",
+          "path": "/tasks/projects/:id/credentials",
+          "purpose": "A project's shared logins, with passwords and the current one-time code. The code's secret is never sent.",
+          "input": "nothing",
+          "access": "Needs credential.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The logins",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/projects/{{projectId}}/credentials",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects/{{projectId}}/credentials",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\"}",
+                  "save": {
+                    "credentialId": "id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Not on the project",
+              "expected": 403,
+              "code": "out_of_scope",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/projects/{{projectId}}/credentials",
+                "as": "sumaiya@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "POST /tasks/projects/:id/credentials",
+          "method": "POST",
+          "path": "/tasks/projects/:id/credentials",
+          "purpose": "Adds a shared login. Secrets are encrypted. otpSecret takes an otpauth:// link or the secret.",
+          "input": "label, loginUrl, username, password, otpSecret, passcode, notes (last three optional)",
+          "access": "Needs credential.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Add a login",
+              "expected": 201,
+              "request": {
+                "method": "POST",
+                "path": "/tasks/projects/{{projectId}}/credentials",
+                "as": "rahim@twintrack.test",
+                "body": "{\"label\":\"Sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\",\"otpSecret\":\"GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ\"}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Not an address",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/tasks/projects/{{projectId}}/credentials",
+                "as": "rahim@twintrack.test",
+                "body": "{\"label\":\"Bad\",\"loginUrl\":\"nope\",\"username\":\"x\",\"password\":\"y\"}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "PATCH /tasks/projects/:id/credentials/:credentialId",
+          "method": "PATCH",
+          "path": "/tasks/projects/:id/credentials/:credentialId",
+          "purpose": "Changes a login. null clears the code secret, passcode or notes.",
+          "input": "any of the fields, version (optional)",
+          "access": "Needs credential.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "New password",
+              "expected": 200,
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/projects/{{projectId}}/credentials/{{credentialId}}",
+                "as": "rahim@twintrack.test",
+                "body": "{\"password\":\"Changed\"}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects/{{projectId}}/credentials",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\"}",
+                  "save": {
+                    "credentialId": "id"
+                  }
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Developer may add but not change",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PATCH",
+                "path": "/tasks/projects/{{projectId}}/credentials/{{credentialId}}",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"label\":\"X\"}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects/{{projectId}}/credentials",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\"}",
+                  "save": {
+                    "credentialId": "id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "DELETE /tasks/projects/:id/credentials/:credentialId",
+          "method": "DELETE",
+          "path": "/tasks/projects/:id/credentials/:credentialId",
+          "purpose": "Moves a login to the recycle bin.",
+          "input": "nothing",
+          "access": "Needs credential.delete",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Remove a login",
+              "expected": 200,
+              "request": {
+                "method": "DELETE",
+                "path": "/tasks/projects/{{projectId}}/credentials/{{credentialId}}",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects/{{projectId}}/credentials",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\"}",
+                  "save": {
+                    "credentialId": "id"
+                  }
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "No such login",
+              "expected": 404,
+              "code": "unknown_credential",
+              "request": {
+                "method": "DELETE",
+                "path": "/tasks/projects/{{projectId}}/credentials/pc_missing",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/points",
+          "method": "GET",
+          "path": "/tasks/points",
+          "purpose": "Career points per person in your scope, highest first. Earned on approval, 5% lost on a revert.",
+          "input": "page, pageSize, since (optional date)",
+          "access": "Needs points.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Your team",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/points",
+                "as": "rahim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/points",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/points/:userId",
+          "method": "GET",
+          "path": "/tasks/points/:userId",
+          "purpose": "One person's points and where they came from, newest first.",
+          "input": "page, pageSize, since (optional)",
+          "access": "Needs points.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A developer's points",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/points/u_09",
+                "as": "rahim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Beyond your scope",
+              "expected": 403,
+              "code": "out_of_scope",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/points/u_04",
+                "as": "mehedi@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/incentives",
+          "method": "GET",
+          "path": "/tasks/incentives",
+          "purpose": "This month's (or a given month's) incentive for everyone in scope who earns one, and whether it's paid.",
+          "input": "month and year (optional, together)",
+          "access": "Needs incentive.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "This month",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/incentives",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/tasks/incentives/settings/u_04",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Month without a year",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/incentives?month=3",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /tasks/incentives/generate",
+          "method": "POST",
+          "path": "/tasks/incentives/generate",
+          "purpose": "Saves a month's figures for everyone in scope who earns. Paid months stay as paid.",
+          "input": "month, year",
+          "access": "Needs incentive.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Generate January",
+              "expected": 200,
+              "request": {
+                "method": "POST",
+                "path": "/tasks/incentives/generate",
+                "as": "rahim@twintrack.test",
+                "body": "{\"month\":1,\"year\":2026}"
+              },
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/tasks/incentives/settings/u_04",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Developer",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/tasks/incentives/generate",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"month\":1,\"year\":2026}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /tasks/incentives/disburse",
+          "method": "POST",
+          "path": "/tasks/incentives/disburse",
+          "purpose": "Pays one person's month, freezing the figures paid.",
+          "input": "userId, month, year",
+          "access": "Needs incentive.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The super admin pays Rahim for January",
+              "expected": 200,
+              "request": {
+                "method": "POST",
+                "path": "/tasks/incentives/disburse",
+                "as": "farhana@twintrack.test",
+                "body": "{\"userId\":\"u_04\",\"month\":1,\"year\":2026}"
+              },
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/tasks/incentives/settings/u_04",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Someone who doesn't earn it",
+              "expected": 409,
+              "code": "not_an_earner",
+              "request": {
+                "method": "POST",
+                "path": "/tasks/incentives/disburse",
+                "as": "rahim@twintrack.test",
+                "body": "{\"userId\":\"u_09\",\"month\":1,\"year\":2026}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/incentives/ledger",
+          "method": "GET",
+          "path": "/tasks/incentives/ledger",
+          "purpose": "Generated and paid months, newest first, within scope.",
+          "input": "userId, month, year (all optional)",
+          "access": "Needs incentive.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Rahim's ledger",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/incentives/ledger?userId=u_04",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/tasks/incentives/settings/u_04",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/incentives/generate",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"month\":1,\"year\":2026}"
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Beyond your scope",
+              "expected": 403,
+              "code": "out_of_scope",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/incentives/ledger?userId=u_04",
+                "as": "mehedi@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/incentives/settings",
+          "method": "GET",
+          "path": "/tasks/incentives/settings",
+          "purpose": "Who earns the monthly incentive, at what rate, and who may get project incentives, plus the default rate.",
+          "input": "nothing",
+          "access": "Needs incentive.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The settings",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/incentives/settings",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/tasks/incentives/settings/u_04",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/incentives/settings",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PUT /tasks/incentives/settings/:userId",
+          "method": "PUT",
+          "path": "/tasks/incentives/settings/:userId",
+          "purpose": "Sets one person's incentive setting. A null rate uses the default.",
+          "input": "earnsMonthlyIncentive, hourlyRate (or null), eligibleForProjectIncentives",
+          "access": "Needs incentive.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The super admin has Rahim earn 500 an hour",
+              "expected": 200,
+              "request": {
+                "method": "PUT",
+                "path": "/tasks/incentives/settings/u_04",
+                "as": "farhana@twintrack.test",
+                "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
+              },
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Beyond your scope",
+              "expected": 403,
+              "code": "out_of_scope",
+              "request": {
+                "method": "PUT",
+                "path": "/tasks/incentives/settings/u_05",
+                "as": "rahim@twintrack.test",
+                "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":null,\"eligibleForProjectIncentives\":false}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Rahim changes his own",
+              "expected": 403,
+              "code": "own_incentive",
+              "request": {
+                "method": "PUT",
+                "path": "/tasks/incentives/settings/u_04",
+                "as": "rahim@twintrack.test",
+                "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":10000,\"eligibleForProjectIncentives\":false}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /tasks/projects/:id/incentives",
+          "method": "GET",
+          "path": "/tasks/projects/:id/incentives",
+          "purpose": "A project's members, whether each may get a project incentive, and what they were given.",
+          "input": "nothing",
+          "access": "Needs incentive.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The members",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/tasks/projects/{{projectId}}/incentives",
+                "as": "rahim@twintrack.test"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "fail",
+              "title": "No such project",
+              "expected": 404,
+              "code": "unknown_project",
+              "request": {
+                "method": "GET",
+                "path": "/tasks/projects/p_missing/incentives",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PUT /tasks/projects/:id/incentives/:userId",
+          "method": "PUT",
+          "path": "/tasks/projects/:id/incentives/:userId",
+          "purpose": "Gives or changes an eligible member's project incentive.",
+          "input": "enabled, amount (or null), notes (or null)",
+          "access": "Needs incentive.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Mehedi gets 5000",
+              "expected": 200,
+              "request": {
+                "method": "PUT",
+                "path": "/tasks/projects/{{projectId}}/incentives/u_09",
+                "as": "rahim@twintrack.test",
+                "body": "{\"enabled\":true,\"amount\":5000,\"notes\":\"Shipped early\"}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/tasks/incentives/settings/u_09",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"earnsMonthlyIncentive\":false,\"hourlyRate\":null,\"eligibleForProjectIncentives\":true}"
+                }
+              ],
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "Not eligible yet",
+              "expected": 409,
+              "code": "not_eligible",
+              "request": {
+                "method": "PUT",
+                "path": "/tasks/projects/{{projectId}}/incentives/u_09",
+                "as": "rahim@twintrack.test",
+                "body": "{\"enabled\":true}"
+              },
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                }
+              ]
             }
           ]
         }

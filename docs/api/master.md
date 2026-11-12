@@ -114,7 +114,7 @@ Links are sent by [`POST /users`](#post-users) and [`POST /users/password-links`
 
 **Access:** `signed`
 
-**Returns:** `module`, `hasAccess`, `profile`, `profileName`, `permissions` (permission to scope), `apis` (each permission held, to the APIs it opens as `METHOD /path`, for trying them from Your permissions), `fieldAccess` (protected fields, as `resource.field` to `hidden`, `read`, `create` or `edit`, for every controlled field, including levels that follow the actions)
+**Returns:** `module`, `hasAccess`, `profile`, `profileName`, `permissions` (permission to scope), `apis` (each permission held, to the APIs it opens as `METHOD /path`, for trying them from Your permissions), `guides` (for each of those APIs, its `purpose`, `input` and `examples`: sample requests taken from the test page's scenarios, each with `title`, `outcome` (`accepted` or `refused`), `expectedStatus`, `expectedCode`, `sentBy` (who sends it in the example data), `parameters`, `query`, `body`, `sendFirst` (requests the example sends before it), `needs` (values an earlier request makes, such as `projectId`) and `changesData`. Scenarios about a missing or forged token are left out, since Try sends your own), `fieldAccess` (protected fields, as `resource.field` to `hidden`, `read`, `create` or `edit`, for every controlled field, including levels that follow the actions)
 
 **Errors:** `404 unknown_module`
 
@@ -518,21 +518,63 @@ A client has `id`, `name`, `initials`, `contactEmail`, `contactPhone`, `address`
 
 Tools such as Claude Code and claude.ai connectors reach TwinTrack through the MCP endpoint. Each acts as one person, with exactly their access, read on every call.
 
+The Master resource `apiToken` (scoped) controls this:
+
+| Action | Allows |
+|---|---|
+| `apiToken.create` | Making a personal token, and approving an app on the consent page. Declining never needs it. |
+| `apiToken.read` | Seeing the tokens and connected apps of the people the scope reaches (`/api-tokens`, `/connected-apps`). |
+| `apiToken.delete` | Revoking those tokens and disconnecting those apps. |
+
+Everyone can always list and revoke their own tokens and apps, so nobody is stuck with a credential they can't stop. Super admins' tokens and apps are out of reach for everyone except super admins.
+
 ### `GET /me/api-tokens`, `POST /me/api-tokens`, `POST /me/api-tokens/:id/revoke`
 
-**Access:** `signed`, your own tokens only. Making one is refused while signed in as someone else.
+**Access:** listing and revoking are `signed`, your own tokens only. Making one is `private` and needs `apiToken.create`, and is refused while signed in as someone else.
 
 **POST body:** `name`, and optionally `expiresInDays` (1 to 365; missing means never)
 
 **Returns:** POST `201` with the token's details and `token` (`tt_pat_…`), shown this once. Only a hash is stored. Lists never include it.
 
-**Errors:** `409 too_many_tokens` (ten active at most), `404 unknown_token`, `403 impersonating`
+**Errors:** `409 too_many_tokens` (ten active at most), `404 unknown_token`, `403 forbidden`, `403 impersonating`
+
+### `GET /api-tokens`
+
+**Access:** `private`, needs `apiToken.read`. The scope decides whose tokens: `own`, `team` or `all`.
+
+**Query:** `page`, `pageSize`, `userId` (optional: one person)
+
+**Returns:** `total`, `tokens`, newest first, each with the fields above plus `owner` (`id`, `name`). Never the token itself.
+
+### `POST /api-tokens/:id/revoke`
+
+**Access:** `private`, needs `apiToken.delete`, scoped
+
+**Returns:** the token, with `revokedAt`. Revoking one already revoked returns it unchanged.
+
+**Errors:** `404 unknown_token`, also for a token out of reach
 
 ### `GET /me/connected-apps`, `POST /me/connected-apps/:id/revoke`
 
 **Access:** `signed`, your own apps only
 
 **Returns:** `apps`, each with `id`, `clientName`, `createdAt`, `lastUsedAt`. Disconnecting stops its tokens at once.
+
+### `GET /connected-apps`
+
+**Access:** `private`, needs `apiToken.read`, scoped
+
+**Query:** `page`, `pageSize`, `userId` (optional)
+
+**Returns:** `total`, `apps`, each with `owner` (`id`, `name`) as well.
+
+### `POST /connected-apps/:id/revoke`
+
+**Access:** `private`, needs `apiToken.delete`, scoped
+
+**Returns:** `id`, `revoked: true`
+
+**Errors:** `404 unknown_connection`, also for an app out of reach
 
 ### `GET /oauth/requests/:id`, `POST /oauth/requests/:id/decision`
 
@@ -542,7 +584,7 @@ Tools such as Claude Code and claude.ai connectors reach TwinTrack through the M
 
 **Returns:** GET `clientName` (the app's own claim), `redirectHost` (where the browser goes next, which it can't fake), `expiresAt`. POST `redirectUrl`, back to the app with a code or `error=access_denied`.
 
-**Errors:** `404 unknown_request`, `409 request_answered`, `409 request_expired`, `403 impersonating`
+**Errors:** `404 unknown_request`, `409 request_answered`, `409 request_expired`, `403 forbidden` (approving without `apiToken.create`), `403 impersonating`
 
 ### OAuth protocol endpoints
 

@@ -4,8 +4,8 @@ import { pageOffset, type PageRequest } from '../../../lib/query.js';
 import { changeRecord } from '../../../lib/records/recordWrites.js';
 import { Project, type ProjectDoc, type ProjectStatus } from '../models/project.js';
 
-export type NewProjectRecord = Pick<ProjectDoc, '_id' | 'name' | 'description' | 'totalAllocatedHours' | 'deadline' | 'leadId' | 'memberIds'>;
-export type ProjectChanges = Partial<Pick<ProjectDoc, 'name' | 'description' | 'totalAllocatedHours' | 'deadline' | 'leadId' | 'status' | 'memberIds'>>;
+export type NewProjectRecord = Pick<ProjectDoc, '_id' | 'name' | 'description' | 'totalAllocatedHours' | 'deadline' | 'leadId' | 'memberIds' | 'clientId'>;
+export type ProjectChanges = Partial<Pick<ProjectDoc, 'name' | 'description' | 'totalAllocatedHours' | 'deadline' | 'leadId' | 'status' | 'memberIds' | 'clientId'>>;
 
 export const projectNotFound = () => new ApiError(404, 'unknown_project', 'No such project.');
 
@@ -37,6 +37,13 @@ export async function findProjectsPage({ peopleIds, sharedIds, status, ...page }
 }
 
 export const findProjectById = (projectId: string) => Project.findById(projectId).lean();
+
+/** Every project in reach (null peopleIds for all), optionally only those one person leads, for summaries. */
+export function findProjectsInReach(reach: { peopleIds: string[]; sharedIds: string[] } | null, leadId?: string) {
+  return Project.find({ ...(reach && projectReachFilter(reach.peopleIds, reach.sharedIds)), ...(leadId && { leadId }) })
+    .sort({ createdAt: -1, _id: 1 })
+    .lean();
+}
 
 export function findProjectsByIds(projectIds: string[]) {
   return Project.find({ _id: { $in: projectIds } }).lean();

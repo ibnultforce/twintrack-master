@@ -21,6 +21,7 @@ import { oauthRoutes } from './oauth/oauth.routes.js';
 import { createOAuthProvider, type OAuthSettings } from './oauth/oauthProvider.js';
 import { mountOAuthProtocol } from './oauth/oauthProtocol.js';
 import { orgRolesRoutes } from './orgRoles/orgRoles.routes.js';
+import { createStorageRoutes } from './storage/storage.routes.js';
 import { directoryRoutes } from './users/directory.routes.js';
 import { photoRoutes } from './users/photos.routes.js';
 import { createUsersRoutes } from './users/users.routes.js';
@@ -68,5 +69,6 @@ export function createMasterRoutes(
     ...apiTokensRoutes,
     ...oauthRoutes,
     ...createMcpRoutes(oauthSettingsFrom(config), mcpToolProviders),
+    ...createStorageRoutes(dependencies.localStorage, config.allowedOrigins),
   ];
 }

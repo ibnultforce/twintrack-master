@@ -30,6 +30,7 @@ export const CONSOLE_NAVIGATION: NavigationItem[] = [
   { href: '/people', label: 'People', permission: 'user.read' },
   { href: '/clients', label: 'Clients', permission: 'client.read' },
   { href: '/access', label: 'Access', needsAccessRights: true },
+  { href: '/api-tokens', label: 'API tokens', permission: 'apiToken.read' },
   { href: '/activity', label: 'Activity log', permission: 'audit.read' },
 ];
 

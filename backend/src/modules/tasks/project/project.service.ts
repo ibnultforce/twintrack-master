@@ -12,9 +12,11 @@ import { assertCanReachRecord, findSharedRecordIds, findSharingModel } from '../
 import { writeRecordHistory } from '../../master/records/recordHistory.service.js';
 import type { ProjectDoc, ProjectStatus } from '../models/project.js';
 import { countOpenTasksAssignedTo } from '../task/task.repository.js';
+import { findClientById } from '../../master/clients/clients.repository.js';
 import { assertPeopleExist, findPeopleNames, TASKS_MODULE_KEY } from '../tasksModule.js';
 import {
   findProjectById,
+  findProjectsInReach,
   findProjectsPage,
   insertProject,
   projectNotFound,
@@ -53,7 +55,7 @@ export const assertCanReachProject = (actor: Actor, scope: Scope, project: Proje
   assertCanReachRecord(actor, scope, scopedProject(project), need);
 
 /** The project as this person may see it: fields they have no access to are left out. */
-function toProjectView(project: ProjectDoc, names: Map<string, string>, rules: FieldRules) {
+function toProjectView(project: ProjectDoc, names: Map<string, string>, rules: FieldRules, clientNames = new Map<string, string>()) {
   return redactRecord({
     id: project._id,
     name: project.name,
@@ -63,6 +65,8 @@ function toProjectView(project: ProjectDoc, names: Map<string, string>, rules: F
     deadline: project.deadline,
     leadId: project.leadId,
     leadName: names.get(project.leadId),
+    clientId: project.clientId,
+    clientName: project.clientId ? clientNames.get(project.clientId) : undefined,
     members: project.memberIds.map((memberId) => ({ id: memberId, name: names.get(memberId) })),
     version: project.version,
     createdBy: project.createdBy,
@@ -80,26 +84,48 @@ const projectAuditFields = (actor: Actor, project: ProjectDoc) => ({
   module: TASKS_MODULE_KEY,
 });
 
+/** A project's client must exist in Master and be active, so new work isn't filed under a client that has ended. */
+async function assertActiveClient(clientId: string | undefined): Promise<void> {
+  if (!clientId) return;
+  const client = await findClientById(clientId);
+  if (!client) throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', [{ path: 'clientId', message: 'no such client' }]);
+  if (client.status !== 'active') throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', [{ path: 'clientId', message: 'is inactive' }]);
+}
+
+async function findClientNames(clientIds: (string | undefined)[]): Promise<Map<string, string>> {
+  const ids = [...new Set(clientIds.filter((id): id is string => Boolean(id)))];
+  const clients = await Promise.all(ids.map((id) => findClientById(id)));
+  return new Map(clients.filter((client) => client !== null).map((client) => [client._id, client.name]));
+}
+
+/** The projects a person's scope reaches, as listing does, for health and roster summaries. */
+export async function projectsInReach(actor: Actor, scope: Scope, leadId?: string): Promise<ProjectDoc[]> {
+  const sharingModel = await findSharingModel(TASKS_MODULE_KEY, PROJECT_RESOURCE);
+  const peopleIds = sharingModel === 'private' ? await peopleInScope(actor.user._id, scope) : null;
+  const sharedIds = peopleIds ? await findSharedRecordIds(actor.user, TASKS_MODULE_KEY, PROJECT_RESOURCE, 'read') : [];
+  return findProjectsInReach(peopleIds ? { peopleIds, sharedIds } : null, leadId);
+}
+
 export async function listProjects(actor: Actor, scope: Scope, page: PageRequest & { status?: ProjectStatus }) {
   const sharingModel = await findSharingModel(TASKS_MODULE_KEY, PROJECT_RESOURCE);
   const peopleIds = sharingModel === 'private' ? await peopleInScope(actor.user._id, scope) : null;
   const sharedIds = peopleIds ? await findSharedRecordIds(actor.user, TASKS_MODULE_KEY, PROJECT_RESOURCE, 'read') : [];
   const { projects, total } = await findProjectsPage({ ...page, ...(peopleIds && { peopleIds, sharedIds }) });
-  const names = await findPeopleNames(projects.flatMap(projectPeople));
-  const rules = await fieldRulesFor(actor);
-  return { scope, total, projects: projects.map((project) => toProjectView(project, names, rules)) };
+  const [names, clientNames, rules] = await Promise.all([findPeopleNames(projects.flatMap(projectPeople)), findClientNames(projects.map((project) => project.clientId)), fieldRulesFor(actor)]);
+  return { scope, total, projects: projects.map((project) => toProjectView(project, names, rules, clientNames)) };
 }
 
 export async function getProject(actor: Actor, scope: Scope, projectId: string) {
   const project = await requireProject(projectId);
   await assertCanReachProject(actor, scope, project, 'read');
-  return toProjectView(project, await findPeopleNames(projectPeople(project)), await fieldRulesFor(actor));
+  return toProjectView(project, await findPeopleNames(projectPeople(project)), await fieldRulesFor(actor), await findClientNames([project.clientId]));
 }
 
 export async function createProject(actor: Actor, scope: Scope, details: NewProjectDetails) {
   const leadId = details.leadId ?? actor.user._id;
   const memberIds = distinctMembers(details.memberIds ?? [], leadId);
   await assertPeopleExist({ leadId, ...Object.fromEntries(memberIds.map((memberId, index) => [`memberIds.${index}`, memberId])) });
+  await assertActiveClient(details.clientId);
 
   const rules = await fieldRulesFor(actor);
   assertMayWriteFields(rules, Object.keys(details), 'create');
@@ -114,7 +140,7 @@ export async function createProject(actor: Actor, scope: Scope, details: NewProj
     await recordAudit({ action: 'project.created', ...projectAuditFields(actor, created) }, session);
     return created;
   });
-  return toProjectView(project, await findPeopleNames(projectPeople(project)), rules);
+  return toProjectView(project, await findPeopleNames(projectPeople(project)), rules, await findClientNames([project.clientId]));
 }
 
 /** Saves one change to a project in reach. `writes` are the fields the caller sets, which need edit access to each. */
@@ -136,12 +162,13 @@ async function changeProject(
     await recordAudit({ action: auditAction, ...projectAuditFields(actor, result) }, session);
     return result;
   });
-  return toProjectView(saved, await findPeopleNames(projectPeople(saved)), rules);
+  return toProjectView(saved, await findPeopleNames(projectPeople(saved)), rules, await findClientNames([saved.clientId]));
 }
 
 export async function updateProject(actor: Actor, scope: Scope, projectId: string, changes: Omit<ProjectChanges, 'memberIds'> & { version?: number }) {
   const { version, ...fields } = changes;
   if (fields.leadId) await assertPeopleExist({ leadId: fields.leadId });
+  if (fields.clientId) await assertActiveClient(fields.clientId);
   return changeProject(actor, scope, projectId, { auditAction: 'project.updated', writes: Object.keys(fields), save: (existing, session) => {
     // A new lead stops being listed as a member, because the lead always counts as one.
     const memberIds = fields.leadId ? distinctMembers(existing.memberIds, fields.leadId) : existing.memberIds;

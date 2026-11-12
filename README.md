@@ -35,6 +35,8 @@ The Next.js app in `frontend/` is the portal and admin console. It runs entirely
 | Screens | Who sees them |
 |---|---|
 | Sign in, set password from an emailed link, Your modules, Directory, Your permissions, Your profile, Apps and API tokens | Anyone signed in |
+| Making an API token or connecting an app, on Apps and API tokens | `apiToken.create` |
+| API tokens (everyone's tokens and connected apps) | `apiToken.read`, and `apiToken.delete` to revoke |
 | Overview, People | `user.read` |
 | Access | `user.read` to see who has access to each module, and `userProfile.update` to give profiles |
 | Records | Anyone signed in. It lists the custom objects they can read. |
@@ -81,6 +83,8 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 `manifests/` has one file per module: `master`, `hr` and `tasks`. Each lists only that module's built routes and the resources they use. Access comes from profiles, which are built in the app. Like `postman/`, this folder is ignored by git, so it has to be added by hand on a new machine, and `npm run seed` and `npm test` need it. The seed loads them, and a test checks that every file in the folder is valid.
 
 To load changed manifests without touching people or profiles, run `npm run seed:modules`. It takes resources and routes from the files, and keeps custom objects created in the app.
+
+Before adding or changing a route, follow [docs/adding-an-api.md](docs/adding-an-api.md). It lists every place that has to change with it.
 
 Update a module's manifest in the same change as any of its routes, and add a route or resource only when it's built. A module can't be named `constructor`, a permission belongs only on a `private` route, and a `team` or `own` scope belongs only on a resource marked `scoped`. Validation refuses anything else.
 
@@ -175,7 +179,14 @@ Projects and their tasks, from start through QA to approval, in `backend/src/mod
 |---|---|---|
 | `GET`, `POST /tasks/projects`, `GET`, `PATCH /tasks/projects/:id` | `project.read`, `.create`, `.update` | List, create, read and change projects |
 | `PUT /tasks/projects/:id/members` | `project.update` | Replace the members. Someone with open tasks stays. |
-| `GET`, `POST /tasks/tasks`, `GET`, `PATCH /tasks/tasks/:id` | `task.read`, `.create`, `.update` | List (with `projectId`, `status`, `assignedDevId`, `overdue`), create, read and change tasks |
+| `GET /tasks/projects/health`, `/roster` | `project.read` | Hours used against allocated, and who works on what |
+| `GET`, `POST /tasks/tasks`, `GET`, `PATCH /tasks/tasks/:id` | `task.read`, `.create`, `.update` | List (with filters, search and sorting), create, read and change tasks |
+| `GET /tasks/tasks/summary`, `/export`, `/search` | `task.read` | Totals, CSV export and quick search |
+| `PATCH /tasks/tasks/:id/qa-estimate`, `/flag`, `/billable`, `/actual-hours` | `task.update` | QA estimate, follow-up flag, billing and timer corrections |
+| `GET /tasks/points`, `/tasks/points/:userId` | `points.read` | Career points and where they came from |
+| `/tasks/projects/:id/credentials` | `credential.*` | Shared project logins with one-time codes |
+| `/tasks/tasks/:id/attachments` | `task.read` | Files, uploaded straight to R2 (or the local disk in development) |
+| `/tasks/incentives`, `/tasks/projects/:id/incentives` | `incentive.*` | Monthly and project incentives |
 | `POST /tasks/tasks/:id/start`, `/pause`, `/complete` | `task.read` | The assignee's timer. Only the assignee. |
 | `POST /tasks/tasks/:id/qa-handover` | `task.update` | Hand to a project member for QA |
 | `POST /tasks/tasks/:id/qa-start`, `/qa-pause`, `/qa-complete` | `task.read` | The QA timer and result. Only the QA person. |
@@ -183,7 +194,7 @@ Projects and their tasks, from start through QA to approval, in `backend/src/mod
 | `POST /tasks/tasks/:id/cancel` | `task.delete` | Cancel an open task. Tasks are never deleted. |
 | `GET /tasks/tasks/:id/history`, `GET`, `POST /tasks/tasks/:id/comments`, `PUT /tasks/tasks/:id/references` | `task.read`, `task.update` for references | History, comments and links between tasks |
 
-A task belongs to its assignee, TL, QA person and project lead, so the scope reaches it through any of them. The rules about the assignee, the QA person and approving your own work come from the task's fields, never from role names. QA hours are protected fields. Points, invoices, credentials, incentives, attachments and flagging aren't built yet, and Tasks has no frontend yet.
+A task belongs to its assignee, TL, QA person and project lead, so the scope reaches it through any of them. The rules about the assignee, the QA person and approving your own work come from the task's fields, never from role names. QA hours are protected fields. Invoices wait for the Accounts module. The Tasks frontend is in `twintrack-tasks/`.
 
 ## Checks
 

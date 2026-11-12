@@ -67,6 +67,12 @@ const envSchema = z
     IMPERSONATION_ENABLED: z.enum(['true', 'false']).default('false'),
     PUBLIC_API_URL: z.string().refine(isWebOrigin, 'must be an address such as https://api.twintrack.com').optional(),
     ENCRYPTION_KEY: z.string().trim().regex(ENCRYPTION_KEY_PATTERN, 'must be 64 hexadecimal characters').optional(),
+    R2_ACCOUNT_ID: z.string().trim().optional(),
+    R2_ACCESS_KEY_ID: z.string().trim().optional(),
+    R2_SECRET_ACCESS_KEY: z.string().trim().optional(),
+    R2_BUCKET: z.string().trim().optional(),
+    STORAGE_DIR: z.string().trim().min(1).default('uploads'),
+    INCENTIVE_HOURLY_RATE_BDT: z.coerce.number().min(0).default(0),
   })
   .superRefine((env, context) => {
     // A module frontend that isn't allowed to call the API would open and then fail on its first request.
@@ -94,6 +100,14 @@ const envSchema = z
     }
     if (env.NODE_ENV === 'production' && !env.PUBLIC_API_URL?.startsWith('https://')) {
       context.addIssue({ code: 'custom', path: ['PUBLIC_API_URL'], message: 'is required in production, as an https address' });
+    }
+    const r2Settings = [env.R2_ACCOUNT_ID, env.R2_ACCESS_KEY_ID, env.R2_SECRET_ACCESS_KEY, env.R2_BUCKET];
+    if (r2Settings.some(Boolean) && !r2Settings.every(Boolean)) {
+      context.addIssue({ code: 'custom', path: ['R2_BUCKET'], message: 'R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET go together' });
+    }
+    // Local files live on one server's disk, which production can't rely on.
+    if (env.NODE_ENV === 'production' && !r2Settings.every(Boolean)) {
+      context.addIssue({ code: 'custom', path: ['R2_BUCKET'], message: 'R2 file storage is required in production' });
     }
     if (env.NODE_ENV === 'production' && !env.ENCRYPTION_KEY) {
       context.addIssue({ code: 'custom', path: ['ENCRYPTION_KEY'], message: 'is required in production' });
@@ -129,6 +143,19 @@ export interface EmailSettings {
   passwordLinkTtlHours: number;
 }
 
+export interface R2Settings {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucket: string;
+}
+
+export interface StorageSettings {
+  /** Files go to Cloudflare R2 when set. Without it, they go to localDirectory, which only development allows. */
+  r2?: R2Settings;
+  localDirectory: string;
+}
+
 export interface Config {
   nodeEnv: 'development' | 'test' | 'production';
   port: number;
@@ -150,6 +177,9 @@ export interface Config {
   encryptionKey: Buffer;
   auth: AuthSettings;
   email: EmailSettings;
+  storage: StorageSettings;
+  /** The hourly incentive rate, in taka, for anyone whose incentive setting doesn't name their own. */
+  defaultIncentiveHourlyRate: number;
 }
 
 export class ConfigError extends Error {}
@@ -192,5 +222,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       portalUrl: values.PORTAL_URL ?? values.MODULE_FRONTEND_URLS.get(MASTER_FRONTEND_KEY) ?? DEFAULT_PORTAL_URL,
       passwordLinkTtlHours: values.PASSWORD_LINK_TTL_HOURS,
     },
+    storage: {
+      ...(values.R2_ACCOUNT_ID && values.R2_ACCESS_KEY_ID && values.R2_SECRET_ACCESS_KEY && values.R2_BUCKET && {
+        r2: { accountId: values.R2_ACCOUNT_ID, accessKeyId: values.R2_ACCESS_KEY_ID, secretAccessKey: values.R2_SECRET_ACCESS_KEY, bucket: values.R2_BUCKET },
+      }),
+      localDirectory: values.STORAGE_DIR,
+    },
+    defaultIncentiveHourlyRate: values.INCENTIVE_HOURLY_RATE_BDT,
   };
 }

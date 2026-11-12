@@ -1,5 +1,5 @@
 import { apiRequest } from './http';
-import type { ApiToken, ConnectedApp, OAuthRequest } from './types';
+import type { ApiToken, ConnectedApp, OAuthRequest, OwnedApiToken, OwnedConnectedApp } from './types';
 
 export async function listMyApiTokens(): Promise<ApiToken[]> {
   return (await apiRequest<{ tokens: ApiToken[] }>('/me/api-tokens')).tokens;
@@ -17,6 +17,19 @@ export async function listMyConnectedApps(): Promise<ConnectedApp[]> {
 }
 
 export const disconnectApp = (appId: string) => apiRequest(`/me/connected-apps/${encodeURIComponent(appId)}/revoke`, { method: 'POST' });
+
+/** Everyone's tokens that apiToken.read reaches, newest first. */
+export const listApiTokensInScope = (page: number, pageSize: number) =>
+  apiRequest<{ total: number; tokens: OwnedApiToken[] }>(`/api-tokens?page=${page}&pageSize=${pageSize}`);
+
+export const revokeApiTokenInScope = (tokenId: string) =>
+  apiRequest<ApiToken>(`/api-tokens/${encodeURIComponent(tokenId)}/revoke`, { method: 'POST' });
+
+/** Everyone's connected apps that apiToken.read reaches, newest first. */
+export const listConnectedAppsInScope = (page: number, pageSize: number) =>
+  apiRequest<{ total: number; apps: OwnedConnectedApp[] }>(`/connected-apps?page=${page}&pageSize=${pageSize}`);
+
+export const disconnectAppInScope = (appId: string) => apiRequest(`/connected-apps/${encodeURIComponent(appId)}/revoke`, { method: 'POST' });
 
 export const getOAuthRequest = (requestId: string) => apiRequest<OAuthRequest>(`/oauth/requests/${encodeURIComponent(requestId)}`);
 

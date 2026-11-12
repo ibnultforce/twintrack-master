@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { Config } from '../../src/config.js';
 import { loadConfig } from '../../src/config.js';
 
@@ -8,6 +10,8 @@ export const TEST_ENV = {
   ALLOWED_ORIGINS: TEST_ORIGIN,
   LOG_LEVEL: 'silent',
   JWT_ACCESS_SECRET: 'test-secret-that-is-long-enough-for-validation',
+  // Uploads in tests go to a temporary folder, never the repository.
+  STORAGE_DIR: join(tmpdir(), 'twintrack-test-uploads'),
 };
 
 export const createTestConfig = (overrides: Record<string, string> = {}): Config =>

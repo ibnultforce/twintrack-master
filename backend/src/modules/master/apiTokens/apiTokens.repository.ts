@@ -1,3 +1,4 @@
+import { pageOffset, type PageRequest } from '../../../lib/query.js';
 import { ApiToken, type ApiTokenDoc } from '../models/apiToken.js';
 
 export type NewApiToken = Pick<ApiTokenDoc, '_id' | 'userId' | 'name' | 'tokenHash' | 'prefix' | 'expiresAt'>;
@@ -18,7 +19,19 @@ export async function insertApiToken(token: NewApiToken): Promise<ApiTokenDoc> {
   return created.toObject();
 }
 
-export const findApiTokenOf = (userId: string, tokenId: string) => ApiToken.findOne({ _id: tokenId, userId }).lean();
+/** One page of tokens, newest first, for one person (an id) or the people a condition matches. */
+export async function findApiTokenPage(userIdCondition: string | object, page: PageRequest) {
+  const filter = { userId: userIdCondition };
+  const [tokens, total] = await Promise.all([
+    ApiToken.find(filter).sort({ createdAt: -1, _id: -1 }).skip(pageOffset(page)).limit(page.pageSize).lean(),
+    ApiToken.countDocuments(filter),
+  ]);
+  return { tokens, total };
+}
+
+export const findApiTokenById = (tokenId: string) => ApiToken.findById(tokenId).lean();
+
+export const findApiTokenOf =(userId: string, tokenId: string) => ApiToken.findOne({ _id: tokenId, userId }).lean();
 
 export const markApiTokenRevoked = (tokenId: string) =>
   ApiToken.findByIdAndUpdate(tokenId, { $set: { revokedAt: new Date() } }, { returnDocument: 'after' }).lean();
