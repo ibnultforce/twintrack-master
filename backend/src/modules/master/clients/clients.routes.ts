@@ -82,9 +82,9 @@ const handleHistory: RequestHandler = async (req, res) => {
 /** Clients are shared reference data, so they aren't scoped: anyone with client.read sees them all. */
 export const clientsRoutes: ApiRoute[] = [
   { method: 'GET', path: '/clients', access: 'private', permission: 'client.read', handler: handleList },
-  { method: 'POST', path: '/clients', access: 'private', permission: 'client.create', handler: handleCreate },
+  { method: 'POST', path: '/clients', access: 'private', permission: 'client.create', bodySchema: createBodySchema, handler: handleCreate },
   { method: 'GET', path: '/clients/:id', access: 'private', permission: 'client.read', handler: handleGet },
-  { method: 'PATCH', path: '/clients/:id', access: 'private', permission: 'client.update', handler: handleUpdate },
-  { method: 'PATCH', path: '/clients/:id/status', access: 'private', permission: 'client.update', handler: handleSetStatus },
+  { method: 'PATCH', path: '/clients/:id', access: 'private', permission: 'client.update', bodySchema: updateBodySchema, handler: handleUpdate },
+  { method: 'PATCH', path: '/clients/:id/status', access: 'private', permission: 'client.update', bodySchema: statusBodySchema, handler: handleSetStatus },
   { method: 'GET', path: '/clients/:id/history', access: 'private', permission: 'client.read', handler: handleHistory },
 ];

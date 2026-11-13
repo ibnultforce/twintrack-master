@@ -8,7 +8,7 @@ import type { ModuleDoc } from '../models/module.js';
 import { countUsersWithProfiles } from '../users/users.repository.js';
 import { validateManifest, type Manifest } from './manifest.js';
 import { deleteModule, findAllModules, findModuleByKey, saveModule } from './moduleRegistry.repository.js';
-import { listPermissionApis, listPermissionUsers } from './grantEditing.js';
+import { listModuleRoutes, listPermissionApis, listPermissionUsers } from './grantEditing.js';
 
 export class CoreModuleError extends ApiError {
   constructor(key: string, problem: string) {
@@ -82,6 +82,7 @@ export async function listRegisteredModules(frontendUrls: Map<string, string>) {
     ...toRegisteredModule(module, frontendUrls),
     resources: module.resources,
     apis: listPermissionApis(module),
+    routes: listModuleRoutes(module),
     usedBy: listPermissionUsers(module, profiles),
   }));
 }

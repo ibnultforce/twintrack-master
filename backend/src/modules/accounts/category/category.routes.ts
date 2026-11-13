@@ -37,8 +37,8 @@ const handleHistory: RequestHandler = async (req, res) => {
 
 export const categoryRoutes: ApiRoute[] = [
   { method: 'GET', path: '/accounts/categories', access: 'private', permission: 'category.read', handler: handleList },
-  { method: 'POST', path: '/accounts/categories', access: 'private', permission: 'category.create', handler: handleCreate },
+  { method: 'POST', path: '/accounts/categories', access: 'private', permission: 'category.create', bodySchema: createBodySchema, handler: handleCreate },
   { method: 'GET', path: '/accounts/categories/:id', access: 'private', permission: 'category.read', handler: handleGet },
-  { method: 'PATCH', path: '/accounts/categories/:id', access: 'private', permission: 'category.update', handler: handleUpdate },
+  { method: 'PATCH', path: '/accounts/categories/:id', access: 'private', permission: 'category.update', bodySchema: updateBodySchema, handler: handleUpdate },
   { method: 'GET', path: '/accounts/categories/:id/history', access: 'private', permission: 'category.read', handler: handleHistory },
 ];

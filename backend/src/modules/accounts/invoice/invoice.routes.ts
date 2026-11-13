@@ -111,16 +111,16 @@ export function createInvoiceRoutes(settings: AccountsSettings, storage: FileSto
 
   return [
     { method: 'GET', path: '/accounts/invoices', access: 'private', permission: 'invoice.read', handler: handleList },
-    { method: 'POST', path: '/accounts/invoices', access: 'private', permission: 'invoice.create', handler: handleCreate },
+    { method: 'POST', path: '/accounts/invoices', access: 'private', permission: 'invoice.create', bodySchema: createBodySchema, handler: handleCreate },
     // Registered before /accounts/invoices/:id, which would otherwise read these names as invoice ids.
     { method: 'GET', path: '/accounts/invoices/unbilled', access: 'private', permission: 'invoice.read', handler: handleUnbilled },
     { method: 'GET', path: '/accounts/invoices/preview', access: 'private', permission: 'invoice.read', handler: handlePreview },
     { method: 'GET', path: '/accounts/invoices/:id', access: 'private', permission: 'invoice.read', handler: handleGet },
-    { method: 'PATCH', path: '/accounts/invoices/:id', access: 'private', permission: 'invoice.update', handler: handleUpdate },
+    { method: 'PATCH', path: '/accounts/invoices/:id', access: 'private', permission: 'invoice.update', bodySchema: updateBodySchema, handler: handleUpdate },
     { method: 'DELETE', path: '/accounts/invoices/:id', access: 'private', permission: 'invoice.delete', handler: handleDelete },
-    { method: 'PATCH', path: '/accounts/invoices/:id/lines', access: 'private', permission: 'invoice.update', handler: handleLines },
+    { method: 'PATCH', path: '/accounts/invoices/:id/lines', access: 'private', permission: 'invoice.update', bodySchema: linesBodySchema, handler: handleLines },
     { method: 'GET', path: '/accounts/invoices/:id/document', access: 'private', permission: 'invoice.read', handler: handleDocument },
-    { method: 'POST', path: '/accounts/invoices/:id/send', access: 'private', permission: 'invoice.update', handler: handleSend },
+    { method: 'POST', path: '/accounts/invoices/:id/send', access: 'private', permission: 'invoice.update', bodySchema: sendBodySchema, handler: handleSend },
     { method: 'GET', path: '/accounts/invoices/:id/history', access: 'private', permission: 'invoice.read', handler: handleHistory },
   ];
 }

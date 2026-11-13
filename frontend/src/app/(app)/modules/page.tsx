@@ -7,16 +7,26 @@ import { getMyModules } from '@/lib/api/account';
 import type { MyModule } from '@/lib/api/types';
 import { longDate } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
-import { useSession } from '@/session/SessionProvider';
+import { useProfile, useSession } from '@/session/SessionProvider';
 
 const MASTER_MODULE_KEY = 'master';
 
 export default function YourModulesPage() {
   const { can, canChangeAccess } = useSession();
+  const profile = useProfile();
   const modules = useLoad(getMyModules, []);
   const consoleHref = firstConsoleHref({ can, canChangeAccess });
 
   const openAction = (module: MyModule) => {
+    // A super admin goes to the module's API explorer, with the app a secondary link.
+    if (profile.superAdmin) {
+      return (
+        <>
+          <Link className="btn btn-primary" href={`/modules/${encodeURIComponent(module.key)}`}>Explore APIs</Link>
+          {module.frontendUrl ? <a className="btn" href={module.frontendUrl}>Open app</a> : null}
+        </>
+      );
+    }
     if (module.key === MASTER_MODULE_KEY) return consoleHref ? <Link className="btn btn-primary" href={consoleHref}>Open</Link> : null;
     if (!module.frontendUrl) return <button type="button" className="btn" disabled>Not available yet</button>;
     return <a className="btn btn-primary" href={module.frontendUrl}>Open</a>;

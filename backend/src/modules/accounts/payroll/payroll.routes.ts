@@ -79,13 +79,13 @@ const handleHistory: RequestHandler = async (req, res) => {
 /** Monthly payroll from HR salaries and Tasks incentives: drafted, approved by someone else, then paid person by person. */
 export const payrollRoutes: ApiRoute[] = [
   { method: 'GET', path: '/accounts/payroll-runs', access: 'private', permission: 'payrollRun.read', handler: handleList },
-  { method: 'POST', path: '/accounts/payroll-runs', access: 'private', permission: 'payrollRun.create', handler: handleCreate },
+  { method: 'POST', path: '/accounts/payroll-runs', access: 'private', permission: 'payrollRun.create', bodySchema: createBodySchema, handler: handleCreate },
   { method: 'GET', path: '/accounts/payroll-runs/:id', access: 'private', permission: 'payrollRun.read', handler: handleGet },
-  { method: 'PATCH', path: '/accounts/payroll-runs/:id', access: 'private', permission: 'payrollRun.update', handler: handleUpdate },
+  { method: 'PATCH', path: '/accounts/payroll-runs/:id', access: 'private', permission: 'payrollRun.update', bodySchema: updateBodySchema, handler: handleUpdate },
   { method: 'DELETE', path: '/accounts/payroll-runs/:id', access: 'private', permission: 'payrollRun.delete', handler: handleDelete },
   { method: 'POST', path: '/accounts/payroll-runs/:id/submit', access: 'private', permission: 'payrollRun.update', handler: handleSubmit },
   { method: 'POST', path: '/accounts/payroll-runs/:id/approve', access: 'private', permission: 'payrollRun.approve', handler: handleApprove },
-  { method: 'POST', path: '/accounts/payroll-runs/:id/return', access: 'private', permission: 'payrollRun.approve', handler: handleReturn },
-  { method: 'PATCH', path: '/accounts/payroll-runs/:id/items/:itemId', access: 'private', permission: 'payrollRun.update', handler: handleSettle },
+  { method: 'POST', path: '/accounts/payroll-runs/:id/return', access: 'private', permission: 'payrollRun.approve', bodySchema: reasonBodySchema, handler: handleReturn },
+  { method: 'PATCH', path: '/accounts/payroll-runs/:id/items/:itemId', access: 'private', permission: 'payrollRun.update', bodySchema: settleBodySchema, handler: handleSettle },
   { method: 'GET', path: '/accounts/payroll-runs/:id/history', access: 'private', permission: 'payrollRun.read', handler: handleHistory },
 ];

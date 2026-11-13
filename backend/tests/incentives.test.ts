@@ -2,6 +2,7 @@ import type { Application } from 'express';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { currentMonth } from '../src/lib/period.js';
+import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { IncentiveLedgerEntry } from '../src/modules/tasks/models/incentive.js';
 import { Task } from '../src/modules/tasks/models/task.js';
@@ -68,6 +69,15 @@ describe('Tasks: incentives', () => {
       const { rahim } = await finishedTask(6);
       await makeEarner(await admin(), ID.RAHIM);
       expect((await rahim.get('/tasks/projects/health')).body.projects[0].thisMonthIncentive).toBe(600);
+    });
+
+    it('leaves allocated hours and the share used out of project health for someone who cannot see them', async () => {
+      const { rahim } = await finishedTask(6);
+      await AccessProfile.updateOne({ _id: 'ap_engineering_lead' }, { $set: { 'grants.tasks.project.fieldAccess.totalAllocatedHours': 'hidden' } });
+      const [project] = (await rahim.get('/tasks/projects/health')).body.projects;
+      expect(project).not.toHaveProperty('totalAllocatedHours');
+      expect(project).not.toHaveProperty('usedShare');
+      expect(project.completedHours).toBe(6);
     });
 
     it("uses a person's own rate when their setting names one", async () => {

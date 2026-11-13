@@ -54,7 +54,7 @@ const handleReverse: RequestHandler = async (req, res) => {
 /** Money out. Posted payments are never edited or deleted, only reversed. */
 export const paymentRoutes: ApiRoute[] = [
   { method: 'GET', path: '/accounts/payments', access: 'private', permission: 'payment.read', handler: handleList },
-  { method: 'POST', path: '/accounts/payments', access: 'private', permission: 'payment.create', handler: handleCreate },
+  { method: 'POST', path: '/accounts/payments', access: 'private', permission: 'payment.create', bodySchema: createBodySchema, handler: handleCreate },
   { method: 'GET', path: '/accounts/payments/:id', access: 'private', permission: 'payment.read', handler: handleGet },
-  { method: 'POST', path: '/accounts/payments/:id/reverse', access: 'private', permission: 'payment.delete', handler: handleReverse },
+  { method: 'POST', path: '/accounts/payments/:id/reverse', access: 'private', permission: 'payment.delete', bodySchema: reasonBodySchema, handler: handleReverse },
 ];

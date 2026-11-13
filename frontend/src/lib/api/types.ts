@@ -46,11 +46,35 @@ export interface ModuleAccess {
   apis: Record<string, string[]>;
   /** For each of those APIs, what it is for and sample requests, keyed like apis' values. */
   guides: Record<string, ApiGuide>;
+  /** Super admins only: records an id field can be chosen from, by kind of record, such as User. */
+  references?: Record<string, ReferenceOption[]>;
+}
+
+export interface BodyFieldOption {
+  field: string;
+  values: (string | number | boolean | null)[];
+  /** The field holds a list of these values. */
+  isMany: boolean;
+}
+
+export interface ReferenceOption {
+  id: string;
+  label: string;
+}
+
+/** A body field or path parameter that takes a record's id, and the list in references to choose it from. */
+export interface ReferenceChoice {
+  field: string;
+  location: 'body' | 'path';
+  list: string;
+  isMany: boolean;
 }
 
 /** A sample request for one API, taken from the scenarios the API's tests replay. */
 export interface ApiExample {
   title: string;
+  /** Super admins only: the fields that take a record's id. */
+  choices?: ReferenceChoice[];
   outcome: 'accepted' | 'refused';
   expectedStatus: number;
   expectedCode?: string;
@@ -60,6 +84,8 @@ export interface ApiExample {
   sendFirst: string[];
   /** Path parameter values. An empty one comes from an earlier request, named in needs. */
   parameters: Record<string, string>;
+  /** For an empty parameter, the value from an earlier step it takes. */
+  parameterSources: Record<string, string>;
   query: string;
   body: string;
   needs: { value: string; madeBy: string }[];
@@ -70,6 +96,8 @@ export interface ApiGuide {
   purpose?: string;
   input?: string;
   examples: ApiExample[];
+  /** Body fields that take one of a fixed set of values, such as a status. */
+  fieldOptions?: BodyFieldOption[];
 }
 
 export interface User {
@@ -292,8 +320,28 @@ export interface RegisteredModule {
   resources: ModuleResource[];
   /** Each permission and the APIs it opens, as "METHOD /path". */
   apis: Record<string, string[]>;
+  /** Every built API, with who may call it. */
+  routes: ModuleApiRoute[];
   /** Each permission and the APIs and profiles that rely on it. An action in use can't be removed. */
   usedBy: Record<string, string[]>;
+}
+
+/** public: anyone, without signing in. signed: any signed-in person. private: needs a permission from their profile. */
+export type ApiAccessRule = 'public' | 'signed' | 'private';
+
+export interface ModuleApiRoute {
+  method: string;
+  path: string;
+  /** The rule in force, after any change a super admin made. */
+  access: ApiAccessRule;
+  /** Any one of these opens it. Empty unless private. */
+  permissions: string[];
+  /** The rule it was built with, in its code and manifest. */
+  declaredAccess: ApiAccessRule;
+  declaredPermissions: string[];
+  isChanged: boolean;
+  /** The rules a super admin may give it. Only one means it can't be changed. */
+  allowedAccess: ApiAccessRule[];
 }
 
 /** Grants for one module, as the API takes them. A profile may also hold "*", everything in the module. */

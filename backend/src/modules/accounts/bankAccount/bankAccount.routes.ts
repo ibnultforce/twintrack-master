@@ -75,7 +75,7 @@ export function createBankAccountRoutes(cipher: SecretCipher): ApiRoute[] {
     res.json(await service.updateBankAccount(getActor(req), id(req.params), parseRequestBody(updateBodySchema, req.body)));
   };
   const handleStatement: RequestHandler = async (req, res) => {
-    res.json(await service.getStatement(id(req.params), parseRequestQuery(statementQuerySchema, req.query)));
+    res.json(await service.getStatement(getActor(req), id(req.params), parseRequestQuery(statementQuerySchema, req.query)));
   };
   const handleHistory: RequestHandler = async (req, res) => {
     res.json(await service.getBankAccountHistory(getActor(req), id(req.params), parseRequestQuery(pageQuerySchema, req.query)));
@@ -89,12 +89,12 @@ export function createBankAccountRoutes(cipher: SecretCipher): ApiRoute[] {
 
   return [
     { method: 'GET', path: '/accounts/bank-accounts', access: 'private', permission: 'bankAccount.read', handler: handleList },
-    { method: 'POST', path: '/accounts/bank-accounts', access: 'private', permission: 'bankAccount.create', handler: handleCreate },
+    { method: 'POST', path: '/accounts/bank-accounts', access: 'private', permission: 'bankAccount.create', bodySchema: createBodySchema, handler: handleCreate },
     { method: 'GET', path: '/accounts/bank-accounts/:id', access: 'private', permission: 'bankAccount.read', handler: handleGet },
-    { method: 'PATCH', path: '/accounts/bank-accounts/:id', access: 'private', permission: 'bankAccount.update', handler: handleUpdate },
+    { method: 'PATCH', path: '/accounts/bank-accounts/:id', access: 'private', permission: 'bankAccount.update', bodySchema: updateBodySchema, handler: handleUpdate },
     { method: 'GET', path: '/accounts/bank-accounts/:id/statement', access: 'private', permission: 'bankAccount.read', handler: handleStatement },
     { method: 'GET', path: '/accounts/bank-accounts/:id/history', access: 'private', permission: 'bankAccount.read', handler: handleHistory },
     { method: 'GET', path: '/accounts/company-bank-details', access: 'private', permission: 'companyBankDetails.read', handler: handleGetDetails },
-    { method: 'PATCH', path: '/accounts/company-bank-details', access: 'private', permission: 'companyBankDetails.update', handler: handleSaveDetails },
+    { method: 'PATCH', path: '/accounts/company-bank-details', access: 'private', permission: 'companyBankDetails.update', bodySchema: companyDetailsBodySchema, handler: handleSaveDetails },
   ];
 }

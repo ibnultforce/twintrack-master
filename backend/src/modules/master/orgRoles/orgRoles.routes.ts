@@ -49,7 +49,7 @@ const handleDeleteOrgRole: RequestHandler = async (req, res) => {
 
 export const orgRolesRoutes: ApiRoute[] = [
   { method: 'GET', path: '/org-roles', access: 'private', permission: 'orgRole.read', handler: handleListOrgRoles },
-  { method: 'POST', path: '/org-roles', access: 'private', permission: 'orgRole.create', handler: handleCreateOrgRole },
-  { method: 'PATCH', path: '/org-roles/:id', access: 'private', permission: 'orgRole.update', handler: handleUpdateOrgRole },
+  { method: 'POST', path: '/org-roles', access: 'private', permission: 'orgRole.create', bodySchema: createOrgRoleBodySchema, handler: handleCreateOrgRole },
+  { method: 'PATCH', path: '/org-roles/:id', access: 'private', permission: 'orgRole.update', bodySchema: updateOrgRoleBodySchema, handler: handleUpdateOrgRole },
   { method: 'DELETE', path: '/org-roles/:id', access: 'private', permission: 'orgRole.delete', handler: handleDeleteOrgRole },
 ];

@@ -10,7 +10,7 @@ The screens never list routes or permissions in frontend code. The **Modules**, 
 
 1. **The manifest is the contract.** Every built route is in `manifests/<module>.manifest.json`, with the same method, path, `access` and `permission` as its `ApiRoute` declaration. Nothing is listed before it's built.
 2. **Access comes from data, never code.** Don't check a profile name, an org role or a module key in a route or service. Declare `access` and `permission` and let `registerRoutes` enforce them.
-3. **Org roles never carry permissions.** A new route needs no change to org roles. If it should reach a manager's team, put `scoped: true` on the resource and let `team` scope do it.
+3. **Org roles never carry permissions.** A new route needs no change to org roles. If it should reach a manager's team, put `scoped: true` on the resource and let `team` scope do it. `team` follows the reporting tree (`managerId`), not the org roles.
 4. **Reuse an action before adding one.** A new action (for example `salary.export`) shows up as a new column on the Profiles screen. Add one only when no existing action has the same meaning.
 5. **Nothing is granted automatically.** A new resource or action starts out held by nobody except the super admin. Say in the change summary which profiles will need it, and let an admin tick it in the app.
 6. **No mounted routers.** Register routes directly through the module's route list (`master.routes.ts`, `hr.routes.ts`, …) so the coverage tests can see them.
@@ -77,3 +77,7 @@ npm run test:postman
 | No test-page scenario | `tests/test-page.test.ts` |
 | Mounted router | `tests/postman-coverage.test.ts` |
 | Docs, artifacts, `.env.example` | Nothing. Use this checklist. |
+
+## Body schema
+
+A route that takes a body declares the schema its handler checks it with as `bodySchema`. The Try dialog reads it to offer each field's fixed values, such as a status, so declaring it keeps those choices exact.

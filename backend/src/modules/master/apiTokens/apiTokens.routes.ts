@@ -52,7 +52,7 @@ const handleRevokeInScope: RequestHandler = async (req, res) => {
  */
 export const apiTokensRoutes: ApiRoute[] = [
   { method: 'GET', path: '/me/api-tokens', access: 'signed', handler: handleList },
-  { method: 'POST', path: '/me/api-tokens', access: 'private', permission: 'apiToken.create', handler: handleCreate },
+  { method: 'POST', path: '/me/api-tokens', access: 'private', permission: 'apiToken.create', bodySchema: createBodySchema, handler: handleCreate },
   { method: 'POST', path: '/me/api-tokens/:id/revoke', access: 'signed', handler: handleRevoke },
   { method: 'GET', path: '/api-tokens', access: 'private', permission: 'apiToken.read', handler: handleListInScope },
   { method: 'POST', path: '/api-tokens/:id/revoke', access: 'private', permission: 'apiToken.delete', handler: handleRevokeInScope },

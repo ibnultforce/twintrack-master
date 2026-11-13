@@ -162,6 +162,18 @@ describe('what only a super admin can change', () => {
       });
     });
 
+    it('lists every API of a module with its access rule', async () => {
+      const farhana = await as('farhana');
+      const modules = (await farhana.get('/modules')).body.modules as { key: string; routes: { method: string; path: string; access: string; permissions: string[] }[] }[];
+      const master = modules.find((module) => module.key === 'master')!;
+      const find = (api: string) => master.routes.find((route) => `${route.method} ${route.path}` === api);
+      expect(find('POST /auth/login')).toMatchObject({ access: 'public', permissions: [] });
+      expect(find('GET /auth/me')).toMatchObject({ access: 'signed', permissions: [] });
+      expect(find('POST /users')).toMatchObject({ access: 'private', permissions: ['user.create'] });
+      expect(master.routes.every((route) => ['public', 'signed', 'private'].includes(route.access))).toBe(true);
+      expect(master.routes.filter((route) => route.access === 'private').every((route) => route.permissions.length > 0)).toBe(true);
+    });
+
     it('removes an unused action and allows renaming with every used action kept', async () => {
       const farhana = await as('farhana');
       await farhana.put('/modules/hr/resources/bonus', { label: 'Bonuses', actions: ['read', 'approve', 'delete'] });

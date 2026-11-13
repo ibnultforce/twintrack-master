@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Dialog } from '@/components/Dialog';
+import { EveryoneResults, responseText, statusTone } from '@/components/EveryoneResults';
 import { describeConnectionProblem, tryApiRequest, type TryResult } from '@/lib/api/http';
-import type { ApiExample, ApiGuide } from '@/lib/api/types';
+import type { ApiExample, ApiGuide, ReferenceOption } from '@/lib/api/types';
+import { ReferencePickers, readBodyObject } from '@/components/ReferencePickers';
+import { sendAsEachPerson, type PersonTryResult } from '@/lib/api/users';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 const METHODS_WITH_BODY = new Set<Method>(['POST', 'PUT', 'PATCH']);
@@ -22,11 +25,9 @@ function buildPath(path: string, values: Record<string, string>, query: string):
   return queryText ? `${filled}?${queryText}` : filled;
 }
 
-const statusTone = (status: number) => (status < 300 ? 'good' : status < 500 ? 'warning' : 'danger');
 const COPIED_MESSAGE_MS = 2000;
+const EMPTY_BODY = '{\n  \n}';
 
-/** The answer as it's shown, so what's copied matches what's on screen. */
-const responseText = (body: unknown) => (typeof body === 'string' ? body : JSON.stringify(body, null, 2));
 
 /** Copies the response to the clipboard, and says so for a moment. */
 function CopyButton({ text }: { text: string }) {
@@ -80,7 +81,7 @@ function SampleNotes({ example }: { example: ApiExample }) {
     <div className="try-sample-notes">
       <p>
         Expected: <span className={`try-status ${example.outcome === 'accepted' ? 'good' : 'warning'}`}>{expectedAnswer(example)}</span>
-        {example.sentBy ? <> when {example.sentBy} sends it in the example data. Sent as you, your own access decides.</> : null}
+        {example.sentBy ? <> when {example.sentBy} sends it in the example data. Sent by anyone else, their own access decides.</> : null}
       </p>
       {example.sendFirst.length > 0 ? (
         <p>The example sends first: {example.sendFirst.map((step, index) => <span key={`${step}-${index}`}>{index > 0 ? ', then ' : ''}<code>{step}</code></span>)}.</p>
@@ -95,27 +96,59 @@ function SampleNotes({ example }: { example: ApiExample }) {
   );
 }
 
+function describeTarget(target: TryTarget) {
+  if (target.kind === 'person') return <>This sends a real request as <b>{target.name}</b>, with their access, so anything it changes is saved.</>;
+  if (target.kind === 'everyone') return <>This sends the same request as each of <b>{target.people.length} people</b> in turn, with their own access, and lists every answer. Anything it changes is saved.</>;
+  return <>This sends a real request with your access, so anything it changes is saved.</>;
+}
+
+/** Who a request is sent as: the signed-in person, one person's test session, or each person in turn. */
+export type TryTarget =
+  | { kind: 'self' }
+  | { kind: 'person'; name: string; accessToken: string }
+  | { kind: 'everyone'; people: { id: string; name: string; email: string }[] };
+
 /**
- * Sends one API as the signed-in person, with their own access token, and shows the answer. Requests run for real,
- * so a change it makes is saved. Samples from the API's tested scenarios can fill the form.
+ * Sends one API, as the signed-in person, as one person, or as everyone one by one, and shows the answer. Requests run for real, so a change it
+ * makes is saved. Samples from the API's tested scenarios fill the form, starting with the first accepted one.
  */
-export function ApiTryDialog({ api, permission, guide, onClose }: { api: string; permission: string; guide?: ApiGuide; onClose: () => void }) {
+export function ApiTryDialog({ api, permission, guide, references, target = { kind: 'self' }, onClose }: {
+  api: string;
+  permission: string;
+  guide?: ApiGuide;
+  /** Super admins only: records an id field can be chosen from. */
+  references?: Record<string, ReferenceOption[]>;
+  target?: TryTarget;
+  onClose: () => void;
+}) {
   const { method, path, parameters } = parseApi(api);
   const hasBody = METHODS_WITH_BODY.has(method);
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [query, setQuery] = useState('');
-  const [bodyText, setBodyText] = useState(hasBody ? '{\n  \n}' : '');
+  const firstSample = guide?.examples.find((example) => example.outcome === 'accepted') ?? guide?.examples[0] ?? null;
+  const [values, setValues] = useState<Record<string, string>>(firstSample?.parameters ?? {});
+  const [query, setQuery] = useState(firstSample?.query ?? '');
+  const [bodyText, setBodyText] = useState(hasBody ? firstSample?.body || EMPTY_BODY : '');
   const [result, setResult] = useState<TryResult | null>(null);
   const [problem, setProblem] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [chosen, setChosen] = useState<ApiExample | null>(null);
+  const [chosen, setChosen] = useState<ApiExample | null>(firstSample);
+  const [everyoneAnswers, setEveryoneAnswers] = useState<PersonTryResult[] | null>(null);
+  // Closing the dialog stops a run for everyone after the person in progress.
+  const isClosed = useRef(false);
+  useEffect(() => {
+    // Set again on mount, since development mode mounts each component twice and runs the cleanup in between.
+    isClosed.current = false;
+    return () => {
+      isClosed.current = true;
+    };
+  }, []);
 
   const applySample = (example: ApiExample) => {
     setChosen(example);
     setValues(example.parameters);
     setQuery(example.query);
-    if (hasBody) setBodyText(example.body || '{\n  \n}');
+    if (hasBody) setBodyText(example.body || EMPTY_BODY);
     setResult(null);
+    setEveryoneAnswers(null);
     setProblem('');
   };
 
@@ -136,7 +169,19 @@ export function ApiTryDialog({ api, permission, guide, onClose }: { api: string;
     }
     setIsSending(true);
     try {
-      setResult(await tryApiRequest(method, finalPath, body));
+      if (target.kind === 'everyone') {
+        setResult(null);
+        setEveryoneAnswers([]);
+        await sendAsEachPerson(
+          target.people,
+          { method, path: finalPath, body },
+          (answer) => setEveryoneAnswers((previous) => [...(previous ?? []), answer]),
+          () => isClosed.current,
+        );
+      } else {
+        setEveryoneAnswers(null);
+        setResult(await tryApiRequest(method, finalPath, body, target.kind === 'person' ? target.accessToken : undefined));
+      }
     } catch {
       setProblem(describeConnectionProblem());
     } finally {
@@ -145,9 +190,12 @@ export function ApiTryDialog({ api, permission, guide, onClose }: { api: string;
   };
 
   return (
-    <Dialog title={`Try ${api}`} onClose={onClose}>
+    <Dialog title={`Try ${api}`} size="extra-wide" onClose={onClose}>
       <form className="form" onSubmit={(event) => void send(event)}>
-        <p className="note">Opened by <code>{permission}</code>. This sends a real request with your access, so anything it changes is saved.</p>
+        <p className="note">Opened by <code>{permission}</code>. {describeTarget(target)}</p>
+        {target.kind === 'everyone' && method !== 'GET' ? (
+          <p className="field-error">This sends the request {target.people.length} times, once per person, so every one that is accepted changes data.</p>
+        ) : null}
         {guide?.purpose ? <p>{guide.purpose}{guide.input ? <span className="meta"> Takes: {guide.input}.</span> : null}</p> : null}
         {guide && guide.examples.length > 0 ? <SampleList examples={guide.examples} chosen={chosen} onChoose={applySample} /> : null}
         {chosen ? <SampleNotes example={chosen} /> : null}
@@ -161,6 +209,15 @@ export function ApiTryDialog({ api, permission, guide, onClose }: { api: string;
           <label htmlFor="try-query">Query, optional</label>
           <input className="input" id="try-query" autoComplete="off" placeholder="page=1&pageSize=5" value={query} onChange={(event) => setQuery(event.target.value)} />
         </div>
+        <ReferencePickers
+          choices={chosen?.choices ?? []}
+          references={references}
+          fieldOptions={hasBody ? guide?.fieldOptions ?? [] : []}
+          parameterValues={values}
+          body={hasBody ? readBodyObject(bodyText) : null}
+          onPathChange={(field, value) => setValues({ ...values, [field]: value })}
+          onBodyChange={setBodyText}
+        />
         {hasBody ? (
           <div className="field">
             <label htmlFor="try-body">JSON body</label>
@@ -171,9 +228,10 @@ export function ApiTryDialog({ api, permission, guide, onClose }: { api: string;
         {problem ? <p className="field-error">{problem}</p> : null}
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>Close</button>
-          <button type="submit" className="btn btn-primary" disabled={isSending || missing.length > 0}>{isSending ? 'Sending…' : 'Send request'}</button>
+          <button type="submit" className="btn btn-primary" disabled={isSending || missing.length > 0}>{isSending ? 'Sending…' : target.kind === 'everyone' ? `Send as all ${target.people.length}` : 'Send request'}</button>
         </div>
       </form>
+      {everyoneAnswers ? <EveryoneResults answers={everyoneAnswers} total={target.kind === 'everyone' ? target.people.length : 0} isRunning={isSending} /> : null}
       {result ? (
         <div className="try-result">
           <div className="try-result-head">

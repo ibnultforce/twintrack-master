@@ -116,7 +116,7 @@ export function createAuthRoutes(config: Config): ApiRoute[] {
       path: '/auth/login',
       access: 'public',
       middleware: [originCheck, createFailedAttemptLimiter(settings, 'login')],
-      handler: handleLogin,
+      bodySchema: loginBodySchema, handler: handleLogin,
     },
     { method: 'POST', path: '/auth/refresh', access: 'public', middleware: [originCheck], handler: handleRefresh },
     { method: 'POST', path: '/auth/logout', access: 'public', middleware: [originCheck], handler: handleLogout },
@@ -126,24 +126,24 @@ export function createAuthRoutes(config: Config): ApiRoute[] {
       access: 'public',
       // The token is the credential here, so wrong ones count as failed attempts.
       middleware: [originCheck, createFailedAttemptLimiter(settings, 'set-password')],
-      handler: handleSetPassword,
+      bodySchema: setPasswordBodySchema, handler: handleSetPassword,
     },
     { method: 'GET', path: '/auth/me', access: 'signed', handler: handleGetProfile },
-    { method: 'PATCH', path: '/auth/me', access: 'signed', handler: handleUpdateProfile },
+    { method: 'PATCH', path: '/auth/me', access: 'signed', bodySchema: updateProfileBodySchema, handler: handleUpdateProfile },
     {
       method: 'POST',
       path: '/auth/verify-password',
       access: 'signed',
       // Asked for before showing something sensitive, such as a salary. Wrong guesses count as failed attempts.
       middleware: [createFailedAttemptLimiter(settings, 'verify-password')],
-      handler: handleVerifyPassword,
+      bodySchema: verifyPasswordBodySchema, handler: handleVerifyPassword,
     },
     {
       method: 'POST',
       path: '/auth/change-password',
       access: 'signed',
       middleware: [createFailedAttemptLimiter(settings, 'change-password')],
-      handler: handleChangePassword,
+      bodySchema: changePasswordBodySchema, handler: handleChangePassword,
     },
   ];
 }

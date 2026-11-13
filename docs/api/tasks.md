@@ -37,7 +37,7 @@ A project has `id`, `name`, `description`, `status` (`active`, `on_hold` or `com
 | Route | Needs | Body or query | Notes |
 |---|---|---|---|
 | `GET /tasks/projects` | `project.read` | `page`, `pageSize`, `status` | Returns `scope`, `total`, `projects` |
-| `GET /tasks/projects/health` | `project.read` | optionally `leadId` | Each project in reach: `completedHours`, `usedShare` of allocated hours, `openTaskCount`, this month's finished hours per TL (`thisMonth`) and `thisMonthIncentive` |
+| `GET /tasks/projects/health` | `project.read` | optionally `leadId` | Each project in reach: `completedHours`, `usedShare` of allocated hours, `openTaskCount`, this month's finished hours per TL (`thisMonth`) and `thisMonthIncentive`. Project fields the caller's field access hides are left out, and `usedShare` with `totalAllocatedHours`. |
 | `GET /tasks/projects/roster` | `project.read` | optionally `leadId` | `teamLeads` (projects, tasks done this month, average hours over or under estimate) and `developers` (open and done tasks, `totalPoints`) |
 | `POST /tasks/projects` | `project.create` | `name`, and optionally `description`, `totalAllocatedHours`, `deadline`, `leadId` (default: the caller), `clientId`, `memberIds` | `201`. The scope must reach the lead or a member. |
 | `GET /tasks/projects/:id` | `project.read` | | `404 unknown_project` |

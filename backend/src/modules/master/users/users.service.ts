@@ -5,6 +5,7 @@ import { ApiError } from '../../../lib/errors.js';
 import type { PageRequest } from '../../../lib/query.js';
 import { findUserReferences, type UserReferenceCheck } from '../../../lib/userReferences.js';
 import { actorFields, type Actor } from '../access/caller.js';
+import { peopleInScope } from '../access/scope.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import { findProfileOf } from '../accessProfiles/accessProfiles.repository.js';
 import { assertProfileWithinOwnAccess } from '../moduleRegistry/grantEditing.js';
@@ -125,6 +126,20 @@ async function assertValidManager(managerId: string, employeeId?: string): Promi
   }
 }
 
+/**
+ * A manager's team scope reaches everyone who reports to them, so a manager link is access. Nobody but a super admin
+ * changes their own, or makes someone from outside their own team report to them or to anyone in their team.
+ */
+async function assertMayChangeManager(actor: Actor, target: UserDoc, managerId: string | null | undefined): Promise<void> {
+  if (actor.user.superAdmin) return;
+  assertNotOwnAccount(actor, target);
+  if (!managerId) return;
+  const ownTeam = (await peopleInScope(actor.user._id, 'team')) ?? [];
+  if (ownTeam.includes(managerId) && !ownTeam.includes(target._id)) {
+    throw new ApiError(403, 'outside_own_team', 'Only a super admin can bring someone from outside your team into it.');
+  }
+}
+
 const duplicatedField = (error: unknown) =>
   error instanceof mongoose.mongo.MongoServerError ? Object.keys((error.keyPattern ?? {}) as object)[0] : undefined;
 
@@ -186,6 +201,7 @@ export async function updateUserDetails(actor: Actor, userId: string, requested:
   // Password links go to the email, so whoever sets it can take the account over. Nobody may take over more than their own access.
   const targetProfile = changes.email ? await findProfileOf(target) : null;
   if (targetProfile) await assertProfileWithinOwnAccess(actor, targetProfile);
+  if ('managerId' in changes) await assertMayChangeManager(actor, target, changes.managerId);
   if (changes.managerId) await assertValidManager(changes.managerId, target._id);
   // A place in the tree widens or narrows what someone's scope reaches, so only a super admin may change their own.
   if (changes.orgRoleId && !actor.user.superAdmin) assertNotOwnAccount(actor, target);

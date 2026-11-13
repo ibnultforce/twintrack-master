@@ -9,6 +9,7 @@ import { createFailedAttemptLimiter } from '../auth/failedAttemptLimiter.js';
 import { MAX_PASSWORD_LENGTH } from '../auth/passwords.js';
 import { exportModuleManifest, importModuleFromRequest, listRegisteredModules, removeModule } from './moduleRegistry.service.js';
 import { removeResource, saveResource } from './permissionRules.service.js';
+import { changeRouteAccess } from './routeAccess.service.js';
 
 const MAX_NAME_LENGTH = 100;
 
@@ -18,6 +19,13 @@ const saveResourceBodySchema = z.strictObject({
   label: nameField,
   actions: z.array(z.string()).min(1, 'needs at least one action'),
   scoped: z.boolean().optional(),
+});
+
+const routeAccessBodySchema = z.strictObject({
+  method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+  path: z.string().startsWith('/').max(300),
+  access: z.enum(['public', 'signed', 'private']),
+  permission: z.string().trim().min(1).max(MAX_NAME_LENGTH).optional(),
 });
 
 // The manifest is checked by the manifest rules, which give better messages than a schema here could.
@@ -58,6 +66,11 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
     res.json(await removeResource(getActor(req), String(req.params.key), String(req.params.resource)));
   };
 
+  const handleChangeRouteAccess: RequestHandler = async (req, res) => {
+    const request = parseRequestBody(routeAccessBodySchema, req.body);
+    res.json({ route: await changeRouteAccess(getActor(req), String(req.params.key), request) });
+  };
+
   return [
     { method: 'GET', path: '/modules', access: 'private', permission: 'module.read', handler: handleListModules },
     {
@@ -66,12 +79,14 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
       access: 'private',
       permission: 'module.create',
       middleware: [createFailedAttemptLimiter(config.auth, 'import-manifest')],
-      handler: handleImportModule,
+      bodySchema: importModuleBodySchema, handler: handleImportModule,
     },
     { method: 'GET', path: '/modules/:key/export', access: 'private', permission: 'module.read', handler: handleExportModule },
     { method: 'DELETE', path: '/modules/:key', access: 'private', permission: 'module.delete', handler: handleRemoveModule },
     // One route both adds and changes a resource. The service picks the permission once it knows whether the resource exists.
-    { method: 'PUT', path: '/modules/:key/resources/:resource', access: 'private', anyPermission: ['module.create', 'module.update'], handler: handleSaveResource },
+    { method: 'PUT', path: '/modules/:key/resources/:resource', access: 'private', anyPermission: ['module.create', 'module.update'], bodySchema: saveResourceBodySchema, handler: handleSaveResource },
+    // Only a super admin may, which the service checks: it changes access for everyone.
+    { method: 'PUT', path: '/modules/:key/route-access', access: 'private', permission: 'module.update', bodySchema: routeAccessBodySchema, handler: handleChangeRouteAccess },
     { method: 'DELETE', path: '/modules/:key/resources/:resource', access: 'private', permission: 'module.delete', handler: handleRemoveResource },
   ];
 }

@@ -98,19 +98,19 @@ const handlers: Record<string, RequestHandler> = {
 const RECORDS = '/records/:module/:object';
 
 export const customObjectsRoutes: ApiRoute[] = [
-  { method: 'POST', path: '/modules/:key/objects', access: 'private', permission: 'module.create', handler: handlers.addObject! },
+  { method: 'POST', path: '/modules/:key/objects', access: 'private', permission: 'module.create', bodySchema: newObjectBodySchema, handler: handlers.addObject! },
   { method: 'PUT', path: '/modules/:key/objects/:object', access: 'private', permission: 'module.update', handler: handlers.updateObject! },
   { method: 'DELETE', path: '/modules/:key/objects/:object', access: 'private', permission: 'module.delete', handler: handlers.removeObject! },
   // Signed, because the permission is held in the module named in the path. The service checks it, as the middleware would.
   { method: 'GET', path: '/records', access: 'signed', handler: handlers.listObjects! },
   { method: 'GET', path: RECORDS, access: 'signed', handler: handlers.list! },
-  { method: 'POST', path: RECORDS, access: 'signed', handler: handlers.create! },
+  { method: 'POST', path: RECORDS, access: 'signed', bodySchema: createBodySchema, handler: handlers.create! },
   { method: 'GET', path: `${RECORDS}/:id`, access: 'signed', handler: handlers.read! },
-  { method: 'PATCH', path: `${RECORDS}/:id`, access: 'signed', handler: handlers.update! },
+  { method: 'PATCH', path: `${RECORDS}/:id`, access: 'signed', bodySchema: updateBodySchema, handler: handlers.update! },
   { method: 'DELETE', path: `${RECORDS}/:id`, access: 'signed', handler: handlers.remove! },
   { method: 'POST', path: `${RECORDS}/:id/restore`, access: 'signed', handler: handlers.restore! },
   { method: 'GET', path: `${RECORDS}/:id/history`, access: 'signed', handler: handlers.history! },
   { method: 'GET', path: `${RECORDS}/:id/shares`, access: 'signed', handler: handlers.listShares! },
-  { method: 'POST', path: `${RECORDS}/:id/shares`, access: 'signed', handler: handlers.share! },
+  { method: 'POST', path: `${RECORDS}/:id/shares`, access: 'signed', bodySchema: shareBodySchema, handler: handlers.share! },
   { method: 'DELETE', path: `${RECORDS}/:id/shares/:shareId`, access: 'signed', handler: handlers.unshare! },
 ];

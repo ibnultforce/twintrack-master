@@ -6,6 +6,7 @@ import type { Actor } from './caller.js';
 import type { Grantee } from './permissions.js';
 import { listPermissionApis } from '../moduleRegistry/grantEditing.js';
 import { findAllModules, findModuleByKey } from '../moduleRegistry/moduleRegistry.repository.js';
+import { fillGuidesFromDatabase, type ReferenceOption } from './apiSamples.service.js';
 import { resolveModuleAccess, type ModuleAccess, type PermissionMap } from './permissions.js';
 
 export interface AccessibleModule {
@@ -36,17 +37,20 @@ export async function listModulesForUser(grantee: Grantee, frontendUrls: Map<str
 
 /**
  * What this person can do in one module, and the APIs each permission they hold opens, as "METHOD /path", so they can
- * try them, with each API's purpose and sample requests in guides.
+ * try them, with each API's purpose and sample requests in guides. A super admin's samples use records from this database.
  */
 export async function getModuleAccessForUser(
   grantee: Grantee,
   moduleKey: string,
-): Promise<ModuleAccess & { apis: Record<string, string[]>; guides: Record<string, ApiGuide> }> {
+): Promise<ModuleAccess & { apis: Record<string, string[]>; guides: Record<string, ApiGuide>; references?: Record<string, ReferenceOption[]> }> {
   const module = await findModuleByKey(moduleKey);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
   const access = resolveModuleAccess(grantee, module);
   const apis = Object.fromEntries(Object.entries(listPermissionApis(module)).filter(([permission]) => Boolean(access.permissions[permission])));
-  return { ...access, apis, guides: findApiGuides([...new Set(Object.values(apis).flat())]) };
+  const guides = findApiGuides([...new Set(Object.values(apis).flat())]);
+  // Only a super admin's samples name real records: they may see every record, and anyone else could learn ids beyond their reach.
+  if (!grantee.user.superAdmin) return { ...access, apis, guides };
+  return { ...access, apis, ...(await fillGuidesFromDatabase(guides)) };
 }
 
 /** What this person can do in one module, for signed routes whose services decide the access. Empty if it isn't loaded. */

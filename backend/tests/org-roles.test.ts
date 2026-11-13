@@ -5,6 +5,7 @@ import { createApp } from '../src/app.js';
 import { peopleInScope } from '../src/modules/master/access/scope.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { OrgRole } from '../src/modules/master/models/orgRole.js';
+import { User } from '../src/modules/master/models/user.js';
 import { validateOrgRolesFile } from '../src/modules/master/orgRoles/orgRolesFile.js';
 import { useTestDatabase } from './helpers/database.js';
 import { addOrgRole, addPerson, importSeedManifests, requestsAs, signIn } from './helpers/signedIn.js';
@@ -171,29 +172,51 @@ describe('org roles', () => {
     });
   });
 
+  // Team scope follows the reporting tree, not the org roles: jasmin → jack → karim → omar, and jasmin → rahim.
+  // nadia holds the same role as jasmin and leads her own line: nadia → priya.
   describe('team scope', () => {
     beforeEach(async () => {
       await addPerson('jasmin', { orgRoleId: 'sales' });
-      await addPerson('jack', { orgRoleId: 'sales_east' });
+      await addPerson('jack', { orgRoleId: 'sales_east', managerId: 'jasmin' });
+      await User.updateOne({ _id: 'karim' }, { $set: { managerId: 'jack' } });
+      await addPerson('omar', { orgRoleId: 'sales_east_team', managerId: 'karim' });
       await addPerson('nadia', { orgRoleId: 'sales' });
+      await addPerson('priya', { orgRoleId: 'sales_east', managerId: 'nadia' });
       await addPerson('rahim', { orgRoleId: 'hr', managerId: 'jasmin' });
     });
 
-    it('reaches everyone in the roles below, at any depth, plus direct reports', async () => {
-      expect((await peopleInScope('jasmin', 'team'))?.sort()).toEqual(['jack', 'jasmin', 'karim', 'rahim']);
+    it('reaches everyone who reports to the person, at any depth, whatever their org role', async () => {
+      expect((await peopleInScope('jasmin', 'team'))?.sort()).toEqual(['jack', 'jasmin', 'karim', 'omar', 'rahim']);
+      expect((await peopleInScope('jack', 'team'))?.sort()).toEqual(['jack', 'karim', 'omar']);
     });
 
-    it('leaves out peers who share the role', async () => {
-      expect(await peopleInScope('jasmin', 'team')).not.toContain('nadia');
+    it("keeps two people in the same org role out of each other's reports", async () => {
+      expect(await peopleInScope('jasmin', 'team')).not.toEqual(expect.arrayContaining(['nadia']));
+      expect(await peopleInScope('jasmin', 'team')).not.toContain('priya');
+      expect((await peopleInScope('nadia', 'team'))?.sort()).toEqual(['nadia', 'priya']);
     });
 
-    it('reaches only the person when nobody is below them', async () => {
-      expect(await peopleInScope('karim', 'team')).toEqual(['karim']);
+    it('reaches only the person when nobody reports to them', async () => {
+      expect(await peopleInScope('omar', 'team')).toEqual(['omar']);
     });
 
-    it('follows a move in the tree on the next call', async () => {
+    it('ends on a loop in the manager links, without repeating anyone', async () => {
+      await User.updateOne({ _id: 'jasmin' }, { $set: { managerId: 'omar' } });
+      const reached = (await peopleInScope('jasmin', 'team')) ?? [];
+      expect([...reached].sort()).toEqual(['jack', 'jasmin', 'karim', 'omar', 'rahim']);
+      expect(new Set(reached).size).toBe(reached.length);
+    });
+
+    it('ignores moves in the org role tree, and follows a manager change on the next call', async () => {
       await (await as('farhana')).patch('/org-roles/sales_east', { parentId: 'hr' });
+      expect((await peopleInScope('jasmin', 'team'))?.sort()).toEqual(['jack', 'jasmin', 'karim', 'omar', 'rahim']);
+      await User.updateOne({ _id: 'jack' }, { $set: { managerId: 'nadia' } });
       expect((await peopleInScope('jasmin', 'team'))?.sort()).toEqual(['jasmin', 'rahim']);
+    });
+
+    it('leaves own and all as they were', async () => {
+      expect(await peopleInScope('jasmin', 'own')).toEqual(['jasmin']);
+      expect(await peopleInScope('jasmin', 'all')).toBeNull();
     });
   });
 });

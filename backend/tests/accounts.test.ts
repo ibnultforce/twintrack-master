@@ -187,6 +187,19 @@ describe('Accounts module', () => {
       expect(statement).toMatchObject({ openingBalance: 80000, closingBalance: 84900 });
       expect(statement.entries).toEqual([expect.objectContaining({ kind: 'receipt', amount: 4900, balance: 84900 })]);
     });
+
+    it('refuses a statement to someone who cannot see the account balances', async () => {
+      const { bank } = await setUpMoney();
+      const statementPath = `/accounts/bank-accounts/${bank.id}/statement?from=2026-01-01&to=2026-12-31`;
+      expect((await (await as('rumana')).get(statementPath)).status).toBe(200);
+
+      await AccessProfile.updateOne({ _id: 'ap_auditor' }, { $set: { 'grants.accounts.bankAccount.fieldAccess.currentBalance': 'hidden' } });
+      const rumana = await as('rumana');
+      expect((await rumana.get(`/accounts/bank-accounts/${bank.id}`)).body).not.toHaveProperty('currentBalance');
+      const refused = await rumana.get(statementPath);
+      expect(refused.status).toBe(403);
+      expect(refused.body.error.code).toBe('field_hidden');
+    });
   });
 
   describe('invoices and receipts', () => {

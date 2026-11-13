@@ -99,7 +99,7 @@ describe('API tokens, OAuth and MCP', () => {
       await AccessProfile.create({ _id: 'ap_token_lead', name: 'Token lead', grants: { master: { apiToken: { actions: ['read', 'delete'], scope: 'team' } } } });
       await AccessProfile.create({ _id: 'ap_nothing', name: 'Nothing', grants: {} });
       await addPerson('lena', { name: 'Lena Lead', profileId: 'ap_token_lead', orgRoleId: 'or_lead' });
-      await addPerson('tom', { name: 'Tom Team', profileId: 'ap_developer', orgRoleId: 'or_team' });
+      await addPerson('tom', { name: 'Tom Team', profileId: 'ap_developer', orgRoleId: 'or_team', managerId: 'lena' });
       await addPerson('nina', { name: 'Nina None', profileId: 'ap_nothing', orgRoleId: 'or_team' });
     });
 

@@ -79,7 +79,8 @@ function ProfileChooser({ person, profiles, canChange, onChanged }: { person: Us
 
 const describeOrgRole = (orgRoles: OrgRole[] | null, orgRoleId?: string) => {
   if (!orgRoleId) return 'Not placed yet';
-  return orgRoles?.find((orgRole) => orgRole.id === orgRoleId)?.name ?? orgRoleId;
+  if (!orgRoles) return "Set, but you can't read org roles";
+  return orgRoles.find((orgRole) => orgRole.id === orgRoleId)?.name ?? orgRoleId;
 };
 
 type OpenDialog = 'edit' | 'status' | 'reset' | 'delete' | 'impersonate' | null;
@@ -180,7 +181,7 @@ export default function PersonPage() {
               <Card title="What they can do">
                 {person.status === 'inactive' ? <Notice tone="warning">This account is deactivated, so none of this applies until it is reactivated.</Notice> : null}
                 {person.profileId && !profiles ? <Notice tone="warning">Their profile isn&apos;t shown, because reading profiles needs accessProfile.read.</Notice> : null}
-                <WhatTheyCanDo person={person} modules={modules} profile={profile} />
+                {person.profileId && !profiles ? null : <WhatTheyCanDo person={person} modules={modules} profile={profile} />}
               </Card>
 
               {dialog === 'edit' ? (

@@ -3652,6 +3652,87 @@
           ]
         },
         {
+          "id": "PUT /modules/:key/route-access",
+          "method": "PUT",
+          "path": "/modules/:key/route-access",
+          "purpose": "Changes who may call one API from the next request on: any signed-in person, or only people holding a permission. Super admins only. An API built public stays public, and one whose code needs the caller can't be made public.",
+          "input": "method, path (with the module's base path), access (signed or private), and permission when making it private",
+          "access": "Needs module.update, and being a super admin",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "PUT",
+                "path": "/modules/hr/route-access",
+                "body": "{\"method\":\"GET\",\"path\":\"/hr/salaries\",\"access\":\"signed\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PUT",
+                "path": "/modules/hr/route-access",
+                "as": "karim@twintrack.test",
+                "body": "{\"method\":\"GET\",\"path\":\"/hr/salaries\",\"access\":\"signed\"}"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Super admin opens the salary list to every signed-in person",
+              "expected": 200,
+              "request": {
+                "method": "PUT",
+                "path": "/modules/hr/route-access",
+                "as": "farhana@twintrack.test",
+                "body": "{\"method\":\"GET\",\"path\":\"/hr/salaries\",\"access\":\"signed\"}"
+              },
+              "changesData": true
+            },
+            {
+              "kind": "success",
+              "title": "Super admin makes the salary list private again, behind salary.read",
+              "expected": 200,
+              "request": {
+                "method": "PUT",
+                "path": "/modules/hr/route-access",
+                "as": "farhana@twintrack.test",
+                "body": "{\"method\":\"GET\",\"path\":\"/hr/salaries\",\"access\":\"private\",\"permission\":\"salary.read\"}"
+              },
+              "changesData": true
+            },
+            {
+              "kind": "fail",
+              "title": "An API whose code needs the caller can't be public",
+              "expected": 422,
+              "code": "access_not_allowed",
+              "request": {
+                "method": "PUT",
+                "path": "/modules/hr/route-access",
+                "as": "farhana@twintrack.test",
+                "body": "{\"method\":\"GET\",\"path\":\"/hr/salaries\",\"access\":\"public\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Unknown API",
+              "expected": 404,
+              "code": "unknown_route",
+              "request": {
+                "method": "PUT",
+                "path": "/modules/hr/route-access",
+                "as": "farhana@twintrack.test",
+                "body": "{\"method\":\"GET\",\"path\":\"/hr/nowhere\",\"access\":\"signed\"}"
+              }
+            }
+          ]
+        },
+        {
           "id": "DELETE /modules/:key/resources/:resource",
           "method": "DELETE",
           "path": "/modules/:key/resources/:resource",

@@ -5,6 +5,7 @@ import type { AccessProfileDoc } from '../models/accessProfile.js';
 import type { ModuleDoc } from '../models/module.js';
 import { isWiderFieldAccess, type Grants, type ManifestResource } from './manifest.js';
 import { findAllModules } from './moduleRegistry.repository.js';
+import { declaredPermissions, listAllowedRules, resolveRouteRule, type AccessRule } from './routeAccess.js';
 
 const EVERYTHING_LABEL = 'Everything in this module';
 
@@ -66,15 +67,51 @@ export function listPermissionUsers(module: ModuleDoc, profiles: Pick<AccessProf
   return users;
 }
 
-/** Each permission and the built APIs it opens, as "METHOD /path". */
-export function listPermissionApis(module: Pick<ModuleDoc, 'routes' | 'baseUrl'>): Record<string, string[]> {
-  const prefix = module.baseUrl && module.baseUrl !== '/' ? module.baseUrl : '';
+/** One built API and who may call it: anyone (public), any signed-in person (signed) or a profile permission (private). */
+export interface ModuleApiRoute {
+  method: string;
+  path: string;
+  /** The rule in force, after any change a super admin made. */
+  access: AccessRule;
+  /** The permissions that open it, any one of which is enough. Empty unless private. */
+  permissions: string[];
+  /** The rule the API was built with, in its code and manifest. */
+  declaredAccess: AccessRule;
+  declaredPermissions: string[];
+  isChanged: boolean;
+  /** The rules a super admin may give it. A single one means it can't be changed. */
+  allowedAccess: AccessRule[];
+}
+
+type RoutedModule = Pick<ModuleDoc, 'routes' | 'baseUrl' | 'routeAccess'>;
+
+const fullPathOf = (module: Pick<ModuleDoc, 'baseUrl'>, path: string) => `${module.baseUrl && module.baseUrl !== '/' ? module.baseUrl : ''}${path}`;
+
+/** Every built API of a module with the access rule in force, with the module's base path in front. */
+export function listModuleRoutes(module: RoutedModule): ModuleApiRoute[] {
+  return module.routes
+    .filter((route) => !route.planned)
+    .map((route) => {
+      const path = fullPathOf(module, route.path);
+      const rule = resolveRouteRule(route, path, module.routeAccess);
+      return {
+        method: route.method,
+        path,
+        access: rule.access,
+        permissions: rule.permissions,
+        declaredAccess: route.access,
+        declaredPermissions: declaredPermissions(route),
+        isChanged: rule.isChanged,
+        allowedAccess: listAllowedRules(route.access),
+      };
+    });
+}
+
+/** Each permission and the built APIs it opens now, as "METHOD /path". */
+export function listPermissionApis(module: RoutedModule): Record<string, string[]> {
   const apis: Record<string, string[]> = {};
-  for (const route of module.routes) {
-    if (route.planned) continue;
-    for (const permission of route.permission ? [route.permission] : (route.anyPermission ?? [])) {
-      (apis[permission] ??= []).push(`${route.method} ${prefix}${route.path}`);
-    }
+  for (const route of listModuleRoutes(module)) {
+    for (const permission of route.permissions) (apis[permission] ??= []).push(`${route.method} ${route.path}`);
   }
   return apis;
 }

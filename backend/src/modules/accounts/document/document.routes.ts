@@ -54,9 +54,9 @@ export function createDocumentRoutes(storage: FileStorage): ApiRoute[] {
 
   return [
     { method: 'GET', path: '/accounts/documents', access: 'private', permission: 'document.read', handler: handleList },
-    { method: 'POST', path: '/accounts/documents', access: 'private', permission: 'document.create', handler: handleStart },
-    { method: 'POST', path: '/accounts/documents/:id/part-urls', access: 'private', permission: 'document.create', handler: handlePartUrls },
-    { method: 'POST', path: '/accounts/documents/:id/complete', access: 'private', permission: 'document.create', handler: handleComplete },
+    { method: 'POST', path: '/accounts/documents', access: 'private', permission: 'document.create', bodySchema: startBodySchema, handler: handleStart },
+    { method: 'POST', path: '/accounts/documents/:id/part-urls', access: 'private', permission: 'document.create', bodySchema: partUrlsBodySchema, handler: handlePartUrls },
+    { method: 'POST', path: '/accounts/documents/:id/complete', access: 'private', permission: 'document.create', bodySchema: completeBodySchema, handler: handleComplete },
     { method: 'GET', path: '/accounts/documents/:id/url', access: 'private', permission: 'document.read', handler: handleUrl },
     // Removing your own needs only document.create. Someone else's also needs document.delete, checked in the service.
     { method: 'DELETE', path: '/accounts/documents/:id', access: 'private', permission: 'document.create', handler: handleDelete },

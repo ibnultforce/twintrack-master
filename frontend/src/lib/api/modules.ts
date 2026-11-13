@@ -1,5 +1,5 @@
 import { apiRequest } from './http';
-import type { AccessProfile, AuditEntry, Grants, OrgRole, RegisteredModule, ResourceAction } from './types';
+import type { AccessProfile, ApiAccessRule, AuditEntry, Grants, ModuleApiRoute, OrgRole, RegisteredModule, ResourceAction } from './types';
 
 const segment = encodeURIComponent;
 const resourcePath = (moduleKey: string, resourceKey: string) => `/modules/${segment(moduleKey)}/resources/${segment(resourceKey)}`;
@@ -27,6 +27,17 @@ export const saveResource = (moduleKey: string, resourceKey: string, details: Re
 
 export const removeResource = (moduleKey: string, resourceKey: string) =>
   apiRequest(resourcePath(moduleKey, resourceKey), { method: 'DELETE' });
+
+export interface RouteAccessChange {
+  method: string;
+  path: string;
+  access: ApiAccessRule;
+  permission?: string;
+}
+
+/** Super admins only: changes who may call one API, from the next request on. */
+export const changeRouteAccess = (moduleKey: string, change: RouteAccessChange) =>
+  apiRequest<{ route: ModuleApiRoute }>(`/modules/${segment(moduleKey)}/route-access`, { method: 'PUT', body: change });
 
 export async function listProfiles(): Promise<AccessProfile[]> {
   return (await apiRequest<{ profiles: AccessProfile[] }>('/access-profiles')).profiles;

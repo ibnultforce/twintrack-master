@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { CustomObjectDialog } from '@/components/CustomObjectDialog';
+import { ModuleRoutes } from '@/components/ModuleRoutes';
 import { ConfirmDialog, Dialog } from '@/components/Dialog';
 import { Card, Loaded, Notice, PageHead, Pill, TextField } from '@/components/ui';
 import { describeError } from '@/lib/api/http';
@@ -133,7 +134,8 @@ type ModulesDialog =
 const permissionTotal = (module: RegisteredModule) => module.resources.reduce((total, resource) => total + resource.actions.length, 0);
 
 export default function RegisteredModulesPage() {
-  const { can } = useSession();
+  const { can, profile } = useSession();
+  const isSuperAdmin = profile?.superAdmin ?? false;
   const canAddResources = can('module.create');
   const canEditResources = can('module.update');
   const canRemoveResources = can('module.delete');
@@ -237,6 +239,7 @@ export default function RegisteredModulesPage() {
                       </table>
                     </div>
                   </Card>
+                  <ModuleRoutes key={module.key} moduleKey={module.key} routes={module.routes} resources={module.resources} canChange={isSuperAdmin} onChanged={modules.reload} />
                   <Card title="Custom objects" aside={canAddResources ? <button type="button" className="link" onClick={() => setDialog({ kind: 'add-object' })}>+ New object</button> : undefined}>
                     {module.resources.filter((resource) => resource.custom).length === 0 ? <p className="empty">No custom objects in {module.name} yet. People reach their records from the Records screen.</p> : (
                       <div className="table-box">

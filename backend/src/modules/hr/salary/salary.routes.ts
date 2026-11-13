@@ -101,14 +101,14 @@ const handleHistory: RequestHandler = async (req, res) => {
 
 export const salaryRoutes: ApiRoute[] = [
   { method: 'GET', path: '/hr/salaries', access: 'private', permission: 'salary.read', handler: handleList },
-  { method: 'POST', path: '/hr/salaries', access: 'private', permission: 'salary.create', handler: handleCreate },
-  { method: 'PATCH', path: '/hr/salaries/:id', access: 'private', permission: 'salary.update', handler: handleUpdate },
-  { method: 'PATCH', path: '/hr/salaries/:id/approve', access: 'private', permission: 'salary.approve', handler: handleApprove },
+  { method: 'POST', path: '/hr/salaries', access: 'private', permission: 'salary.create', bodySchema: createBodySchema, handler: handleCreate },
+  { method: 'PATCH', path: '/hr/salaries/:id', access: 'private', permission: 'salary.update', bodySchema: updateBodySchema, handler: handleUpdate },
+  { method: 'PATCH', path: '/hr/salaries/:id/approve', access: 'private', permission: 'salary.approve', bodySchema: approveBodySchema, handler: handleApprove },
   { method: 'DELETE', path: '/hr/salaries/:id', access: 'private', permission: 'salary.delete', handler: handleDelete },
   { method: 'POST', path: '/hr/salaries/:id/restore', access: 'private', permission: 'salary.delete', handler: handleRestore },
   { method: 'GET', path: '/hr/salaries/:id/history', access: 'private', permission: 'salary.read', handler: handleHistory },
   // Sharing needs salary.read to reach these. The service then decides who may share, from the salary and its owner.
   { method: 'GET', path: '/hr/salaries/:id/shares', access: 'private', permission: 'salary.read', handler: handleListShares },
-  { method: 'POST', path: '/hr/salaries/:id/shares', access: 'private', permission: 'salary.read', handler: handleShare },
+  { method: 'POST', path: '/hr/salaries/:id/shares', access: 'private', permission: 'salary.read', bodySchema: shareBodySchema, handler: handleShare },
   { method: 'DELETE', path: '/hr/salaries/:id/shares/:shareId', access: 'private', permission: 'salary.read', handler: handleUnshare },
 ];

@@ -76,8 +76,8 @@ export function createCredentialRoutes(cipher: SecretCipher): ApiRoute[] {
 
   return [
     { method: 'GET', path: '/tasks/projects/:id/credentials', access: 'private', permission: 'credential.read', middleware: [noStore], handler: handleList },
-    { method: 'POST', path: '/tasks/projects/:id/credentials', access: 'private', permission: 'credential.create', middleware: [noStore], handler: handleCreate },
-    { method: 'PATCH', path: '/tasks/projects/:id/credentials/:credentialId', access: 'private', permission: 'credential.update', middleware: [noStore], handler: handleUpdate },
+    { method: 'POST', path: '/tasks/projects/:id/credentials', access: 'private', permission: 'credential.create', middleware: [noStore], bodySchema: createBodySchema, handler: handleCreate },
+    { method: 'PATCH', path: '/tasks/projects/:id/credentials/:credentialId', access: 'private', permission: 'credential.update', middleware: [noStore], bodySchema: updateBodySchema, handler: handleUpdate },
     { method: 'DELETE', path: '/tasks/projects/:id/credentials/:credentialId', access: 'private', permission: 'credential.delete', handler: handleDelete },
   ];
 }

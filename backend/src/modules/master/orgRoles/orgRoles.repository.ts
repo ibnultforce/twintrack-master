@@ -22,10 +22,6 @@ export function findOrgRolesBelow(orgRoleId: string, session?: ClientSession) {
   return OrgRole.find({ ancestorIds: orgRoleId }).session(session ?? null).lean();
 }
 
-export async function findOrgRoleIdsBelow(orgRoleId: string): Promise<string[]> {
-  return OrgRole.find({ ancestorIds: orgRoleId }).distinct('_id');
-}
-
 export async function countPeopleByOrgRole(): Promise<Map<string, number>> {
   const counts = await User.aggregate<{ _id: string; count: number }>([
     { $match: { orgRoleId: { $exists: true } } },

@@ -49,7 +49,7 @@ const handleRemoveProfile: RequestHandler = async (req, res) => {
 
 export const accessProfilesRoutes: ApiRoute[] = [
   { method: 'GET', path: '/access-profiles', access: 'private', permission: 'accessProfile.read', handler: handleListProfiles },
-  { method: 'POST', path: '/access-profiles', access: 'private', permission: 'accessProfile.create', handler: handleCreateProfile },
-  { method: 'PATCH', path: '/access-profiles/:id', access: 'private', permission: 'accessProfile.update', handler: handleUpdateProfile },
+  { method: 'POST', path: '/access-profiles', access: 'private', permission: 'accessProfile.create', bodySchema: createProfileBodySchema, handler: handleCreateProfile },
+  { method: 'PATCH', path: '/access-profiles/:id', access: 'private', permission: 'accessProfile.update', bodySchema: updateProfileBodySchema, handler: handleUpdateProfile },
   { method: 'DELETE', path: '/access-profiles/:id', access: 'private', permission: 'accessProfile.delete', handler: handleRemoveProfile },
 ];

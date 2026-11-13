@@ -1,11 +1,12 @@
 import { currentMonth, monthBounds } from '../../../lib/period.js';
 import type { Actor } from '../../master/access/caller.js';
 import type { Scope } from '../../master/moduleRegistry/manifest.js';
+import { readFieldRules, redactRecord } from '../../master/records/fieldSecurity.service.js';
 import { findIncentiveSettings } from '../incentive/incentive.repository.js';
 import { CLOSED_TASK_STATUSES } from '../models/task.js';
 import { sumPointsOf } from '../points/points.repository.js';
 import { findRosterTasks, sumDoneHoursByLead, sumHoursByProject } from '../task/task.repository.js';
-import { findPeopleNames } from '../tasksModule.js';
+import { findPeopleNames, TASKS_MODULE_KEY } from '../tasksModule.js';
 import { projectsInReach } from './project.service.js';
 
 const HOUR_DECIMALS = 100;
@@ -22,10 +23,13 @@ export async function getProjectsHealth(actor: Actor, scope: Scope, defaultHourl
   const { from, before } = monthBounds(currentMonth());
   const [hours, leadHours] = await Promise.all([sumHoursByProject(projectIds), sumDoneHoursByLead(projectIds, from, before)]);
   const leadIds = [...new Set(leadHours.map((entry) => entry.tlId))];
-  const [names, earners] = await Promise.all([
+  const [names, earners, rules] = await Promise.all([
     findPeopleNames([...projects.map((project) => project.leadId), ...leadIds]),
     findIncentiveSettings(leadIds, true),
+    readFieldRules(actor, TASKS_MODULE_KEY, 'project'),
   ]);
+  // The share used is worked out from the allocated hours, so it is hidden with them.
+  const isAllocationHidden = rules.hidden.includes('totalAllocatedHours');
   const rateByLead = new Map(earners.map((setting) => [setting._id, setting.hourlyRate ?? defaultHourlyRate]));
   const hoursByProject = new Map(hours.map((entry) => [entry.projectId, entry]));
 
@@ -34,7 +38,7 @@ export async function getProjectsHealth(actor: Actor, scope: Scope, defaultHourl
       const projectHours = hoursByProject.get(project._id);
       const completedHours = roundHours(projectHours?.completedHours ?? 0);
       const monthLeads = leadHours.filter((entry) => entry.projectId === project._id);
-      return {
+      return redactRecord({
         id: project._id,
         name: project.name,
         status: project.status,
@@ -43,12 +47,12 @@ export async function getProjectsHealth(actor: Actor, scope: Scope, defaultHourl
         totalAllocatedHours: project.totalAllocatedHours,
         completedHours,
         // Missing when no hours were allocated, because a share of nothing means nothing.
-        usedShare: project.totalAllocatedHours ? roundHours(completedHours / project.totalAllocatedHours) : undefined,
+        usedShare: project.totalAllocatedHours && !isAllocationHidden ? roundHours(completedHours / project.totalAllocatedHours) : undefined,
         openTaskCount: projectHours?.openTaskCount ?? 0,
         thisMonth: monthLeads.map((entry) => ({ tlId: entry.tlId, tlName: names.get(entry.tlId), hours: roundHours(entry.hours) })),
         // Each lead's hours at their own rate. Leads who don't earn the monthly incentive add nothing.
         thisMonthIncentive: roundHours(monthLeads.reduce((sum, entry) => sum + entry.hours * (rateByLead.get(entry.tlId) ?? 0), 0)),
-      };
+      }, rules);
     }),
   };
 }

@@ -164,7 +164,7 @@ main { min-width: 0; padding: 24px; display: grid; gap: 16px; align-content: sta
 .module-card h2 { font-size: 17px; font-weight: 600; }
 .module-card .card-head { margin: 0; align-items: flex-start; }
 .module-card p { color: var(--ink-muted); }
-.module-card .bottom { margin-top: auto; padding-top: 8px; }
+.module-card .bottom { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Tables and rows */
 /* Positioned, so absolutely placed hidden labels stay inside the scroll area. */
@@ -367,10 +367,41 @@ dialog h2 { margin-bottom: 14px; font-size: 17px; font-weight: 600; }
 .object-field .wide { grid-column: 1 / -1; }
 .object-field-options { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 dialog.dialog-wide { width: min(640px, calc(100vw - 32px)); }
+dialog.dialog-extra-wide { width: min(960px, calc(100vw - 32px)); }
 .history-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .history-list li { padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 @media (max-width: 760px) { .object-field { grid-template-columns: 1fr; } }
-.org-role-item b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Org roles tree: connector lines, collapsible branches, and colours for the chosen role, the roles above it and the roles below it. */
+.split-wide-side { grid-template-columns: 320px minmax(0, 1fr); }
+.org-tree-tools { display: flex; gap: 14px; padding: 0 8px; font-size: 13px; }
+.org-tree-legend { list-style: none; margin: 4px 0 8px; padding: 0 8px; display: grid; gap: 4px; color: var(--ink-muted); font-size: 12px; }
+.org-tree-legend li { display: flex; align-items: center; gap: 8px; }
+.org-tree-swatch { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.org-tree-swatch[data-relation="chosen"] { width: 12px; height: 12px; border-radius: 3px; background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.org-tree-swatch[data-relation="below"] { background: var(--accent); }
+.org-tree-swatch[data-relation="above"] { background: var(--ink-muted); }
+.org-tree, .org-tree-group { list-style: none; margin: 0; padding: 0; }
+.org-tree-group { margin-left: 11px; padding-left: 14px; }
+.org-tree-branch { position: relative; }
+.org-tree-group > .org-tree-branch::before { content: ""; position: absolute; left: -14px; top: 0; width: 12px; height: 17px; border-left: 1.5px solid var(--border-strong); border-bottom: 1.5px solid var(--border-strong); border-bottom-left-radius: 7px; }
+.org-tree-group > .org-tree-branch::after { content: ""; position: absolute; left: -14px; top: 17px; bottom: 0; border-left: 1.5px solid var(--border-strong); }
+.org-tree-group > .org-tree-branch:last-child::after { display: none; }
+.org-tree-group > .org-tree-branch[data-relation="below"]::before { border-color: var(--accent); }
+.org-tree-node { position: relative; display: flex; align-items: center; gap: 4px; margin: 1px 0; padding: 3px 8px 3px 2px; border-radius: 8px; }
+.org-tree-node:hover { background: var(--surface-muted); }
+.org-tree-node[data-relation="chosen"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.org-tree-node[data-relation="chosen"] .org-tree-name { color: var(--accent); font-weight: 700; }
+.org-tree-node[data-relation="below"]::after, .org-tree-node[data-relation="above"]::after { content: ""; flex: none; order: 3; width: 6px; height: 6px; border-radius: 50%; }
+.org-tree-node[data-relation="below"]::after { background: var(--accent); }
+.org-tree-node[data-relation="above"]::after { background: var(--ink-muted); }
+.org-tree-node .org-tree-count { order: 4; }
+.org-tree-node[data-relation="other"] .org-tree-name { color: var(--ink-muted); font-weight: 500; }
+.org-tree-toggle { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--ink-muted); font-size: 12px; cursor: pointer; }
+button.org-tree-toggle:hover { background: var(--neutral-soft); }
+.org-tree-name { flex: 1; min-width: 0; padding: 2px 0; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.org-tree-count { flex: none; min-width: 22px; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-muted); font-size: 12px; text-align: center; }
+.org-tree-summary { padding: 8px 8px 0; margin-top: 6px; border-top: 1px solid var(--border); }
+@media (max-width: 1000px) { .split-wide-side { grid-template-columns: minmax(0, 1fr); } }
 
 /* Trying an API from Your permissions: each route with a Try button, and the request and answer in a dialog. */
 /* Your permissions: one block per record, one line per API with a coloured method badge, the path and Try. */
@@ -391,8 +422,12 @@ dialog.dialog-wide { width: min(640px, calc(100vw - 32px)); }
 .api-row:first-child { border-top: 0; }
 .api-row:hover { background: var(--surface-muted); }
 .api-path { font-size: 13px; overflow-wrap: anywhere; }
+.api-what { display: grid; gap: 2px; min-width: 0; }
+.api-purpose { font-size: 12.5px; color: var(--ink-muted); }
 .api-permission { font-size: 12px; color: var(--ink-muted); white-space: nowrap; }
 .api-group-extra { margin: 6px 0 0; }
+.api-row-verdict { grid-template-columns: 72px minmax(0, 1fr) auto 190px auto; }
+.api-verdict { display: flex; justify-content: flex-end; }
 .method-badge { display: inline-block; text-align: center; padding: 2px 0; border-radius: 6px; font: 700 11px/1.4 ui-monospace, Consolas, monospace; letter-spacing: .03em; }
 .method-get { background: var(--good-soft); color: var(--good); }
 .method-post { background: var(--accent-soft); color: var(--accent); }
@@ -403,6 +438,7 @@ dialog.dialog-wide { width: min(640px, calc(100vw - 32px)); }
 @media (max-width: 760px) {
   .api-row { grid-template-columns: 64px minmax(0, 1fr) auto; }
   .api-permission { display: none; }
+  .api-row-verdict { grid-template-columns: 64px minmax(0, 1fr) auto auto; }
 }
 .try-body { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; resize: vertical; }
 .try-request { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
@@ -441,3 +477,31 @@ dialog.dialog-wide { width: min(640px, calc(100vw - 32px)); }
 .try-sample .try-status { flex: none; min-width: 52px; text-align: center; }
 .try-sample-notes { display: grid; gap: 4px; padding: 8px 12px; border-radius: 8px; background: var(--surface-muted); font-size: 13px; }
 .try-sample-notes p { margin: 0; }
+
+.tester-choice { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; }
+.tester-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 16px; padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); }
+.tester-bar span { flex: 1 1 260px; }
+.api-rows-scroll { max-height: 420px; overflow-y: auto; }
+/* Space between the access filter tabs and the list below them. */
+.module-routes-list { margin-top: 12px; }
+/* Each API on Modules, with room for a super admin's Change button. */
+.api-row-access { grid-template-columns: 72px minmax(0, 1fr) auto auto 72px; }
+.api-row-access .btn, .api-row-access .route-locked { justify-self: end; }
+.route-access-option { align-items: flex-start; gap: 8px; padding: 6px 0; }
+.route-access-option input { margin-top: 3px; }
+@media (max-width: 760px) {
+  .api-row-access { grid-template-columns: 64px minmax(0, 1fr) auto auto; }
+}
+.everyone-count { margin-left: 8px; }
+.everyone-results { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; max-height: 480px; overflow-y: auto; }
+.everyone-results li { border-top: 1px solid var(--border); }
+.everyone-results li:first-child { border-top: 0; }
+.everyone-results summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; }
+.everyone-results summary:hover { background: var(--surface-muted); }
+.everyone-detail { margin-left: auto; }
+.everyone-results .try-response { margin: 0 12px 10px; }
+
+/* Pickers of real records for the Try dialog's id fields, two to a row where there is room. */
+.reference-pickers { display: grid; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px 14px; }
+.reference-pickers legend { font-weight: 600; padding: 0 4px; }
+.reference-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 16px; }

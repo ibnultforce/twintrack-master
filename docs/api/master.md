@@ -114,7 +114,7 @@ Links are sent by [`POST /users`](#post-users) and [`POST /users/password-links`
 
 **Access:** `signed`
 
-**Returns:** `module`, `hasAccess`, `profile`, `profileName`, `permissions` (permission to scope), `apis` (each permission held, to the APIs it opens as `METHOD /path`, for trying them from Your permissions), `guides` (for each of those APIs, its `purpose`, `input` and `examples`: sample requests taken from the test page's scenarios, each with `title`, `outcome` (`accepted` or `refused`), `expectedStatus`, `expectedCode`, `sentBy` (who sends it in the example data), `parameters`, `query`, `body`, `sendFirst` (requests the example sends before it), `needs` (values an earlier request makes, such as `projectId`) and `changesData`. Scenarios about a missing or forged token are left out, since Try sends your own), `fieldAccess` (protected fields, as `resource.field` to `hidden`, `read`, `create` or `edit`, for every controlled field, including levels that follow the actions)
+**Returns:** `module`, `hasAccess`, `profile`, `profileName`, `permissions` (permission to scope), `apis` (each permission held, to the APIs it opens as `METHOD /path`, for trying them from Your permissions), `guides` (for each of those APIs, its `purpose`, `input` and `examples`: sample requests taken from the test page's scenarios, each with `title`, `outcome` (`accepted` or `refused`), `expectedStatus`, `expectedCode`, `sentBy` (who sends it in the example data), `parameters`, `parameterSources` (for an empty parameter, the earlier-step value it takes), `query`, `body`, `sendFirst` (requests the example sends before it), `needs` (values an earlier request makes, such as `projectId`) and `changesData`. Scenarios about a missing or forged token are left out, since Try sends your own. For a super admin, samples name real records in this database instead of the example data's ids, and a sample that creates something gets a fresh name, key and email, so it doesn't clash with an existing record. Each of a super admin's samples also has `choices`: the body fields and path parameters that take a record's id, each with `field`, `location` (`body` or `path`), `list` and `isMany`. The answer then adds `references`, up to 100 records of each kind (such as `User` or `OrgRole`) as `id` and `label`, for choosing them by name. `choices` also covers id fields the API's body schema names that the sample leaves out, such as `leadId`. Every guide has `fieldOptions`: the body fields that take one of a fixed set of values, each as `field`, `values` and `isMany`, read from the schema the API checks its body with, which a route declares as `bodySchema`), `fieldAccess` (protected fields, as `resource.field` to `hidden`, `read`, `create` or `edit`, for every controlled field, including levels that follow the actions)
 
 **Errors:** `404 unknown_module`
 
@@ -178,7 +178,7 @@ Nobody is given a password. New people, and people whose password is reset, are 
 
 **Returns:** the updated person.
 
-**Errors:** `403 super_admin_protected`, `403 own_account` when someone other than a super admin changes their own `orgRoleId`, `403 beyond_own_access` when someone other than a super admin changes the `email` of a person whose profile goes beyond their own access (password links go to the email, so it would hand that access over), `404 unknown_user`, `409 email_taken`, `409 employee_number_taken`, `422 validation_failed` for an org role that doesn't exist or another field such as `profileId`
+**Errors:** `403 super_admin_protected`, `403 own_account` when someone other than a super admin changes their own `orgRoleId` or `managerId`, `403 outside_own_team` when someone other than a super admin makes a person from outside their team report to them or to anyone in their team (a manager link widens `team` scope), `403 beyond_own_access` when someone other than a super admin changes the `email` of a person whose profile goes beyond their own access (password links go to the email, so it would hand that access over), `404 unknown_user`, `409 email_taken`, `409 employee_number_taken`, `422 validation_failed` for an org role that doesn't exist or another field such as `profileId`
 
 ### `PATCH /users/:id/status`
 
@@ -226,7 +226,7 @@ Nobody is given a password. New people, and people whose password is reset, are 
 
 ## Changing someone's access
 
-A person's access comes from their one profile, given with the route below. It needs the Master permission `userProfile.update`, whose scope decides whose profile someone may change: `team` reaches their direct reports and everyone in the org roles below theirs, and `all` reaches everyone. The profile being given, and the one it replaces, must both stay within the giver's own access in every module.
+A person's access comes from their one profile, given with the route below. It needs the Master permission `userProfile.update`, whose scope decides whose profile someone may change: `team` reaches everyone who reports to them, at any depth, and `all` reaches everyone. The profile being given, and the one it replaces, must both stay within the giver's own access in every module.
 
 Only a super admin can change a super admin's profile or their own.
 
@@ -260,7 +260,7 @@ Only a super admin can change a super admin's profile or their own.
 
 ## Org roles
 
-The organisation tree. Every org role has one parent, except the single root. A person in a role sees records owned by people in the roles below it, at any depth, but only with their own permissions: the tree passes on visibility, never permissions. People who share a role are peers and don't see each other's records through the tree.
+The organisation tree. Every org role has one parent, except the single root. Org roles describe job levels. They don't decide what `team` scope reaches, which follows each person's manager instead; they decide only who a share to an org role, or to a role and everything below it, reaches. The tree passes on no permissions.
 
 An org role in these responses has `id`, `name`, `description`, `parentId` (`null` for the root), `depth` (`0` for the root), `peopleCount`, `createdAt` and `updatedAt`.
 
@@ -308,7 +308,7 @@ Master can't be replaced or removed through the API.
 
 **Access:** `private`, needs `module.read`
 
-**Returns:** `modules`, each with `key`, `name`, `version`, `description`, `core`, `frontendUrl`, `resources`, `apis`, and `usedBy`, the APIs and profiles relying on each permission.
+**Returns:** `modules`, each with `key`, `name`, `version`, `description`, `core`, `frontendUrl`, `resources`, `apis`, `routes`, and `usedBy`, the APIs and profiles relying on each permission. `routes` lists every built API as `method`, `path` (with the module's base path), `access` (`public`: anyone without signing in, `signed`: any signed-in person, `private`: a profile permission) and `permissions`, any one of which opens a private API (empty otherwise). These are the rule in force; `declaredAccess` and `declaredPermissions` are what the API was built with, `isChanged` says a super admin changed it, and `allowedAccess` lists the rules it can be given (see [`PUT /modules/:key/route-access`](#put-moduleskeyroute-access)). Every manifest route must state its `access`; a private route must name a permission and the others may not.
 
 ### `POST /modules/import`
 
@@ -391,6 +391,22 @@ A profile in these responses has `id`, `name`, `description`, `grants`, `holders
 **Returns:** `201` for a new resource or `200` for a change, with `created`, `module`, `resource`.
 
 **Errors:** `404 unknown_module`
+
+### `PUT /modules/:key/route-access`
+
+**Access:** `private`, needs `module.update`, and only a super admin may (`403 super_admin_only` otherwise).
+
+Changes who may call one API, from the next request on. Saved on the module, kept when its manifest is imported again, and written to the activity log as `module.routeAccessChanged`. Setting the rule the API was built with removes the change.
+
+**Body:** `method`, `path` (as the API is called, with the module's base path, such as `/hr/salaries`), `access` (`signed` or `private`), and `permission` (a `resource.action` of the module) to make it private. Without one, a private API keeps the permission it was built with.
+
+- An API built `public` stays public: it works before anyone signs in.
+- Any other API can be `signed` or `private` but not `public`, because its code needs to know who is calling.
+- A built-private API made `signed` keeps the scope of anyone holding its permission; anyone else reaches only their own records (`own`).
+
+**Returns:** `route`, the API as `GET /modules` lists it.
+
+**Errors:** `404 unknown_module`, `404 unknown_route`, `422 access_not_allowed`, `422 validation_failed`
 
 ### `DELETE /modules/:key/resources/:resource`
 

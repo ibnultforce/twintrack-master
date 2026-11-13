@@ -129,19 +129,19 @@ export function createUsersRoutes(mailer: PasswordLinkMailer, referenceChecks: U
 
   return [
     { method: 'GET', path: '/users', access: 'private', permission: 'user.read', handler: handleListUsers },
-    { method: 'POST', path: '/users', access: 'private', permission: 'user.create', handler: handleCreateUser },
+    { method: 'POST', path: '/users', access: 'private', permission: 'user.create', bodySchema: createUserBodySchema, handler: handleCreateUser },
     // Emails each person a one-time link for setting a new password. Registered before /users/:id.
-    { method: 'POST', path: '/users/password-links', access: 'private', permission: 'user.update', handler: handleSendPasswordLinks },
+    { method: 'POST', path: '/users/password-links', access: 'private', permission: 'user.update', bodySchema: sendLinksBodySchema, handler: handleSendPasswordLinks },
     { method: 'GET', path: '/users/next-employee-number', access: 'private', permission: 'user.create', handler: handlePreviewEmployeeNumber },
     // Registered before /users/:id, which would otherwise read "access-options" as an id.
     { method: 'GET', path: '/users/access-options', access: 'private', anyPermission: [READ_PEOPLE, GIVE_PROFILE_PERMISSION], handler: handleListAccessModules },
     { method: 'GET', path: '/users/:id', access: 'private', permission: 'user.read', handler: handleGetUser },
-    { method: 'PATCH', path: '/users/:id', access: 'private', permission: 'user.update', handler: handleUpdateUser },
+    { method: 'PATCH', path: '/users/:id', access: 'private', permission: 'user.update', bodySchema: updateUserBodySchema, handler: handleUpdateUser },
     // Only for someone who never signed in. Everyone else is deactivated, so their history stays whole.
     { method: 'DELETE', path: '/users/:id', access: 'private', permission: 'user.delete', handler: handleDeleteUser },
-    { method: 'PATCH', path: '/users/:id/status', access: 'private', permission: 'user.update', handler: handleSetStatus },
+    { method: 'PATCH', path: '/users/:id/status', access: 'private', permission: 'user.update', bodySchema: setStatusBodySchema, handler: handleSetStatus },
     // userProfile.update is scoped: its scope decides whose profile someone may change. The service checks the rest.
-    { method: 'PUT', path: '/users/:id/profile', access: 'private', permission: GIVE_PROFILE_PERMISSION, handler: handleSetProfile },
+    { method: 'PUT', path: '/users/:id/profile', access: 'private', permission: GIVE_PROFILE_PERMISSION, bodySchema: setProfileBodySchema, handler: handleSetProfile },
     { method: 'GET', path: '/modules/:key/people', access: 'private', anyPermission: [READ_PEOPLE, GIVE_PROFILE_PERMISSION], handler: handleListModulePeople },
     { method: 'GET', path: '/modules/:key/addable-people', access: 'private', permission: GIVE_PROFILE_PERMISSION, handler: handleListAddablePeople },
   ];

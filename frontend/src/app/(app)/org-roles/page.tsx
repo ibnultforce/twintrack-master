@@ -11,6 +11,7 @@ import { listAllUsers } from '@/lib/api/users';
 import { formatTime, humanize, peopleCount } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useProfile, useSession } from '@/session/SessionProvider';
+import { OrgTree, OrgTreeLegend, type RoleRelation } from './OrgTree';
 
 /** The roles in tree order: each parent followed by its children, sorted by name at each level. */
 function orderAsTree(roles: OrgRole[]): OrgRole[] {
@@ -54,6 +55,20 @@ function rolesAbove(roles: OrgRole[], role: OrgRole): OrgRole[] {
   return above;
 }
 
+/** Everyone who reports to this person, directly or through others. This is what their team scope reaches. */
+function reportingLineOf(people: User[], personId: string): User[] {
+  const line: User[] = [];
+  const seen = new Set([personId]);
+  let managerIds = [personId];
+  while (managerIds.length > 0) {
+    const reports = people.filter((person) => person.managerId && managerIds.includes(person.managerId) && !seen.has(person.id));
+    reports.forEach((report) => seen.add(report.id));
+    line.push(...reports);
+    managerIds = reports.map((report) => report.id);
+  }
+  return line;
+}
+
 const indentedName = (role: OrgRole) => `${'— '.repeat(role.depth)}${role.name}`;
 
 function RoleFormDialog({ title, submitLabel, role, parentChoices, initialParentId, needsParent, onSubmit, onClose }: {
@@ -95,7 +110,7 @@ function RoleFormDialog({ title, submitLabel, role, parentChoices, initialParent
               <option value="" disabled>Choose a parent role</option>
               {parentChoices.map((choice) => <option key={choice.id} value={choice.id}>{indentedName(choice)}</option>)}
             </select>
-            <p className="meta">Moving a role moves every role below it too. People above see the records of everyone below them.</p>
+            <p className="meta">Moving a role moves every role below it too. It changes nobody's reach: team reach follows who reports to whom.</p>
           </div>
         ) : null}
         {error ? <Notice tone="danger">{error}</Notice> : null}
@@ -110,7 +125,7 @@ function RoleFormDialog({ title, submitLabel, role, parentChoices, initialParent
 
 type OrgRoleDialog = 'add-child' | 'add-root' | 'edit' | 'delete' | null;
 
-/** The organisation tree. It decides whose records someone's team scope reaches. It never gives permissions. */
+/** The organisation tree of job levels. Team reach follows each person's manager, not this tree, and the tree never gives permissions. */
 export default function OrgRolesPage() {
   const viewer = useProfile();
   const { can } = useSession();
@@ -126,10 +141,11 @@ export default function OrgRolesPage() {
   const [chosenId, setChosenId] = useState('');
   const [dialog, setDialog] = useState<OrgRoleDialog>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
   return (
     <>
-      <PageHead title="Org roles" subtitle="Your organisation tree. People see the records of everyone in the roles below theirs." />
+      <PageHead title="Org roles" subtitle="Your job levels. Team-scoped access reaches the people who report to someone, through their managers, not everyone in the roles below." />
       {outcome ? <Notice tone="good">{outcome}</Notice> : null}
       <Loaded state={data}>
         {({ roles, people }) => {
@@ -154,34 +170,42 @@ export default function OrgRolesPage() {
           const above = rolesAbove(roles, role);
           const rolesBelow = roles.filter((candidate) => candidate.id !== role.id && below.has(candidate.id));
           const peopleBelow = rolesBelow.reduce((total, candidate) => total + candidate.peopleCount, 0);
-          const peopleAbove = above.reduce((total, candidate) => total + candidate.peopleCount, 0);
           const holders = people?.filter((person) => person.orgRoleId === role.id) ?? [];
-          const holderIds = new Set(holders.map((holder) => holder.id));
-          const directReports = people?.filter((person) => person.managerId && holderIds.has(person.managerId)).length ?? null;
+          const reachOfHolders = people ? holders.map((holder) => ({ holder, line: reportingLineOf(people, holder.id) })) : null;
           const isOwnRole = viewer.orgRoleId === role.id && !viewer.superAdmin;
           const isRoot = role.parentId === null;
+          const aboveIds = new Set(above.map((step) => step.id));
+          const relationOf = (roleId: string): RoleRelation =>
+            roleId === role.id ? 'chosen' : aboveIds.has(roleId) ? 'above' : below.has(roleId) ? 'below' : 'other';
+          // The chosen role always stays visible, even if a role above it was collapsed.
+          const visibleCollapsedIds = new Set([...collapsedIds].filter((roleId) => !aboveIds.has(roleId)));
 
           return (
             <>
-              <div className="split">
+              <div className="split split-wide-side">
                 <section className="side" aria-label="Org tree">
                   <div className="side-head">
                     <span>Tree</span>
                     {canCreate ? <button type="button" className="link" onClick={() => setDialog('add-child')}>+ Role below</button> : null}
                   </div>
-                  {roles.map((candidate) => (
-                    <button
-                      type="button"
-                      key={candidate.id}
-                      className="item item-button org-role-item"
-                      style={{ paddingLeft: `${12 + candidate.depth * 18}px` }}
-                      aria-current={candidate.id === role.id}
-                      onClick={() => setChosenId(candidate.id)}
-                    >
-                      <b>{candidate.depth > 0 ? '└ ' : ''}{candidate.name}</b>
-                      <span className="count">{candidate.peopleCount}</span>
-                    </button>
-                  ))}
+                  <div className="org-tree-tools">
+                    <button type="button" className="link" onClick={() => setCollapsedIds(new Set())}>Expand all</button>
+                    <button type="button" className="link" onClick={() => setCollapsedIds(new Set(roles.filter((candidate) => candidate.depth > 0 && roles.some((child) => child.parentId === candidate.id)).map((candidate) => candidate.id)))}>Collapse all</button>
+                  </div>
+                  <OrgTreeLegend />
+                  <OrgTree
+                    roles={roles}
+                    chosenId={role.id}
+                    relationOf={relationOf}
+                    collapsedIds={visibleCollapsedIds}
+                    onChoose={setChosenId}
+                    onToggle={(roleId) => setCollapsedIds((previous) => {
+                      const next = new Set(previous);
+                      if (next.has(roleId)) next.delete(roleId); else next.add(roleId);
+                      return next;
+                    })}
+                  />
+                  <p className="meta org-tree-summary">{peopleCount(peopleBelow)} in {rolesBelow.length} {rolesBelow.length === 1 ? 'level' : 'levels'} below {role.name}. Each person's team reaches only their own reporting line, so two people in {role.name} lead separate teams.</p>
                 </section>
                 <div className="pane">
                   <section className="card pane-top">
@@ -212,10 +236,16 @@ export default function OrgRolesPage() {
                   </Card>
 
                   <Card title="Who it reaches">
-                    <Row label="People below this role">{peopleCount(peopleBelow)}</Row>
-                    <Row label="People above who can see this role">{peopleCount(peopleAbove)}</Row>
-                    {directReports !== null ? <Row label="Direct reports of people in this role">{peopleCount(directReports)}</Row> : null}
-                    <p className="note spaced">Someone in {role.name} with a team-scoped permission reaches their direct reports and the records of the {peopleCount(peopleBelow)} in the {rolesBelow.length} {rolesBelow.length === 1 ? 'role' : 'roles'} below it. The tree only decides visibility. Permissions come from each person's profile.</p>
+                    <p className="note">Team-scoped permissions reach a person and everyone who reports to them, directly or through others, whatever their org role. The tree only names job levels. Permissions come from each person&apos;s profile.</p>
+                    {reachOfHolders === null ? <p className="empty">Seeing each person&apos;s reporting line needs user.read.</p>
+                      : reachOfHolders.length === 0 ? <p className="empty">Nobody is in this role, so it reaches nobody.</p>
+                      : reachOfHolders.map(({ holder, line }) => (
+                        <Row key={holder.id} label={holder.name}>
+                          {line.length === 0 ? 'Nobody reports to them' : (
+                            <span title={line.map((person) => person.name).join(', ')}>{peopleCount(line.length)}: {line.map((person, index) => <span key={person.id}>{index > 0 ? ', ' : ''}<Link className="link" href={`/people/${encodeURIComponent(person.id)}`}>{person.name}</Link></span>)}</span>
+                          )}
+                        </Row>
+                      ))}
                   </Card>
 
                   <Card title="People in this role" aside={<span className="note">{peopleCount(role.peopleCount)}</span>}>

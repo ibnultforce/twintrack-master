@@ -24,6 +24,8 @@ interface RequestOptions {
   /** Sent as it is, with its own content type, such as an image file. Takes the place of body. */
   file?: Blob;
   query?: Record<string, string | number | undefined>;
+  /** Sent in place of the session's own token, such as a test session for another person. */
+  accessToken?: string;
 }
 
 interface SessionListeners {
@@ -68,6 +70,7 @@ function buildUrl(path: string, query: RequestOptions['query']): string {
 }
 
 function send(path: string, options: RequestOptions): Promise<Response> {
+  const token = options.accessToken ?? accessToken;
   const hasBody = options.body !== undefined;
   const contentType = options.file ? options.file.type : hasBody ? 'application/json' : undefined;
   return fetch(buildUrl(path, options.query), {
@@ -75,7 +78,7 @@ function send(path: string, options: RequestOptions): Promise<Response> {
     credentials: 'include',
     headers: {
       ...(contentType && { 'Content-Type': contentType }),
-      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
     body: options.file ?? (hasBody ? JSON.stringify(options.body) : undefined),
   });
@@ -165,14 +168,17 @@ export interface TryResult {
 /**
  * Sends one request exactly as asked, for trying an API, and returns whatever comes back instead of throwing on a
  * refusal. An expired token is refreshed once, as in apiRequest. The path may include a query string.
+ * With asToken, it is sent as that token's person instead, and is never refreshed: the caller owns that token.
  */
-export async function tryApiRequest(method: NonNullable<RequestOptions['method']>, path: string, body?: unknown): Promise<TryResult> {
+export async function tryApiRequest(method: NonNullable<RequestOptions['method']>, path: string, body?: unknown, asToken?: string): Promise<TryResult> {
   const started = performance.now();
-  let response = await send(path, { method, body });
-  if (response.status === 401 && accessToken !== null && isImpersonating) {
+  let response = await send(path, { method, body, accessToken: asToken });
+  // Someone else's token is never refreshed: that would swap in the signed-in person's own identity.
+  const isOwnToken = asToken === undefined;
+  if (isOwnToken && response.status === 401 && accessToken !== null && isImpersonating) {
     // Refreshing would swap in the super admin's own token under the impersonated screen, as apiRequest explains.
     listeners?.onImpersonationEnded();
-  } else if (response.status === 401 && accessToken !== null) {
+  } else if (isOwnToken && response.status === 401 && accessToken !== null) {
     const refusal = (await response.clone().json().catch(() => null)) as { error?: { code?: string } } | null;
     if (REFRESHABLE_CODES.has(refusal?.error?.code ?? '') && (await refreshAccessToken())) response = await send(path, { method, body });
   }

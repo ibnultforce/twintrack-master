@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import { findBodySchema } from './apiRoute.js';
+import { listBodyFieldOptions, type BodyFieldOption } from './bodyFieldOptions.js';
 
 /**
  * Sample requests for each API, for the Try dialog on "Your permissions". They come from the test page's scenarios,
@@ -12,6 +14,7 @@ const ACCOUNTS_FILE = new URL('../../test-page/accounts.json', import.meta.url);
 
 const PATH_PARAMETER = /^:(\w+)$/;
 const PLACEHOLDER = /\{\{(\w+)\}\}/g;
+const WHOLE_PLACEHOLDER = /^\{\{(\w+)\}\}$/;
 
 interface ScenarioRequest {
   method: string;
@@ -40,6 +43,15 @@ interface ScenarioRoute {
   scenarios: Scenario[];
 }
 
+/** A body field or path parameter that takes a record's id, and the list of records to choose it from. */
+export interface ReferenceChoice {
+  field: string;
+  location: 'body' | 'path';
+  list: string;
+  /** The field holds a list of ids, such as memberIds. */
+  isMany: boolean;
+}
+
 export interface ApiExample {
   title: string;
   /** Whether the API should accept it. */
@@ -52,18 +64,24 @@ export interface ApiExample {
   sendFirst: string[];
   /** Values for the path's parameters. An empty one comes from an earlier step, named in needs. */
   parameters: Record<string, string>;
+  /** For each empty parameter, the value from an earlier step it takes, such as id from projectId. */
+  parameterSources: Record<string, string>;
   query: string;
   /** Pretty-printed JSON, or empty when the API takes no body. */
   body: string;
   /** Values the sample uses that an earlier request creates, such as a task id, with the request that makes them. */
   needs: { value: string; madeBy: string }[];
   changesData: boolean;
+  /** Set for super admins: the fields that take a record's id. */
+  choices?: ReferenceChoice[];
 }
 
 export interface ApiGuide {
   purpose?: string;
   input?: string;
   examples: ApiExample[];
+  /** Body fields that take one of a fixed set of values, read from the schema the API checks its body with. */
+  fieldOptions: BodyFieldOption[];
 }
 
 const prettyBody = (body: string | undefined) => {
@@ -76,19 +94,21 @@ const prettyBody = (body: string | undefined) => {
 };
 
 /** Reads each parameter's value from where the route's pattern has it in the sample's path. */
-function readParameters(pattern: string, path: string): Record<string, string> {
+function readParameters(pattern: string, path: string): { parameters: Record<string, string>; parameterSources: Record<string, string> } {
   const patternParts = pattern.split('/');
   const pathParts = path.split('/');
   const parameters: Record<string, string> = {};
+  const parameterSources: Record<string, string> = {};
   patternParts.forEach((part, index) => {
     const name = PATH_PARAMETER.exec(part)?.[1];
     if (!name) return;
     const value = decodeURIComponent(pathParts[index] ?? '');
     // A placeholder means the value comes from an earlier step, which differs every time.
-    parameters[name] = PLACEHOLDER.test(value) ? '' : value;
-    PLACEHOLDER.lastIndex = 0;
+    const source = WHOLE_PLACEHOLDER.exec(value)?.[1];
+    parameters[name] = source ? '' : value;
+    if (source) parameterSources[name] = source;
   });
-  return parameters;
+  return { parameters, parameterSources };
 }
 
 function toExample(route: ScenarioRoute, scenario: Scenario, people: Map<string, string>): ApiExample | null {
@@ -108,7 +128,7 @@ function toExample(route: ScenarioRoute, scenario: Scenario, people: Map<string,
     ...(scenario.code && { expectedCode: scenario.code }),
     sentBy: people.get(request.as),
     sendFirst: (scenario.setup ?? []).map((step) => `${step.method} ${step.path.split('?')[0]}`),
-    parameters: readParameters(pattern, path),
+    ...readParameters(pattern, path),
     query,
     body: prettyBody(request.body),
     needs,
@@ -126,7 +146,7 @@ function loadGuides(): Map<string, ApiGuide> {
     const examples = route.scenarios.map((scenario) => toExample(route, scenario, people)).filter((example): example is ApiExample => example !== null);
     // Accepted samples first, since they show how the API is meant to be used.
     examples.sort((first, second) => Number(first.outcome === 'refused') - Number(second.outcome === 'refused'));
-    guides.set(route.id, { purpose: route.purpose, input: route.input, examples });
+    guides.set(route.id, { purpose: route.purpose, input: route.input, examples, fieldOptions: [] });
   }
   return guides;
 }
@@ -139,6 +159,9 @@ export function findApiGuides(apis: string[]): Record<string, ApiGuide> {
   const guides = cachedGuides;
   return Object.fromEntries(apis.flatMap((api) => {
     const guide = guides.get(api);
-    return guide ? [[api, guide]] : [];
+    if (!guide) return [];
+    // Read when asked, since routes register their schemas after this module loads.
+    const schema = findBodySchema(api);
+    return [[api, { ...guide, fieldOptions: schema ? listBodyFieldOptions(schema) : [] }]];
   }));
 }

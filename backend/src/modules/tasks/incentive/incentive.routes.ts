@@ -78,12 +78,12 @@ export function createIncentiveRoutes(defaultHourlyRate: number): ApiRoute[] {
 
   return [
     { method: 'GET', path: '/tasks/incentives', access: 'private', permission: 'incentive.read', handler: handleMonth },
-    { method: 'POST', path: '/tasks/incentives/generate', access: 'private', permission: 'incentive.create', handler: handleGenerate },
-    { method: 'POST', path: '/tasks/incentives/disburse', access: 'private', permission: 'incentive.update', handler: handleDisburse },
+    { method: 'POST', path: '/tasks/incentives/generate', access: 'private', permission: 'incentive.create', bodySchema: monthBodySchema, handler: handleGenerate },
+    { method: 'POST', path: '/tasks/incentives/disburse', access: 'private', permission: 'incentive.update', bodySchema: disburseBodySchema, handler: handleDisburse },
     { method: 'GET', path: '/tasks/incentives/ledger', access: 'private', permission: 'incentive.read', handler: handleLedger },
     { method: 'GET', path: '/tasks/incentives/settings', access: 'private', permission: 'incentive.read', handler: handleSettings },
-    { method: 'PUT', path: '/tasks/incentives/settings/:userId', access: 'private', permission: 'incentive.update', handler: handleUpdateSetting },
+    { method: 'PUT', path: '/tasks/incentives/settings/:userId', access: 'private', permission: 'incentive.update', bodySchema: settingBodySchema, handler: handleUpdateSetting },
     { method: 'GET', path: '/tasks/projects/:id/incentives', access: 'private', permission: 'incentive.read', handler: handleProjectIncentives },
-    { method: 'PUT', path: '/tasks/projects/:id/incentives/:userId', access: 'private', permission: 'incentive.update', handler: handleSetProjectIncentive },
+    { method: 'PUT', path: '/tasks/projects/:id/incentives/:userId', access: 'private', permission: 'incentive.update', bodySchema: projectIncentiveBodySchema, handler: handleSetProjectIncentive },
   ];
 }

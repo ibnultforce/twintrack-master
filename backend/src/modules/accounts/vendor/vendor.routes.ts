@@ -49,9 +49,9 @@ export function createVendorRoutes(cipher: SecretCipher): ApiRoute[] {
 
   return [
     { method: 'GET', path: '/accounts/vendors', access: 'private', permission: 'vendor.read', handler: handleList },
-    { method: 'POST', path: '/accounts/vendors', access: 'private', permission: 'vendor.create', handler: handleCreate },
+    { method: 'POST', path: '/accounts/vendors', access: 'private', permission: 'vendor.create', bodySchema: createBodySchema, handler: handleCreate },
     { method: 'GET', path: '/accounts/vendors/:id', access: 'private', permission: 'vendor.read', handler: handleGet },
-    { method: 'PATCH', path: '/accounts/vendors/:id', access: 'private', permission: 'vendor.update', handler: handleUpdate },
+    { method: 'PATCH', path: '/accounts/vendors/:id', access: 'private', permission: 'vendor.update', bodySchema: updateBodySchema, handler: handleUpdate },
     { method: 'GET', path: '/accounts/vendors/:id/history', access: 'private', permission: 'vendor.read', handler: handleHistory },
   ];
 }

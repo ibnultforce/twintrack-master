@@ -55,7 +55,7 @@ const handleRevokeInScope: RequestHandler = async (req, res) => {
  */
 export const oauthRoutes: ApiRoute[] = [
   { method: 'GET', path: '/oauth/requests/:id', access: 'signed', handler: handleGetRequest },
-  { method: 'POST', path: '/oauth/requests/:id/decision', access: 'signed', handler: handleDecide },
+  { method: 'POST', path: '/oauth/requests/:id/decision', access: 'signed', bodySchema: decisionBodySchema, handler: handleDecide },
   { method: 'GET', path: '/me/connected-apps', access: 'signed', handler: handleListConnectedApps },
   { method: 'POST', path: '/me/connected-apps/:id/revoke', access: 'signed', handler: handleRevokeConnectedApp },
   { method: 'GET', path: '/connected-apps', access: 'private', permission: 'apiToken.read', handler: handleListInScope },

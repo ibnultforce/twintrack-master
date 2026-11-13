@@ -83,12 +83,12 @@ export function createProjectRoutes(defaultHourlyRate: number): ApiRoute[] {
 
   return [
     { method: 'GET', path: '/tasks/projects', access: 'private', permission: 'project.read', handler: handleList },
-    { method: 'POST', path: '/tasks/projects', access: 'private', permission: 'project.create', handler: handleCreate },
+    { method: 'POST', path: '/tasks/projects', access: 'private', permission: 'project.create', bodySchema: createBodySchema, handler: handleCreate },
     // Registered before /tasks/projects/:id, which would otherwise read these names as project ids.
     { method: 'GET', path: '/tasks/projects/health', access: 'private', permission: 'project.read', handler: handleHealth },
     { method: 'GET', path: '/tasks/projects/roster', access: 'private', permission: 'project.read', handler: handleRoster },
     { method: 'GET', path: '/tasks/projects/:id', access: 'private', permission: 'project.read', handler: handleGet },
-    { method: 'PATCH', path: '/tasks/projects/:id', access: 'private', permission: 'project.update', handler: handleUpdate },
-    { method: 'PUT', path: '/tasks/projects/:id/members', access: 'private', permission: 'project.update', handler: handleSetMembers },
+    { method: 'PATCH', path: '/tasks/projects/:id', access: 'private', permission: 'project.update', bodySchema: updateBodySchema, handler: handleUpdate },
+    { method: 'PUT', path: '/tasks/projects/:id/members', access: 'private', permission: 'project.update', bodySchema: membersBodySchema, handler: handleSetMembers },
   ];
 }

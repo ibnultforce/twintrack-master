@@ -15,6 +15,8 @@ const RESOURCE = 'bankAccount';
 const DETAILS_RESOURCE = 'companyBankDetails';
 /** A statement lists at most this many movements, so a long period can't make an answer too big to send. */
 const MAX_STATEMENT_ENTRIES = 2000;
+/** The bank account fields a statement reveals: it starts from the opening balance and ends at the current one. */
+const STATEMENT_FIELDS = ['openingBalance', 'currentBalance'];
 
 export /** Money is dated by day, so an account counts everything from the start of its opening day. */
 const startOfDay = (moment: Date) => new Date(Date.UTC(moment.getUTCFullYear(), moment.getUTCMonth(), moment.getUTCDate()));
@@ -121,8 +123,16 @@ export function createBankAccountService(cipher: SecretCipher) {
     return viewWithBalance(actor, saved);
   }
 
-  /** Every movement in the period, with the balance before it and after each one. */
-  async function getStatement(bankAccountId: string, period: { from: Date; to: Date }) {
+  /**
+   * Every movement in the period, with the balance before it and after each one. A statement is made of balances, so
+   * someone who can't see an account's balances can't read its statement either.
+   */
+  async function getStatement(actor: Actor, bankAccountId: string, period: { from: Date; to: Date }) {
+    const rules = await fieldRulesFor(actor, RESOURCE);
+    const hiddenBalances = STATEMENT_FIELDS.filter((field) => rules.hidden.includes(field));
+    if (hiddenBalances.length > 0) {
+      throw new ApiError(403, 'field_hidden', `A statement shows ${hiddenBalances.join(', ')}, which you can't see on this account.`);
+    }
     const account = await requireRecord(BankAccount, bankAccountId, bankAccountNotFound);
     const opened = startOfDay(account.openingDate);
     const start = period.from < opened ? opened : period.from;

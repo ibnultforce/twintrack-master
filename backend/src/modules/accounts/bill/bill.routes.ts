@@ -83,13 +83,13 @@ const handleHistory: RequestHandler = async (req, res) => {
 /** Bills from vendors: drafted, sent for approval, approved or rejected by someone else, paid, and reversed if wrong. */
 export const billRoutes: ApiRoute[] = [
   { method: 'GET', path: '/accounts/bills', access: 'private', permission: 'bill.read', handler: handleList },
-  { method: 'POST', path: '/accounts/bills', access: 'private', permission: 'bill.create', handler: handleCreate },
+  { method: 'POST', path: '/accounts/bills', access: 'private', permission: 'bill.create', bodySchema: createBodySchema, handler: handleCreate },
   { method: 'GET', path: '/accounts/bills/:id', access: 'private', permission: 'bill.read', handler: handleGet },
-  { method: 'PATCH', path: '/accounts/bills/:id', access: 'private', permission: 'bill.update', handler: handleUpdate },
+  { method: 'PATCH', path: '/accounts/bills/:id', access: 'private', permission: 'bill.update', bodySchema: updateBodySchema, handler: handleUpdate },
   { method: 'DELETE', path: '/accounts/bills/:id', access: 'private', permission: 'bill.delete', handler: handleDelete },
   { method: 'POST', path: '/accounts/bills/:id/submit', access: 'private', permission: 'bill.update', handler: handleSubmit },
   { method: 'POST', path: '/accounts/bills/:id/approve', access: 'private', permission: 'bill.approve', handler: handleApprove },
-  { method: 'POST', path: '/accounts/bills/:id/reject', access: 'private', permission: 'bill.approve', handler: handleReject },
-  { method: 'POST', path: '/accounts/bills/:id/reverse', access: 'private', permission: 'bill.delete', handler: handleReverse },
+  { method: 'POST', path: '/accounts/bills/:id/reject', access: 'private', permission: 'bill.approve', bodySchema: reasonBodySchema, handler: handleReject },
+  { method: 'POST', path: '/accounts/bills/:id/reverse', access: 'private', permission: 'bill.delete', bodySchema: reasonBodySchema, handler: handleReverse },
   { method: 'GET', path: '/accounts/bills/:id/history', access: 'private', permission: 'bill.read', handler: handleHistory },
 ];

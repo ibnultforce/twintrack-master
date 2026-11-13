@@ -62,7 +62,7 @@ export function CustomObjectDialog({ moduleKey, existing, onSaved, onClose }: { 
   };
 
   return (
-    <Dialog title={existing ? `Edit ${existing.label}` : 'New custom object'} onClose={onClose} isWide>
+    <Dialog title={existing ? `Edit ${existing.label}` : 'New custom object'} onClose={onClose} size="wide">
       <form className="form" onSubmit={(event) => void submit(event)}>
         <TextField id="object-label" label="Name, such as Trainings" required value={label} onChange={setLabel} />
         {existing ? null : <TextField id="object-key" label="Key" hint="Letters and numbers, starting with a lowercase letter. Leave blank to make one from the name." value={objectKey} onChange={setObjectKey} />}

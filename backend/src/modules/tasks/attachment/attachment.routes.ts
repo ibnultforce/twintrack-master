@@ -67,9 +67,9 @@ export function createAttachmentRoutes(storage: FileStorage): ApiRoute[] {
 
   return [
     { method: 'GET', path: '/tasks/tasks/:id/attachments', access: 'private', permission: 'task.read', handler: handleList },
-    { method: 'POST', path: '/tasks/tasks/:id/attachments', access: 'private', permission: 'task.read', handler: handleStart },
-    { method: 'POST', path: '/tasks/tasks/:id/attachments/:attachmentId/part-urls', access: 'private', permission: 'task.read', handler: handlePartUrls },
-    { method: 'POST', path: '/tasks/tasks/:id/attachments/:attachmentId/complete', access: 'private', permission: 'task.read', handler: handleComplete },
+    { method: 'POST', path: '/tasks/tasks/:id/attachments', access: 'private', permission: 'task.read', bodySchema: startBodySchema, handler: handleStart },
+    { method: 'POST', path: '/tasks/tasks/:id/attachments/:attachmentId/part-urls', access: 'private', permission: 'task.read', bodySchema: partUrlsBodySchema, handler: handlePartUrls },
+    { method: 'POST', path: '/tasks/tasks/:id/attachments/:attachmentId/complete', access: 'private', permission: 'task.read', bodySchema: completeBodySchema, handler: handleComplete },
     { method: 'GET', path: '/tasks/tasks/:id/attachments/:attachmentId/url', access: 'private', permission: 'task.read', handler: handleUrl },
     { method: 'DELETE', path: '/tasks/tasks/:id/attachments/:attachmentId', access: 'private', permission: 'task.read', handler: handleDelete },
   ];

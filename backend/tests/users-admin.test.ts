@@ -305,6 +305,44 @@ describe('user administration', () => {
       expect(response.body.error.fields[0].path).toBe('orgRoleId');
     });
 
+    describe('manager links, which decide what a team scope reaches', () => {
+      beforeEach(async () => {
+        await addPerson('mitu', { name: 'Mitu Report', managerId: 'alia' });
+        await addPerson('tanvir', { name: 'Tanvir Report', managerId: 'mitu' });
+      });
+
+      it('lets nobody but a super admin change their own manager', async () => {
+        await User.updateOne({ _id: 'alia' }, { $set: { managerId: 'rahim' } });
+        for (const managerId of ['farhana', null]) {
+          const response = await (await as('alia')).patch('/users/alia', { managerId });
+          expect(response.status).toBe(403);
+          expect(response.body.error.code).toBe('own_account');
+        }
+        expect((await (await as('farhana')).patch('/users/farhana', { managerId: 'jahid' })).body.managerId).toBe('jahid');
+      });
+
+      it.each([
+        ['to themselves', 'alia'],
+        ['to someone in their team', 'mitu'],
+        ['to someone deeper in their team', 'tanvir'],
+      ])('refuses pulling someone from outside their team into it, %s', async (_label, managerId) => {
+        const response = await (await as('alia')).patch('/users/karim', { managerId });
+        expect(response.status).toBe(403);
+        expect(response.body.error.code).toBe('outside_own_team');
+        expect((await User.findById('karim').lean())?.managerId).toBe('rahim');
+      });
+
+      it('lets them move people within their own team, or out of it', async () => {
+        const admin = await as('alia');
+        expect((await admin.patch('/users/tanvir', { managerId: 'alia' })).body.managerId).toBe('alia');
+        expect((await admin.patch('/users/tanvir', { managerId: 'rahim' })).body.managerId).toBe('rahim');
+      });
+
+      it("lets a super admin bring anyone into anyone else's team", async () => {
+        expect((await (await as('farhana')).patch('/users/karim', { managerId: 'alia' })).body.managerId).toBe('alia');
+      });
+    });
+
     it('lets nobody move themselves in the org tree', async () => {
       const response = await (await as('alia')).patch('/users/alia', { orgRoleId: 'or_root' });
       expect(response.status).toBe(403);

@@ -48,7 +48,7 @@ These are made inactive (`status: inactive`) rather than deleted, because posted
 | `GET /accounts/bank-accounts` | `bankAccount.read` | `page`, `pageSize`, `status` | Each with `currentBalance` |
 | `POST /accounts/bank-accounts` | `bankAccount.create` | `name`, `currency`, and optionally `bankName`, `accountNumber`, `openingBalance`, `openingDate` (default today) | `201` |
 | `GET`, `PATCH /accounts/bank-accounts/:id` | `bankAccount.read`, `.update` | Any of `name`, `bankName`, `accountNumber`, `openingBalance`, `openingDate`, `status`, and `version` | |
-| `GET /accounts/bank-accounts/:id/statement` | `bankAccount.read` | `from`, `to` | `openingBalance`, `closingBalance` and `entries`, each with `kind` (`receipt`, `receipt_reversal`, `payment`, `payment_reversal`, `salary`), `amount` (negative for money out) and `balance` after it. At most 2000 entries (`422 period_too_long`). |
+| `GET /accounts/bank-accounts/:id/statement` | `bankAccount.read` | `from`, `to` | `openingBalance`, `closingBalance` and `entries`, each with `kind` (`receipt`, `receipt_reversal`, `payment`, `payment_reversal`, `salary`), `amount` (negative for money out) and `balance` after it. At most 2000 entries (`422 period_too_long`). Refused with `403 field_hidden` when the caller's field access hides `openingBalance` or `currentBalance`. |
 | `GET /accounts/bank-accounts/:id/history` | `bankAccount.read` | `page`, `pageSize` | |
 | `GET /accounts/company-bank-details` | `companyBankDetails.read` | | |
 | `PATCH /accounts/company-bank-details` | `companyBankDetails.update` | Any of `bankName`, `accountName`, `accountNumber`, `branchName`, `routingNumber`, `swiftCode`, `address`, and `version` | Saves only the fields sent; an empty one is cleared |

@@ -1,5 +1,7 @@
-import { apiBlob, apiRequest, setAccessToken } from './http';
-import type { AccessModule, AddablePerson, CreatedUserResult, ModulePerson, PasswordLinkResult, User, UserDetails, UserStatus } from './types';
+import { apiBlob, apiRequest, describeError, setAccessToken, tryApiRequest, type TryResult } from './http';
+import type { AccessModule, AddablePerson, CreatedUserResult, ModuleAccess, ModulePerson, PasswordLinkResult, User, UserDetails, UserStatus } from './types';
+
+type TryMethod = Parameters<typeof tryApiRequest>[0];
 
 /** The most the API returns in one page. */
 const MAX_PAGE_SIZE = 100;
@@ -62,6 +64,33 @@ export async function impersonateUser(userId: string): Promise<void> {
   setAccessToken(accessToken);
 }
 
+/** A short session as another person, kept apart from the signed-in session. Development only, like impersonation. */
+export interface TestSession {
+  accessToken: string;
+  user: { id: string; name: string };
+}
+
+/**
+ * Starts a session as this person for sending test requests, without switching the signed-in session. It is an
+ * impersonation session, so the API audits it and refuses what impersonation may not do.
+ */
+export const startTestSession = (userId: string) =>
+  apiRequest<TestSession>(`${userPath(userId)}/impersonate`, { method: 'POST' });
+
+/**
+ * Ends a test session. Sent without refreshing, so an expired test token can't end the super admin's own session, and
+ * the token for that session which comes back isn't needed: theirs never changed.
+ */
+export async function endTestSession(session: TestSession): Promise<void> {
+  await tryApiRequest('POST', '/auth/stop-impersonating', undefined, session.accessToken);
+}
+
+/** What this module lets the test session's person do, or null if the session has ended. */
+export async function getModuleAccessAs(session: TestSession, moduleKey: string): Promise<ModuleAccess | null> {
+  const result = await tryApiRequest('GET', `/me/permissions/${encodeURIComponent(moduleKey)}`, undefined, session.accessToken);
+  return result.status === 200 ? (result.body as ModuleAccess) : null;
+}
+
 /** Gives a person a profile, replacing any they had, or takes it away with null. */
 export const setUserProfile = (userId: string, profileId: string | null) =>
   apiRequest<User>(`${userPath(userId)}/profile`, { method: 'PUT', body: { profileId } });
@@ -81,4 +110,36 @@ export const listAddablePeople = (moduleKey: string, search: string) =>
 
 export async function listModulePeople(moduleKey: string): Promise<ModulePerson[]> {
   return (await apiRequest<{ people: ModulePerson[] }>(`/modules/${encodeURIComponent(moduleKey)}/people`)).people;
+}
+
+/** One person's answer when the same request is sent as everyone. */
+export interface PersonTryResult {
+  person: { id: string; name: string; email: string };
+  /** Null when a test session couldn't be started for them, explained by problem. */
+  result: TryResult | null;
+  problem?: string;
+}
+
+/**
+ * Sends one request as each person in turn, each through their own test session, which is ended straight after.
+ * Runs one at a time so the answers arrive in order and the API isn't flooded. Development only, like impersonation.
+ */
+export async function sendAsEachPerson(
+  people: { id: string; name: string; email: string }[],
+  request: { method: TryMethod; path: string; body?: unknown },
+  onAnswer: (answer: PersonTryResult) => void,
+  shouldStop: () => boolean,
+): Promise<void> {
+  for (const person of people) {
+    if (shouldStop()) return;
+    let session: TestSession | null = null;
+    try {
+      session = await startTestSession(person.id);
+      onAnswer({ person, result: await tryApiRequest(request.method, request.path, request.body, session.accessToken) });
+    } catch (failure) {
+      onAnswer({ person, result: null, problem: describeError(failure) });
+    } finally {
+      if (session) await endTestSession(session).catch(() => undefined);
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import type { ClientSession } from 'mongoose';
 import { Module, type ModuleDoc } from '../models/module.js';
 import type { Manifest } from './manifest.js';
+import type { RouteAccessChange } from './routeAccess.js';
 
 export function findModuleByKey(key: string, session?: ClientSession) {
   return Module.findOne({ key }).session(session ?? null).lean();
@@ -34,4 +35,9 @@ export async function saveModule(manifest: Manifest, isCore: boolean, session?: 
     { upsert: true, session, strict: false },
   );
   return result.upsertedCount > 0;
+}
+
+/** Saves the access rules a super admin changed. Doesn't mark resources as edited, since resources are unchanged. */
+export async function saveRouteAccessChanges(key: string, routeAccess: RouteAccessChange[], session: ClientSession): Promise<void> {
+  await Module.updateOne({ key }, { $set: { routeAccess } }, { session });
 }

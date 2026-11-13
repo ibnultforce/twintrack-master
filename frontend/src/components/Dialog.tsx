@@ -6,7 +6,12 @@ import type { PasswordLinkError, PasswordLinkResult } from '@/lib/api/types';
 import { Notice, Pill } from './ui';
 
 /** A modal built on the native dialog element, which handles focus and the Escape key. */
-export function Dialog({ title, onClose, children, isWide = false }: { title: string; onClose: () => void; children: ReactNode; isWide?: boolean }) {
+/** normal fits a short form; wide (640px) a table or longer form; extra-wide (960px) side-by-side request and response text. */
+export type DialogSize = 'normal' | 'wide' | 'extra-wide';
+
+const DIALOG_SIZE_CLASSES: Record<DialogSize, string | undefined> = { normal: undefined, wide: 'dialog-wide', 'extra-wide': 'dialog-extra-wide' };
+
+export function Dialog({ title, onClose, children, size = 'normal' }: { title: string; onClose: () => void; children: ReactNode; size?: DialogSize }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -15,7 +20,7 @@ export function Dialog({ title, onClose, children, isWide = false }: { title: st
   }, []);
 
   return (
-    <dialog ref={dialogRef} className={isWide ? 'dialog-wide' : undefined} aria-labelledby="dialog-title" onCancel={onClose}>
+    <dialog ref={dialogRef} className={DIALOG_SIZE_CLASSES[size]} aria-labelledby="dialog-title" onCancel={onClose}>
       <h2 id="dialog-title">{title}</h2>
       {children}
     </dialog>

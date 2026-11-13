@@ -68,7 +68,7 @@ Some permissions reach only certain people. If someone has the same permission m
 | Scope | Reaches |
 |---|---|
 | `own` | The caller |
-| `team` | The caller, their direct reports, and everyone in the org roles below theirs |
+| `team` | The caller and everyone who reports to them, directly or through others (`managerId`). Org roles play no part |
 | `all` | Everyone |
 
 ## Tokens and sessions

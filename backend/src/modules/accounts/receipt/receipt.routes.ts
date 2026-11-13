@@ -51,9 +51,9 @@ const handleReverse: RequestHandler = async (req, res) => {
 /** Money in, counted against invoices. Posted receipts are never edited or deleted, only reversed. */
 export const receiptRoutes: ApiRoute[] = [
   { method: 'GET', path: '/accounts/receipts', access: 'private', permission: 'receipt.read', handler: handleList },
-  { method: 'POST', path: '/accounts/receipts', access: 'private', permission: 'receipt.create', handler: handleCreate },
+  { method: 'POST', path: '/accounts/receipts', access: 'private', permission: 'receipt.create', bodySchema: createBodySchema, handler: handleCreate },
   { method: 'GET', path: '/accounts/receipts/:id', access: 'private', permission: 'receipt.read', handler: handleGet },
-  { method: 'POST', path: '/accounts/receipts/:id/allocations', access: 'private', permission: 'receipt.update', handler: handleAllocate },
+  { method: 'POST', path: '/accounts/receipts/:id/allocations', access: 'private', permission: 'receipt.update', bodySchema: allocateBodySchema, handler: handleAllocate },
   { method: 'DELETE', path: '/accounts/receipts/:id/allocations/:allocationId', access: 'private', permission: 'receipt.update', handler: handleRemoveAllocation },
-  { method: 'POST', path: '/accounts/receipts/:id/reverse', access: 'private', permission: 'receipt.delete', handler: handleReverse },
+  { method: 'POST', path: '/accounts/receipts/:id/reverse', access: 'private', permission: 'receipt.delete', bodySchema: reasonBodySchema, handler: handleReverse },
 ];

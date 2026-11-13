@@ -114,9 +114,10 @@ Each route declares its `access` in its feature's route file, and `registerRoute
 | `signed` | Access token, session and active account |
 | `private` | The same, plus the `permission` or one of the `anyPermission` values the route names |
 
+- **A super admin can change a rule in the app** (Modules, then APIs, or `PUT /modules/:key/route-access`). The change is saved on the module in `routeAccess`, read on every call, and kept when the manifest is imported again; the code and manifest still hold the rule the API was built with. A built-public API (sign-in, MCP, file links) can't be changed, since it has to work without a session. Any other API can be signed or private, never public, because its code needs to know who is calling. A built-private API opened to every signed-in person gives someone without its permission the `own` scope.
 - **Permissions** are read from the database on each call, so a change applies on the person's next request, even with a token they already hold. `modules/master/access/permissions.ts` reads what the person's profile allows in the module.
 - **Profiles** are org-wide, in the `accessprofiles` collection, with grants keyed by module. Each person holds at most one, in `profileId`, and it is where all of their access comes from. `accessProfile.create` builds them and `userProfile.update` gives them.
-- **Org tree:** every person has an `orgRoleId` in a tree with one root (`/org-roles`). A person sees records owned by people in the roles below theirs, but only with their own permissions: the tree passes on visibility, never permissions. `team` scope reads it in `modules/master/access/scope.ts`. Nobody but a super admin can move themselves or the role they hold. The sample tree is in `seed/org-roles.json`.
+- **Org tree:** every person has an `orgRoleId` in a tree with one root (`/org-roles`). Org roles describe job levels and decide only who a share to "a role and everything below it" reaches. `team` scope follows the reporting tree instead (`managerId`, in `modules/master/access/scope.ts`): the person and everyone who reports to them, directly or through others, so two people in the same org role never see each other's teams. Nobody but a super admin can move themselves or the role they hold, change their own manager, or make someone from outside their team report to them or to anyone in it (`403 outside_own_team`). The sample tree is in `seed/org-roles.json`.
 - **Rules that depend on the data** being changed, such as "nobody changes their own access", belong in services, because middleware can't see that data.
 
 ## Admin API
@@ -145,7 +146,7 @@ Services enforce these rules, because they depend on the data being changed:
 
 - **Own access:** only a super admin can change their own profile or org role. Nobody can deactivate themselves or reset their own password here. To change your own password, use `POST /auth/change-password`.
 - **Super admins:** only a super admin can edit, deactivate or reset a super admin, or change their access, and no route can create one. A super admin always has everything, whatever is on their record.
-- **Giving a profile:** `userProfile.update` is scoped. `team` reaches the giver's direct reports and everyone in the org roles below theirs, and `all` reaches everyone. The new profile, and the one it replaces, must both stay within the giver's own access in every module. This is how access is delegated: a project manager with `userProfile.update` at `team` scope can build profiles from what they hold and give them to their developers.
+- **Giving a profile:** `userProfile.update` is scoped. `team` reaches everyone who reports to the giver, at any depth, and `all` reaches everyone. The new profile, and the one it replaces, must both stay within the giver's own access in every module. This is how access is delegated: a project manager with `userProfile.update` at `team` scope can build profiles from what they hold and give them to their developers.
 - **Building profiles:** someone other than a super admin can only put in what they hold themselves, at no wider reach, and can't change one that goes beyond their own access, or make one that holds everything.
 - **Changing what a module offers:** adding a resource needs `module.create` in Master, changing a resource needs `module.update`, and removing a resource needs `module.delete`. After an edit, re-importing or removing that module needs it too.
 - **Removing:** a profile someone holds can't be removed. Neither can an action or resource that a profile or route still uses, except by a super admin, which takes it out of them. Actions come from a fixed list: `read`, `create`, `update`, `delete` and `approve`.
@@ -169,7 +170,7 @@ Services enforce these rules, because they depend on the data being changed:
 | `GET /hr/salaries/:id/history` | `salary.read` | What changed, who changed it and when |
 | `GET`, `POST /hr/salaries/:id/shares`, `DELETE /hr/salaries/:id/shares/:shareId` | `salary.read` | List, add and remove shares. The employee, anyone above them, or someone with `salary.share` may share. |
 
-The scope from someone's profile decides who that reaches: `own` is the person, `team` adds their direct reports and everyone in the org roles below theirs, and `all` is everyone. Someone outside their reach gets `out_of_scope`. The activity log leaves out amounts, because people can read it without being allowed to see salaries. Sample salaries are in `seed/salaries.json`.
+The scope from someone's profile decides who that reaches: `own` is the person, `team` adds everyone who reports to them, at any depth, and `all` is everyone. Someone outside their reach gets `out_of_scope`. The activity log leaves out amounts, because people can read it without being allowed to see salaries. Sample salaries are in `seed/salaries.json`.
 
 ## Tasks
 

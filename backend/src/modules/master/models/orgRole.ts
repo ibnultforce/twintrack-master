@@ -2,7 +2,7 @@ import { Schema, model } from 'mongoose';
 
 /**
  * A position in the organisation tree. Every role has one parent except the single root, and a person in a role
- * sees records owned by people in the roles below it. The tree decides visibility only, never permissions.
+ * reaches no one through it: team scope follows managers. The tree decides who shares to a role reach, never permissions.
  */
 export interface OrgRoleDoc {
   _id: string;
