@@ -61,6 +61,19 @@ export const deleteSalary = (salaryId: string, context: WriteContext) => moveToR
 
 export const restoreSalary = (salaryId: string, context: WriteContext) => restoreFromRecycleBin(Salary, salaryId, context, salaryNotFound);
 
+/**
+ * Each person's approved salary in effect on a date: the latest one starting on or before it. Pending ones don't
+ * count, because they haven't been approved. Null employeeIds means everyone with one.
+ */
+export async function findSalariesInEffect(employeeIds: string[] | null, on: Date): Promise<Map<string, SalaryDoc>> {
+  const salaries = await Salary.find({ status: 'approved', effectiveFrom: { $lte: on }, ...(employeeIds && { employeeId: { $in: employeeIds } }) })
+    .sort({ effectiveFrom: -1, _id: 1 })
+    .lean();
+  const inEffect = new Map<string, SalaryDoc>();
+  for (const salary of salaries) if (!inEffect.has(salary.employeeId)) inEffect.set(salary.employeeId, salary);
+  return inEffect;
+}
+
 export function findEmployeeNames(employeeIds: string[]) {
   return User.find({ _id: { $in: employeeIds } }).select('name').lean();
 }

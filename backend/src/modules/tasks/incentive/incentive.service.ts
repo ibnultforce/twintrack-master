@@ -164,11 +164,15 @@ export function createIncentiveService(defaultHourlyRate: number) {
     return toSettingView(saved, names);
   }
 
-  /** A project's members, whether each may get a project incentive, and what they've been given. */
+  /**
+   * A project's members within the caller's scope, whether each may get a project incentive, and what they've been
+   * given. Reaching the project isn't enough to see everyone's money on it: an own scope sees only its own grant.
+   */
   async function listProjectIncentives(actor: Actor, scope: Scope, projectId: string) {
     const project = await requireProject(projectId);
     await assertCanReachProject(actor, scope, project, 'read');
-    const people = projectPeople(project);
+    const reached = await peopleInScope(actor.user._id, scope);
+    const people = projectPeople(project).filter((userId) => !reached || reached.includes(userId));
     const [settings, grants] = await Promise.all([findIncentiveSettings(people), findProjectIncentives(projectId)]);
     const names = await findPeopleNames([...people, ...grants.map((grant) => grant.grantedBy)]);
     const eligible = new Set(settings.filter((setting) => setting.eligibleForProjectIncentives).map((setting) => setting._id));
@@ -193,6 +197,8 @@ export function createIncentiveService(defaultHourlyRate: number) {
     if (!projectPeople(project).includes(userId)) {
       throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', [{ path: 'userId', message: 'is not on this project' }]);
     }
+    // Reaching the project through one member doesn't reach everyone on it, such as the caller's own manager.
+    await assertReachesPerson(actor, scope, userId);
     const setting = await findIncentiveSetting(userId);
     if (!setting?.eligibleForProjectIncentives) {
       throw new ApiError(409, 'not_eligible', "This person isn't eligible for project incentives yet. Change their incentive setting first.");

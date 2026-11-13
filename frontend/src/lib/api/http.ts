@@ -169,7 +169,10 @@ export interface TryResult {
 export async function tryApiRequest(method: NonNullable<RequestOptions['method']>, path: string, body?: unknown): Promise<TryResult> {
   const started = performance.now();
   let response = await send(path, { method, body });
-  if (response.status === 401 && accessToken !== null) {
+  if (response.status === 401 && accessToken !== null && isImpersonating) {
+    // Refreshing would swap in the super admin's own token under the impersonated screen, as apiRequest explains.
+    listeners?.onImpersonationEnded();
+  } else if (response.status === 401 && accessToken !== null) {
     const refusal = (await response.clone().json().catch(() => null)) as { error?: { code?: string } } | null;
     if (REFRESHABLE_CODES.has(refusal?.error?.code ?? '') && (await refreshAccessToken())) response = await send(path, { method, body });
   }

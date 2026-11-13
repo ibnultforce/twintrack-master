@@ -5,6 +5,7 @@ import { actorFields, type Actor } from '../access/caller.js';
 import { findAllProfiles, saveProfileGrants } from '../accessProfiles/accessProfiles.repository.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import type { AccessProfileDoc } from '../models/accessProfile.js';
+import { CustomRecord } from '../models/customRecord.js';
 import type { ModuleDoc } from '../models/module.js';
 import { validateManifest, type Grants, type ManifestResource } from './manifest.js';
 import { findModuleByKey, updateModulePermissionRules } from './moduleRegistry.repository.js';
@@ -133,10 +134,20 @@ export function saveResource(actor: Actor, moduleKey: string, resourceKey: strin
   });
 }
 
+/**
+ * Refuses to remove a custom object that still has records, including any in the recycle bin. They would be orphaned,
+ * and would come back under a new object given the same key.
+ */
+export async function assertCustomObjectHasNoRecords(moduleKey: string, objectKey: string, session: ClientSession): Promise<void> {
+  const records = await CustomRecord.countDocuments({ module: moduleKey, object: objectKey }).setOptions({ withDeleted: true }).session(session);
+  if (records > 0) throw new ApiError(409, 'object_in_use', `${records} records use this object. Delete them first.`);
+}
+
 /** Removes a resource. Only a super admin can remove one that a profile or API still uses. */
 export function removeResource(actor: Actor, moduleKey: string, resourceKey: string) {
   return editModuleRules(moduleKey, async (module, session) => {
     const resource = requireResource(module, resourceKey);
+    if (resource.custom === true) await assertCustomObjectHasNoRecords(moduleKey, resourceKey, session);
     const profileChanges = await removeActions(actor, module, resource, [], session);
     await saveRules(actor, module, { resources: module.resources.filter((candidate) => candidate.key !== resourceKey) }, {
       action: 'module.resource_removed',

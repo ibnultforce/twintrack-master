@@ -13,6 +13,7 @@ import {
   findClientById,
   findClientsPage,
   insertClient,
+  SEARCHED_CLIENT_FIELDS,
   updateClient as saveClientChanges,
   type ClientChanges,
   type NewClientRecord,
@@ -71,8 +72,9 @@ async function requireClient(clientId: string): Promise<ClientDoc> {
 }
 
 export async function listClients(actor: Actor, query: PageRequest & { search?: string; status?: ClientStatus }) {
-  const { clients, total } = await findClientsPage(query);
   const rules = await fieldRulesFor(actor);
+  const searchedFields = SEARCHED_CLIENT_FIELDS.filter((field) => !rules.hidden.includes(field));
+  const { clients, total } = await findClientsPage({ ...query, searchedFields });
   return { clients: clients.map((client) => toClientView(client, rules)), total };
 }
 

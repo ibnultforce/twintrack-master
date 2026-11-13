@@ -185,6 +185,12 @@ describe('Tasks: clients, project health, roster and logins', () => {
       expect((await rahim.post(`/tasks/projects/${projectId}/credentials`, body)).status).toBe(422);
     });
 
+    it.each(['javascript:alert(document.cookie)', 'data:text/html,<script>alert(1)</script>', 'ftp://files.acme.test'])('refuses the login address %s, which the frontend would show as a link', async (loginUrl) => {
+      const { rahim, projectId, credential } = await withLogin();
+      expect((await rahim.post(`/tasks/projects/${projectId}/credentials`, { ...login, loginUrl })).body.error.fields[0].path).toBe('loginUrl');
+      expect((await rahim.patch(`/tasks/projects/${projectId}/credentials/${credential.id}`, { loginUrl })).status).toBe(422);
+    });
+
     it('answers 404 for a login on another project', async () => {
       const { rahim, credential } = await withLogin();
       const other = (await newProject({ name: 'Other' })).body;

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { ApiError } from '../../../lib/errors.js';
 import { UPLOAD_PART_SIZE, type FileStorage } from '../../../lib/storage/fileStorage.js';
+import { normalizeMimeType, safeDownload } from '../../../lib/storage/fileTypes.js';
 import { actorFields, type Actor } from '../../master/access/caller.js';
 import { recordAudit } from '../../master/audit/audit.repository.js';
 import type { Scope } from '../../master/moduleRegistry/manifest.js';
@@ -23,17 +24,9 @@ import {
 export const TASK_ATTACHMENT_LIMIT_BYTES = 5 * 1024 ** 3;
 /** Uploads left unfinished this long are cleared away, matching R2's rule for unfinished multipart uploads. */
 const STALE_UPLOAD_MS = 24 * 60 * 60 * 1000;
-/** Shown in the browser. Anything else is downloaded, so a file can't run as a page on the API's address. */
-const INLINE_VIEWABLE_TYPES = /^(image\/(png|jpeg|gif|webp|bmp|avif)|video\/(mp4|webm|ogg|quicktime)|audio\/[\w.+-]+|application\/pdf)$/;
-/** Shown as plain text, whatever their type, so markup inside them never runs. */
-const PLAIN_TEXT_TYPES = /^(text\/(plain|csv|markdown|x-log)|application\/json)$/;
 
 const notFound = () => new ApiError(404, 'unknown_attachment', 'No such file on this task.');
 
-function normalizeMimeType(mimeType: string | undefined): string {
-  const value = mimeType?.trim().toLowerCase() ?? '';
-  return /^[\w.+-]+\/[\w.+-]+$/.test(value) ? value : 'application/octet-stream';
-}
 
 const toAttachmentView = (attachment: TaskAttachmentDoc, names: Map<string, string>) => ({
   id: attachment._id,
@@ -157,11 +150,7 @@ export function createAttachmentService(storage: FileStorage) {
     const attachment = await findAttachment(taskId, attachmentId);
     if (attachment?.status !== 'ready') throw notFound();
 
-    const isViewable = INLINE_VIEWABLE_TYPES.test(attachment.mimeType);
-    const isPlainText = PLAIN_TEXT_TYPES.test(attachment.mimeType);
-    const contentType = isPlainText ? 'text/plain; charset=utf-8' : isViewable ? attachment.mimeType : 'application/octet-stream';
-    const disposition = mode === 'view' && (isViewable || isPlainText) ? 'inline' : 'attachment';
-    return { url: await storage.downloadUrl(attachment.storageKey, { fileName: attachment.fileName, contentType, disposition }) };
+    return { url: await storage.downloadUrl(attachment.storageKey, safeDownload(attachment, mode)) };
   }
 
   async function deleteAttachment(actor: Actor, scope: Scope, taskId: string, attachmentId: string, canEditTask: boolean) {

@@ -7,6 +7,7 @@ import { ClientFormDialog } from '@/components/ClientFormDialog';
 import { ConfirmDialog } from '@/components/Dialog';
 import { Card, ClientStatusPill, Loaded, PageHead, Row } from '@/components/ui';
 import { getClient, getClientHistory, setClientStatus, updateClient } from '@/lib/api/clients';
+import type { Client, ClientDetails } from '@/lib/api/types';
 import { formatTime, humanize } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useSession } from '@/session/SessionProvider';
@@ -22,6 +23,18 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 const showValue = (value: unknown) => (value === undefined || value === null || value === '' ? 'nothing' : String(value));
+
+/**
+ * Only the fields that changed. The API refuses any field the person can't edit, even unchanged, and leaves out
+ * fields they can't see, so sending the whole form would block the save or clear a hidden value.
+ */
+function changedClientFields(client: Client, submitted: ClientDetails): Partial<ClientDetails> {
+  const changes: Partial<Record<keyof ClientDetails, string | null>> = {};
+  for (const field of Object.keys(submitted) as (keyof ClientDetails)[]) {
+    if ((client[field] ?? null) !== submitted[field]) changes[field] = submitted[field];
+  }
+  return changes as Partial<ClientDetails>;
+}
 
 export default function ClientPage() {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +92,9 @@ export default function ClientPage() {
                   submitLabel="Save"
                   client={client}
                   onClose={() => setDialog(null)}
-                  onSubmit={async (changes) => {
+                  onSubmit={async (submitted) => {
+                    const changes = changedClientFields(client, submitted);
+                    if (Object.keys(changes).length === 0) return;
                     await updateClient(client.id, changes, client.version);
                     details.reload();
                   }}

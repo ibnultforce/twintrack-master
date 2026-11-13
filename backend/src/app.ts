@@ -9,6 +9,8 @@ import { LOCAL_PART_PATH } from './lib/storage/localStorage.js';
 import { handleApiError } from './lib/errorHandler.js';
 import { createRequestLogger } from './lib/requestLogger.js';
 import { serveTestPage } from './lib/testPage.js';
+import { ACCOUNTS_MODULE_KEY, createAccountsRoutes } from './modules/accounts/accounts.routes.js';
+import { accountsUserReferenceChecks } from './modules/accounts/accountsUserReferences.js';
 import { HR_MODULE_KEY, hrRoutes } from './modules/hr/hr.routes.js';
 import { hrUserReferenceChecks } from './modules/hr/hrUserReferences.js';
 import { createTasksRoutes, TASKS_MODULE_KEY } from './modules/tasks/tasks.routes.js';
@@ -42,10 +44,11 @@ export function createApp(config: Config, dependencyOverrides: Partial<AppDepend
 
   if (config.isTestPageEnabled) serveTestPage(app);
   mountMasterProtocols(app, config);
-  const masterExtensions = { userReferenceChecks: [...hrUserReferenceChecks, ...tasksUserReferenceChecks], mcpToolProviders: [tasksMcpTools] };
+  const masterExtensions = { userReferenceChecks: [...hrUserReferenceChecks, ...tasksUserReferenceChecks, ...accountsUserReferenceChecks], mcpToolProviders: [tasksMcpTools] };
   registerRoutes(app, createMasterRoutes(config, dependencies, masterExtensions), createAccessMiddleware(config.auth, MASTER_MODULE_KEY));
   registerRoutes(app, hrRoutes, createAccessMiddleware(config.auth, HR_MODULE_KEY));
   registerRoutes(app, createTasksRoutes(config, dependencies), createAccessMiddleware(config.auth, TASKS_MODULE_KEY));
+  registerRoutes(app, createAccountsRoutes(config, dependencies), createAccessMiddleware(config.auth, ACCOUNTS_MODULE_KEY));
 
   app.use((_req, res) => {
     res.status(404).json({ error: { code: 'no_route', message: 'No such route.' } });

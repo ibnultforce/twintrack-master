@@ -192,6 +192,24 @@ describe('Tasks: incentives', () => {
       expect(changed.body).not.toHaveProperty('amount');
     });
 
+    it('gives project incentives only to members the scope reaches', async () => {
+      const rahim = await as('rahim');
+      // Rahim reaches the project as its lead, but u_05 is outside his team.
+      const project = (await rahim.post('/tasks/projects', { name: 'Shared work', memberIds: [ID.MEHEDI, 'u_05'] })).body;
+      await (await admin()).put('/tasks/incentives/settings/u_05', { earnsMonthlyIncentive: false, hourlyRate: null, eligibleForProjectIncentives: true });
+      const given = await rahim.put(`/tasks/projects/${project.id}/incentives/u_05`, { enabled: true, amount: 5000 });
+      expect(given.body.error?.code).toBe('out_of_scope');
+    });
+
+    it("shows an own scope only its own grant, not the rest of the project's money", async () => {
+      const { rahim, projectId } = await finishedTask(1);
+      await rahim.put(`/tasks/incentives/settings/${ID.SUMAIYA}`, { earnsMonthlyIncentive: false, hourlyRate: null, eligibleForProjectIncentives: true });
+      expect((await rahim.put(`/tasks/projects/${projectId}/incentives/${ID.SUMAIYA}`, { enabled: true, amount: 9000 })).status).toBe(200);
+
+      const { members } = (await (await as('mehedi')).get(`/tasks/projects/${projectId}/incentives`)).body;
+      expect(members.map((member: { userId: string }) => member.userId)).toEqual([ID.MEHEDI]);
+    });
+
     it('refuses someone who is not on the project', async () => {
       const { rahim, projectId } = await finishedTask(1);
       expect((await rahim.put(`/tasks/projects/${projectId}/incentives/u_05`, { enabled: true })).body.error.fields[0].path).toBe('userId');

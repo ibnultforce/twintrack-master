@@ -45,6 +45,8 @@ export interface TaskDoc extends RecordFields {
   /** Raised for a follow-up, such as by HR, with a note saying why. Works at any status. */
   flagged: boolean;
   flagNote?: string;
+  /** The Accounts invoice that billed this task. Missing until one does. */
+  invoiceId?: string;
   startedAt?: Date;
   completedAt?: Date;
   approvedBy?: string;
@@ -91,6 +93,7 @@ const taskSchema = new Schema<TaskDoc>(
     billable: { type: Boolean, default: true },
     flagged: { type: Boolean, default: false, index: true },
     flagNote: String,
+    invoiceId: { type: String, index: true },
     startedAt: Date,
     completedAt: Date,
     approvedBy: String,

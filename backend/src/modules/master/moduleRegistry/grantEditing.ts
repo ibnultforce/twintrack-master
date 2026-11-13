@@ -4,6 +4,7 @@ import { isWiderScope, listGrantFieldAccess, listGrantPermissions, resolveModule
 import type { AccessProfileDoc } from '../models/accessProfile.js';
 import type { ModuleDoc } from '../models/module.js';
 import { isWiderFieldAccess, type Grants, type ManifestResource } from './manifest.js';
+import { findAllModules } from './moduleRegistry.repository.js';
 
 const EVERYTHING_LABEL = 'Everything in this module';
 
@@ -35,6 +36,19 @@ export function assertGrantsWithinOwnAccess(actor: Actor, module: ModuleDoc, gra
   const problems = [...beyondOwnAccess.map(([permission]) => permission), ...fieldsBeyond];
   if (problems.length > 0) {
     throw new ApiError(403, 'beyond_own_access', `This profile goes beyond your own access in ${module.name}: ${problems.join(', ')}.`);
+  }
+}
+
+/**
+ * Stops anyone giving, taking away or taking over a profile wider than their own access in any module. A super admin
+ * may. A module that isn't loaded grants nothing, so its part of the profile can't go beyond anyone's access.
+ */
+export async function assertProfileWithinOwnAccess(actor: Actor, profile: Pick<AccessProfileDoc, 'grants'>): Promise<void> {
+  if (actor.user.superAdmin) return;
+  const modules = await findAllModules();
+  for (const [moduleKey, grants] of Object.entries(profile.grants)) {
+    const module = modules.find((candidate) => candidate.key === moduleKey);
+    if (module) assertGrantsWithinOwnAccess(actor, module, grants);
   }
 }
 

@@ -6,9 +6,8 @@ import { listGrantPermissions, readOwnEntry } from '../access/permissions.js';
 import { peopleInScope } from '../access/scope.js';
 import { findAllProfiles, findProfileById, findProfileIdsGranting } from '../accessProfiles/accessProfiles.repository.js';
 import { recordAudit } from '../audit/audit.repository.js';
-import type { AccessProfileDoc } from '../models/accessProfile.js';
 import type { UserDoc } from '../models/user.js';
-import { assertGrantsWithinOwnAccess } from '../moduleRegistry/grantEditing.js';
+import { assertProfileWithinOwnAccess } from '../moduleRegistry/grantEditing.js';
 import { findAllModules, findModuleByKey } from '../moduleRegistry/moduleRegistry.repository.js';
 import { findAllOrgRoles } from '../orgRoles/orgRoles.repository.js';
 import { findUsersAddableTo, findUsersWithAccessIn, saveUserProfile } from './users.repository.js';
@@ -29,17 +28,6 @@ async function requireModule(moduleKey: string) {
   const module = await findModuleByKey(moduleKey);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
   return module;
-}
-
-/** Stops anyone giving or taking away a profile wider than their own access in any module. A super admin may. */
-async function assertProfileWithinOwnAccess(actor: Actor, profile: Pick<AccessProfileDoc, 'grants'>): Promise<void> {
-  if (actor.user.superAdmin) return;
-  const modules = await findAllModules();
-  for (const [moduleKey, grants] of Object.entries(profile.grants)) {
-    // A module that isn't loaded grants nothing, so its part of the profile can't go beyond anyone's access.
-    const module = modules.find((candidate) => candidate.key === moduleKey);
-    if (module) assertGrantsWithinOwnAccess(actor, module, grants);
-  }
 }
 
 /**

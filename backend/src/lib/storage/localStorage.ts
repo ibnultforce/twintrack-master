@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, readdir, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { DOWNLOAD_URL_TTL_SECONDS, PART_URL_TTL_SECONDS, type DownloadOptions, type FileStorage } from './fileStorage.js';
@@ -87,6 +87,14 @@ export function createLocalStorage(directory: string, publicApiUrl: string, sign
     },
     async deleteObject(key) {
       await rm(pathOf(key), { force: true });
+    },
+    async putObject(key, body) {
+      const target = pathOf(key);
+      await mkdir(dirname(target), { recursive: true });
+      await writeFile(target, body);
+    },
+    readObject(key) {
+      return readFile(pathOf(key));
     },
     readGrant(token) {
       const [payload, signature] = token.split('.');

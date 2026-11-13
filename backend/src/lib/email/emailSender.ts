@@ -7,6 +7,13 @@ export interface EmailMessage {
   html: string;
   /** The same message without markup, for mail clients that show text only. */
   text: string;
+  /** Files sent with the message, such as an invoice document. */
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  fileName: string;
+  content: Buffer;
 }
 
 /** Sends email. Features depend on this, not on Resend, so tests and local development can swap it. */
@@ -38,7 +45,17 @@ export function createResendEmailSender(apiKey: string, from: string, logLevel: 
         response = await fetch(RESEND_EMAILS_URL, {
           method: 'POST',
           headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from, to: [message.to], subject: message.subject, html: message.html, text: message.text }),
+          body: JSON.stringify({
+            from,
+            to: [message.to],
+            subject: message.subject,
+            html: message.html,
+            text: message.text,
+            // Resend takes each file's content as base64.
+            ...(message.attachments?.length && {
+              attachments: message.attachments.map((file) => ({ filename: file.fileName, content: file.content.toString('base64') })),
+            }),
+          }),
         });
       } catch (error) {
         logger.warn({ to: message.to, reason: (error as Error).message }, 'Could not reach Resend');
@@ -61,7 +78,8 @@ export function createLogEmailSender(logLevel: string): EmailSender {
   const logger = pino({ level: logLevel });
   return {
     async send(message) {
-      logger.info({ to: message.to, subject: message.subject, text: message.text }, 'Email not sent: RESEND_API_KEY is not set');
+      const attachments = message.attachments?.map((file) => file.fileName);
+      logger.info({ to: message.to, subject: message.subject, text: message.text, attachments }, 'Email not sent: RESEND_API_KEY is not set');
     },
   };
 }

@@ -1,3 +1,4 @@
+import type { ClientSession } from 'mongoose';
 import { randomUUID } from 'node:crypto';
 import { isDuplicateKeyError } from '../../../db.js';
 import type { Month } from '../../../lib/period.js';
@@ -83,6 +84,22 @@ export function markLedgerEntryPaid(userId: string, month: Month, figures: Ledge
     { $set: { ...figures, disbursed: true, disbursedAt: new Date(), disbursedBy: paidBy }, $setOnInsert: { _id: `il_${randomUUID()}`, userId, ...month } },
     { upsert: true, returnDocument: 'after' },
   ).lean());
+}
+
+/** Each person's unpaid monthly incentive saved for a month, which payroll pays with their salary. */
+export async function findUnpaidLedgerEntries(userIds: string[], month: Month): Promise<Map<string, IncentiveLedgerEntryDoc>> {
+  const entries = await IncentiveLedgerEntry.find({ userId: { $in: userIds }, month: month.month, year: month.year, disbursed: false }).lean();
+  return new Map(entries.map((entry) => [entry.userId, entry]));
+}
+
+/** Marks a monthly incentive paid when the payroll run that included it pays the person. Returns whether it was unpaid. */
+export async function markLedgerEntryPaidByPayroll(userId: string, month: Month, paidBy: string, session: ClientSession): Promise<boolean> {
+  const result = await IncentiveLedgerEntry.updateOne(
+    { userId, month: month.month, year: month.year, disbursed: false },
+    { $set: { disbursed: true, disbursedAt: new Date(), disbursedBy: paidBy } },
+    { session },
+  );
+  return result.modifiedCount === 1;
 }
 
 export const findProjectIncentives = (projectId: string) => ProjectIncentive.find({ projectId }).lean();

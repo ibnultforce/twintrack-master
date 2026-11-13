@@ -6,6 +6,8 @@ import type { PageRequest } from '../../../lib/query.js';
 import { findUserReferences, type UserReferenceCheck } from '../../../lib/userReferences.js';
 import { actorFields, type Actor } from '../access/caller.js';
 import { recordAudit } from '../audit/audit.repository.js';
+import { findProfileOf } from '../accessProfiles/accessProfiles.repository.js';
+import { assertProfileWithinOwnAccess } from '../moduleRegistry/grantEditing.js';
 import { assertOrgRoleExists } from '../orgRoles/orgRoles.service.js';
 import { hashUnusablePassword } from '../auth/passwords.js';
 import { sendPasswordLink, type PasswordLinkMailer } from '../auth/passwordLinks.service.js';
@@ -181,6 +183,9 @@ export async function updateUserDetails(actor: Actor, userId: string, requested:
   const changes = findChangedDetails(target, requested);
   const changedFields = Object.keys(changes) as (keyof UserDetailChanges)[];
   if (changedFields.length === 0) return toUserView(target);
+  // Password links go to the email, so whoever sets it can take the account over. Nobody may take over more than their own access.
+  const targetProfile = changes.email ? await findProfileOf(target) : null;
+  if (targetProfile) await assertProfileWithinOwnAccess(actor, targetProfile);
   if (changes.managerId) await assertValidManager(changes.managerId, target._id);
   // A place in the tree widens or narrows what someone's scope reaches, so only a super admin may change their own.
   if (changes.orgRoleId && !actor.user.superAdmin) assertNotOwnAccount(actor, target);

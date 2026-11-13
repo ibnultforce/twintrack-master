@@ -59,6 +59,12 @@ describe('signing in as someone else, in development', () => {
     expect((await requestsAs(app, (await startAsKarim()).accessToken).get('/auth/me')).body.canImpersonate).toBe(false);
   });
 
+  it('still tells the portal after the super admin changes their name', async () => {
+    const renamed = await (await as('farhana')).patch('/auth/me', { name: 'Farhana K.' });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body).toMatchObject({ name: 'Farhana K.', canImpersonate: true });
+  });
+
   it("hands back the super admin's own session when they stop, and ends the impersonation", async () => {
     const { accessToken } = await startAsKarim();
     const stopped = await request(app).post('/auth/stop-impersonating').set(bearer(accessToken));

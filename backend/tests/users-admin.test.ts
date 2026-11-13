@@ -214,12 +214,13 @@ describe('user administration', () => {
     it('is not mistaken for a person called access-options', async () => {
       const response = await (await as('alia')).get('/users/access-options');
       expect(response.status).toBe(200);
-      expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(['hr', 'master', 'tasks']);
+      expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(['accounts', 'hr', 'master', 'tasks']);
     });
 
     it('lists every module to someone who reads people or gives profiles, and to nobody else', async () => {
       for (const id of ['alia', 'sabbir', 'rumana']) {
         expect((await (await as(id)).get('/users/access-options')).body.modules).toEqual([
+          { key: 'accounts', name: 'Accounts' },
           { key: 'hr', name: 'HR' },
           { key: 'master', name: 'Master' },
           { key: 'tasks', name: 'Tasks' },
@@ -262,9 +263,20 @@ describe('user administration', () => {
     });
 
     it('refuses an email someone else uses', async () => {
-      const response = await (await as('alia')).patch('/users/rahim', { email: 'karim@twintrack.test' });
+      const response = await (await as('alia')).patch('/users/karim', { email: 'rahim@twintrack.test' });
       expect(response.status).toBe(409);
       expect(response.body.error.code).toBe('email_taken');
+    });
+
+    it("refuses changing the email of someone whose profile goes beyond the admin's own access", async () => {
+      // A password link sent to the new email would hand over Rahim's HR and Tasks access, which Alia doesn't hold.
+      const response = await (await as('alia')).patch('/users/rahim', { email: 'alia-inbox@twintrack.test' });
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('beyond_own_access');
+      expect((await User.findById('rahim').lean())?.email).toBe('rahim@twintrack.test');
+
+      expect((await (await as('alia')).patch('/users/karim', { email: 'karim.ahmed@twintrack.test' })).status).toBe(200);
+      expect((await (await as('farhana')).patch('/users/rahim', { email: 'rahim.uddin@twintrack.test' })).status).toBe(200);
     });
 
     it.each([

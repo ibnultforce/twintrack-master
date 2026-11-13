@@ -104,6 +104,21 @@ describe('clients', () => {
       expect((await admin.get('/clients?search=acme')).body.total).toBe(1);
     });
 
+    it("doesn't search a field the person can't see, so a search can't reveal it", async () => {
+      await AccessProfile.create({
+        _id: 'ap_no_email',
+        name: 'Client reader without emails',
+        grants: { master: { client: { actions: ['read'], fieldAccess: { contactEmail: 'hidden' } } } },
+      });
+      await addPerson('nomail', { profileId: 'ap_no_email', orgRoleId: 'or_root' });
+      await addAcme();
+
+      const reader = await as('nomail');
+      expect((await reader.get('/clients?search=billing@')).body.total).toBe(0);
+      expect((await reader.get('/clients?search=acme')).body.total).toBe(1);
+      expect((await (await as('sales')).get('/clients?search=billing@')).body.total).toBe(1);
+    });
+
     it('hides fields the profile marks hidden', async () => {
       const { id } = await addAcme();
       const seen = (await (await as('viewer')).get(`/clients/${id}`)).body;

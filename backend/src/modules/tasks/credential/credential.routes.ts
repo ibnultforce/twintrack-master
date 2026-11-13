@@ -12,7 +12,8 @@ const MAX_SECRET_LENGTH = 500;
 const MAX_NOTES_LENGTH = 5000;
 
 const labelField = z.string().trim().min(1, 'is required').max(MAX_SHORT_LENGTH);
-const urlField = z.url('must be an address, such as https://login.salesforce.com').max(MAX_SECRET_LENGTH);
+// Only web addresses: the frontend shows this as a link, so javascript: or data: would run in the reader's session.
+const urlField = z.url({ protocol: /^https?$/, error: 'must be an http or https address, such as https://login.salesforce.com' }).max(MAX_SECRET_LENGTH);
 const usernameField = z.string().min(1, 'is required').max(MAX_SHORT_LENGTH);
 // Secrets are kept exactly as typed, spaces included.
 const secretField = z.string().min(1, 'is required').max(MAX_SECRET_LENGTH);

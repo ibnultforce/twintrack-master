@@ -52,7 +52,12 @@ export async function getProfile(user: UserDoc, session: { impersonatorId?: stri
 }
 
 /** People can change only their own name. HR owns job details such as title and department. */
-export async function updateOwnName(caller: Caller, name: string, ipAddress: string | undefined): Promise<Profile> {
+export async function updateOwnName(
+  caller: Caller,
+  name: string,
+  ipAddress: string | undefined,
+  settings: { isImpersonationEnabled?: boolean } = {},
+): Promise<Profile> {
   assertNotImpersonating(caller);
   const { user } = caller;
   const updatedUser = await updateUserName(user._id, name);
@@ -71,7 +76,7 @@ export async function updateOwnName(caller: Caller, name: string, ipAddress: str
       ip: ipAddress,
     });
   }
-  return getProfile(updatedUser);
+  return getProfile(updatedUser, { impersonatorId: caller.impersonatorId, isImpersonationEnabled: settings.isImpersonationEnabled });
 }
 
 /** Replaces the password and ends every other session, in case someone else was signed in. This one stays open. */

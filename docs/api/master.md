@@ -178,7 +178,7 @@ Nobody is given a password. New people, and people whose password is reset, are 
 
 **Returns:** the updated person.
 
-**Errors:** `403 super_admin_protected`, `403 own_account` when someone other than a super admin changes their own `orgRoleId`, `404 unknown_user`, `409 email_taken`, `409 employee_number_taken`, `422 validation_failed` for an org role that doesn't exist or another field such as `profileId`
+**Errors:** `403 super_admin_protected`, `403 own_account` when someone other than a super admin changes their own `orgRoleId`, `403 beyond_own_access` when someone other than a super admin changes the `email` of a person whose profile goes beyond their own access (password links go to the email, so it would hand that access over), `404 unknown_user`, `409 email_taken`, `409 employee_number_taken`, `422 validation_failed` for an org role that doesn't exist or another field such as `profileId`
 
 ### `PATCH /users/:id/status`
 
@@ -394,11 +394,11 @@ A profile in these responses has `id`, `name`, `description`, `grants`, `holders
 
 ### `DELETE /modules/:key/resources/:resource`
 
-**Access:** `private`, needs `module.delete`. Refused while a profile or API uses the resource, unless you're a super admin.
+**Access:** `private`, needs `module.delete`. Refused while a profile or API uses the resource, unless you're a super admin. A custom object is refused while it has records, including any in the recycle bin, as with [`DELETE /modules/:key/objects/:object`](#delete-moduleskeyobjectsobject).
 
 **Returns:** `removed`, `module`, `resource`
 
-**Errors:** `404 unknown_resource`
+**Errors:** `404 unknown_resource`, `409 object_in_use`
 
 ## Custom objects
 
@@ -472,7 +472,7 @@ A client has `id`, `name`, `initials`, `contactEmail`, `contactPhone`, `address`
 
 **Access:** `private`, needs `client.read`
 
-**Query:** `page`, `pageSize`, `search` (name, initials or email), `status` (`active` or `inactive`)
+**Query:** `page`, `pageSize`, `search` (name, initials or email, leaving out any of them the caller's field access hides), `status` (`active` or `inactive`)
 
 **Returns:** `clients`, `total`
 

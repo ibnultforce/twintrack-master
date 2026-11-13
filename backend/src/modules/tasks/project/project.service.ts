@@ -169,7 +169,9 @@ export async function updateProject(actor: Actor, scope: Scope, projectId: strin
   const { version, ...fields } = changes;
   if (fields.leadId) await assertPeopleExist({ leadId: fields.leadId });
   if (fields.clientId) await assertActiveClient(fields.clientId);
-  return changeProject(actor, scope, projectId, { auditAction: 'project.updated', writes: Object.keys(fields), save: (existing, session) => {
+  return changeProject(actor, scope, projectId, { auditAction: 'project.updated', writes: Object.keys(fields), save: async (existing, session) => {
+    // The old lead leaves the project with the change, so, like a removed member, not while they have open tasks there.
+    if (fields.leadId && fields.leadId !== existing.leadId) await assertNoOpenTasks(projectId, [existing.leadId]);
     // A new lead stops being listed as a member, because the lead always counts as one.
     const memberIds = fields.leadId ? distinctMembers(existing.memberIds, fields.leadId) : existing.memberIds;
     return saveProjectChanges(projectId, { ...fields, memberIds }, { actorId: actor.user._id, expectedVersion: version, session });
@@ -182,13 +184,20 @@ export async function setProjectMembers(actor: Actor, scope: Scope, projectId: s
   const memberIds = distinctMembers(request.memberIds, existing.leadId);
   await assertPeopleExist(Object.fromEntries(memberIds.map((memberId, index) => [`memberIds.${index}`, memberId])));
 
-  const removedIds = existing.memberIds.filter((memberId) => !memberIds.includes(memberId));
-  if (removedIds.length > 0 && (await countOpenTasksAssignedTo(projectId, removedIds)) > 0) {
-    throw new ApiError(409, 'member_has_open_tasks', 'Someone you removed still has open tasks in this project. Reassign or cancel them first.');
-  }
   return changeProject(actor, scope, projectId, {
     auditAction: 'project.members_changed',
     writes: ['memberIds'],
-    save: (_existing, session) => saveProjectChanges(projectId, { memberIds }, { actorId: actor.user._id, expectedVersion: request.version, session }),
+    // After the reach check, so someone outside the project learns nothing about its tasks.
+    save: async (current, session) => {
+      await assertNoOpenTasks(projectId, current.memberIds.filter((memberId) => !memberIds.includes(memberId)));
+      return saveProjectChanges(projectId, { memberIds }, { actorId: actor.user._id, expectedVersion: request.version, session });
+    },
   });
+}
+
+/** Someone leaving a project, as a member or as its lead, stays until their open tasks there are reassigned. */
+async function assertNoOpenTasks(projectId: string, leavingIds: string[]): Promise<void> {
+  if (leavingIds.length > 0 && (await countOpenTasksAssignedTo(projectId, leavingIds)) > 0) {
+    throw new ApiError(409, 'member_has_open_tasks', 'Someone leaving this project still has open tasks in it. Reassign or cancel them first.');
+  }
 }

@@ -31,6 +31,7 @@ describe('validateManifest', () => {
 
   it('finds one manifest for each module', () => {
     expect(manifestFiles.sort()).toEqual([
+      'accounts.manifest.json',
       'hr.manifest.json',
       'master.manifest.json',
       'tasks.manifest.json',

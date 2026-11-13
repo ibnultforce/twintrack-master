@@ -276,8 +276,10 @@ export async function exportTasksCsv(actor: Actor, scope: Scope, filters: TaskFi
 /** A few tasks matching a title or number, for pickers such as the one for references. */
 export async function searchTasks(actor: Actor, scope: Scope, search: string) {
   const tasks = await searchTaskSummaries(await toTaskFilter(actor, scope, { search }), SEARCH_RESULT_LIMIT);
-  const projects = new Map((await findProjectsByIds([...new Set(tasks.map((task) => task.projectId))])).map((project) => [project._id, project.name]));
-  return { tasks: tasks.map((task) => ({ ...toTaskLink(task), title: task.title, projectName: projects.get(task.projectId) })) };
+  const [projectList, rules] = await Promise.all([findProjectsByIds([...new Set(tasks.map((task) => task.projectId))]), fieldRulesFor(actor)]);
+  const projects = new Map(projectList.map((project) => [project._id, project.name]));
+  // The title is a controlled field, so it stays hidden here as it does on the task itself.
+  return { tasks: tasks.map((task) => redactRecord({ ...toTaskLink(task), title: task.title, projectName: projects.get(task.projectId) }, rules)) };
 }
 
 /** One task, with the tasks it points to and the tasks pointing to it. */
@@ -408,6 +410,9 @@ export async function updateTask(actor: Actor, scope: Scope, taskId: string, cha
     check: async ({ task, project }) => {
       if (!fields.assignedDevId || fields.assignedDevId === task.assignedDevId) return;
       assertIsProjectMember(project, fields.assignedDevId, 'assignedDevId');
+      // While a QA round is open or its result stands, the tester can't become the assignee and test their own work.
+      const hasQaRound = task.status === 'qa_todo' || task.status === 'qa_in_progress' || Boolean(task.qaCompletedAt);
+      if (hasQaRound && fields.assignedDevId === task.qaId) throw invalidField('assignedDevId', "can't be the person doing QA on this task");
       if (task.resumedAt) throw new ApiError(409, 'timer_running', 'The assignee is working on this task. They need to pause it before it moves to someone else.');
       // The new assignee must also be inside the caller's reach, as on create.
       await assertCanReachRecord(actor, scope, { ...historyRef(taskId), peopleIds: [fields.assignedDevId] }, 'edit');

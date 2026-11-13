@@ -5,6 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { resolveDependencies } from '../src/appDependencies.js';
 import { createApp } from '../src/app.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
+import { User } from '../src/modules/master/models/user.js';
 import { Task } from '../src/modules/tasks/models/task.js';
 import { createTasksRoutes } from '../src/modules/tasks/tasks.routes.js';
 import { formatTaskNumber, secondsWorked } from '../src/modules/tasks/task/taskLifecycle.js';
@@ -104,6 +105,22 @@ describe('Tasks module', () => {
       expect(response.status).toBe(409);
       expect(response.body.error.code).toBe('member_has_open_tasks');
       expect((await rahim.put(`/tasks/projects/${projectId}/members`, { memberIds: [ID.ARIF, ID.MEHEDI, ID.SUMAIYA] })).status).toBe(200);
+    });
+
+    it("keeps the lead, who leaves the project when replaced, while they still have open tasks in it", async () => {
+      const { rahim, projectId } = await setUpProjectWithTask();
+      await rahim.post('/tasks/tasks', { projectId, title: 'Review', assignedDevId: ID.RAHIM, tlId: ID.RAHIM, estimatedHours: 1 });
+      const response = await rahim.patch(`/tasks/projects/${projectId}`, { leadId: ID.ARIF });
+      expect(response.status).toBe(409);
+      expect(response.body.error.code).toBe('member_has_open_tasks');
+      expect((await rahim.get(`/tasks/projects/${projectId}`)).body.leadId).toBe(ID.RAHIM);
+    });
+
+    it('checks the reach before saying anything about open tasks', async () => {
+      const { projectId } = await setUpProjectWithTask();
+      await User.updateOne({ _id: 'u_05' }, { $set: { profileId: 'ap_engineering_lead' } });
+      const outsider = await as('rumana');
+      expect((await outsider.put(`/tasks/projects/${projectId}/members`, { memberIds: [] })).body.error.code).toBe('out_of_scope');
     });
   });
 

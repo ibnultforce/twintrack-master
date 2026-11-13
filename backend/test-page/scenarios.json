@@ -1085,6 +1085,18 @@
             },
             {
               "kind": "fail",
+              "title": "Changing the email of someone with access beyond your own",
+              "expected": 403,
+              "code": "beyond_own_access",
+              "request": {
+                "method": "PATCH",
+                "path": "/users/u_12",
+                "as": "arif@twintrack.test",
+                "body": "{\"email\":\"arif.inbox@twintrack.test\"}"
+              }
+            },
+            {
+              "kind": "fail",
               "title": "No access token",
               "expected": 401,
               "code": "no_token",
@@ -1147,9 +1159,9 @@
               "code": "email_taken",
               "request": {
                 "method": "PATCH",
-                "path": "/users/u_04",
+                "path": "/users/u_08",
                 "as": "arif@twintrack.test",
-                "body": "{\"email\":\"karim@twintrack.test\"}"
+                "body": "{\"email\":\"rahim@twintrack.test\"}"
               }
             },
             {
@@ -8564,6 +8576,4364 @@
                   }
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "routes": [
+        {
+          "id": "GET /accounts/categories",
+          "method": "GET",
+          "path": "/accounts/categories",
+          "purpose": "Lists categories of income and spending, by code.",
+          "input": "page, pageSize, status, search",
+          "access": "Needs category.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant lists categories",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/categories",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"code\":\"RENT\"}",
+                  "save": {
+                    "categoryId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/categories",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/categories",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/categories",
+          "method": "POST",
+          "path": "/accounts/categories",
+          "purpose": "Adds a category. The code is stored in capitals and must be unique.",
+          "input": "name, code, parentId",
+          "access": "Needs category.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant adds a category",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/categories",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"name\":\"Office rent\",\"code\":\"office-rent\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A code another category uses",
+              "expected": 409,
+              "code": "code_taken",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/categories",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"code\":\"RENT\"}",
+                  "save": {
+                    "categoryId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/categories",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"name\":\"Rent again\",\"code\":\"rent\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/categories/:id",
+          "method": "GET",
+          "path": "/accounts/categories/:id",
+          "purpose": "Reads one category.",
+          "input": "category id",
+          "access": "Needs category.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads a category",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/categories",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"code\":\"RENT\"}",
+                  "save": {
+                    "categoryId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/categories/{{categoryId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such category",
+              "expected": 404,
+              "code": "unknown_category",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/categories/cat_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/categories/:id",
+          "method": "PATCH",
+          "path": "/accounts/categories/:id",
+          "purpose": "Changes a category, or makes it inactive so new money can no longer use it.",
+          "input": "any of name, code, parentId, status, and version",
+          "access": "Needs category.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant makes a category inactive",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/categories",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"code\":\"RENT\"}",
+                  "save": {
+                    "categoryId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/categories/{{categoryId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"status\":\"inactive\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A category as its own parent",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/categories",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"code\":\"RENT\"}",
+                  "save": {
+                    "categoryId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/categories/{{categoryId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"parentId\":\"{{categoryId}}\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/categories/:id/history",
+          "method": "GET",
+          "path": "/accounts/categories/:id/history",
+          "purpose": "A category's field history, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs category.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reads the history",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/categories",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"code\":\"RENT\"}",
+                  "save": {
+                    "categoryId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/categories/{{categoryId}}/history",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/categories",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"code\":\"RENT\"}",
+                  "save": {
+                    "categoryId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/categories/{{categoryId}}/history",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/vendors",
+          "method": "GET",
+          "path": "/accounts/vendors",
+          "purpose": "Lists vendors by name.",
+          "input": "page, pageSize, status, search",
+          "access": "Needs vendor.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant lists vendors",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/vendors",
+          "method": "POST",
+          "path": "/accounts/vendors",
+          "purpose": "Adds a vendor. The bank account number is stored encrypted and shown only where field access reaches it.",
+          "input": "name, contactName, contactEmail, contactPhone, address, bankName, bankAccountNumber, notes",
+          "access": "Needs vendor.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant adds a vendor",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/vendors",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"name\":\"Dhaka Office Supplies\",\"contactEmail\":\"sales@dos.test\",\"bankName\":\"City Bank\",\"bankAccountNumber\":\"0011223344\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The finance lead can only read vendors",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/vendors",
+                "as": "rumana@twintrack.test",
+                "body": "{\"name\":\"Nope\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/vendors/:id",
+          "method": "GET",
+          "path": "/accounts/vendors/:id",
+          "purpose": "Reads one vendor.",
+          "input": "vendor id",
+          "access": "Needs vendor.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads a vendor, with the bank number",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors/{{vendorId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such vendor",
+              "expected": 404,
+              "code": "unknown_vendor",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors/ven_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/vendors/:id",
+          "method": "PATCH",
+          "path": "/accounts/vendors/:id",
+          "purpose": "Changes a vendor, or makes it inactive. An empty bank account number removes it.",
+          "input": "any of the vendor fields, status, and version",
+          "access": "Needs vendor.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant updates the contact",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/vendors/{{vendorId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"contactName\":\"Shafiq\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "An edit made from an old version",
+              "expected": 409,
+              "code": "version_conflict",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/vendors/{{vendorId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"contactName\":\"Shafiq\",\"version\":9}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/vendors/:id/history",
+          "method": "GET",
+          "path": "/accounts/vendors/:id/history",
+          "purpose": "A vendor's field history, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs vendor.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reads the history",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors/{{vendorId}}/history",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such vendor",
+              "expected": 404,
+              "code": "unknown_vendor",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors/ven_missing/history",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bank-accounts",
+          "method": "GET",
+          "path": "/accounts/bank-accounts",
+          "purpose": "Lists the company's bank accounts, each with its current balance worked out from posted money.",
+          "input": "page, pageSize, status",
+          "access": "Needs bankAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant lists accounts",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bank-accounts",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bank-accounts",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bank-accounts",
+          "method": "POST",
+          "path": "/accounts/bank-accounts",
+          "purpose": "Adds a bank account. Its currency never changes.",
+          "input": "name, currency, bankName, accountNumber, openingBalance, openingDate",
+          "access": "Needs bankAccount.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant adds an account",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bank-accounts",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"name\":\"Operating\",\"bankName\":\"City Bank\",\"accountNumber\":\"1234567890\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A currency the API does not take",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bank-accounts",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"name\":\"Euro\",\"currency\":\"EUR\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bank-accounts/:id",
+          "method": "GET",
+          "path": "/accounts/bank-accounts/:id",
+          "purpose": "Reads one bank account with its current balance.",
+          "input": "bank account id",
+          "access": "Needs bankAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads an account",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bank-accounts/{{bankAccountId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such account",
+              "expected": 404,
+              "code": "unknown_bank_account",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bank-accounts/ba_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/bank-accounts/:id",
+          "method": "PATCH",
+          "path": "/accounts/bank-accounts/:id",
+          "purpose": "Changes a bank account, or makes it inactive.",
+          "input": "any of name, bankName, accountNumber, openingBalance, openingDate, status, and version",
+          "access": "Needs bankAccount.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant renames an account",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/bank-accounts/{{bankAccountId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"name\":\"Main operating\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The currency can not change",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/bank-accounts/{{bankAccountId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"currency\":\"USD\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bank-accounts/:id/statement",
+          "method": "GET",
+          "path": "/accounts/bank-accounts/:id/statement",
+          "purpose": "Every movement through an account in a period, with the balance before and after each.",
+          "input": "from, to",
+          "access": "Needs bankAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reads a statement",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payments",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"vendor\",\"amount\":10000,\"paymentDate\":\"2026-06-05\",\"method\":\"bank_transfer\",\"reference\":\"TRX-1001\"}",
+                  "save": {
+                    "paymentId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bank-accounts/{{bankAccountId}}/statement?from=2026-06-01&to=2026-06-30",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A period that ends before it starts",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bank-accounts/{{bankAccountId}}/statement?from=2026-06-30&to=2026-06-01",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bank-accounts/:id/history",
+          "method": "GET",
+          "path": "/accounts/bank-accounts/:id/history",
+          "purpose": "A bank account's field history, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs bankAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reads the history",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bank-accounts/{{bankAccountId}}/history",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bank-accounts/{{bankAccountId}}/history",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/company-bank-details",
+          "method": "GET",
+          "path": "/accounts/company-bank-details",
+          "purpose": "The payment details printed on every invoice.",
+          "input": "none",
+          "access": "Needs companyBankDetails.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reads the details",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/company-bank-details",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/company-bank-details",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/company-bank-details",
+          "method": "PATCH",
+          "path": "/accounts/company-bank-details",
+          "purpose": "Saves the fields given. An empty one is cleared; fields left out stay.",
+          "input": "any of bankName, accountName, accountNumber, branchName, routingNumber, swiftCode, address, and version",
+          "access": "Needs companyBankDetails.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant saves the details",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/company-bank-details",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"bankName\":\"City Bank\",\"accountName\":\"TwinForce Solutions Ltd\",\"accountNumber\":\"1234567890\",\"swiftCode\":\"CIBLBDDH\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The finance lead can only read them",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/company-bank-details",
+                "as": "rumana@twintrack.test",
+                "body": "{\"bankName\":\"Other\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bills",
+          "method": "GET",
+          "path": "/accounts/bills",
+          "purpose": "Lists bills, newest business date first, each with what has been paid.",
+          "input": "page, pageSize, status, vendorId, projectId, categoryId, overdue",
+          "access": "Needs bill.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead lists bills waiting for approval",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills?status=pending_approval",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills",
+          "method": "POST",
+          "path": "/accounts/bills",
+          "purpose": "Adds a bill as a draft.",
+          "input": "vendorId, businessDate, currency, amount, and optionally billNumber, categoryId, projectId, department, dueDate, taxCode, notes",
+          "access": "Needs bill.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant records a bill",
+              "expected": 201,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"vendorId\":\"{{vendorId}}\",\"billNumber\":\"DOS-0042\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A vendor that does not exist",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"vendorId\":\"ven_missing\",\"businessDate\":\"2026-06-01\",\"currency\":\"BDT\",\"amount\":1}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bills/:id",
+          "method": "GET",
+          "path": "/accounts/bills/:id",
+          "purpose": "Reads one bill, with what's been paid and what's still owed.",
+          "input": "bill id",
+          "access": "Needs bill.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reads a bill",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills/{{billId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such bill",
+              "expected": 404,
+              "code": "unknown_bill",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills/bill_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/bills/:id",
+          "method": "PATCH",
+          "path": "/accounts/bills/:id",
+          "purpose": "Changes a draft bill. Once submitted, its figures are what went for approval.",
+          "input": "any of the bill fields, and version",
+          "access": "Needs bill.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant corrects a draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/bills/{{billId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"amount\":32000}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A bill already sent for approval",
+              "expected": 409,
+              "code": "invalid_status",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/bills/{{billId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"amount\":32000}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "DELETE /accounts/bills/:id",
+          "method": "DELETE",
+          "path": "/accounts/bills/:id",
+          "purpose": "Moves a draft bill to the recycle bin. Posted bills are reversed instead.",
+          "input": "bill id",
+          "access": "Needs bill.delete",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant deletes a draft",
+              "expected": 204,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/bills/{{billId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "An approved bill",
+              "expected": 409,
+              "code": "invalid_status",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/bills/{{billId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/submit",
+          "method": "POST",
+          "path": "/accounts/bills/:id/submit",
+          "purpose": "Sends a draft bill for approval.",
+          "input": "bill id",
+          "access": "Needs bill.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant submits a bill",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/submit",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A bill already submitted",
+              "expected": 409,
+              "code": "invalid_status",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/submit",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/approve",
+          "method": "POST",
+          "path": "/accounts/bills/:id/approve",
+          "purpose": "Approves a bill waiting for approval, so it can be paid. Never by whoever made it.",
+          "input": "bill id",
+          "access": "Needs bill.approve",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead approves",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/approve",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The super admin approving a bill she made",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"currency\":\"BDT\",\"amount\":500}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/reject",
+          "method": "POST",
+          "path": "/accounts/bills/:id/reject",
+          "purpose": "Rejects a bill waiting for approval, with the reason. Never by whoever made it.",
+          "input": "reason",
+          "access": "Needs bill.approve",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead rejects",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/reject",
+                "as": "rumana@twintrack.test",
+                "body": "{\"reason\":\"Wrong vendor\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Without a reason",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/reject",
+                "as": "rumana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/reverse",
+          "method": "POST",
+          "path": "/accounts/bills/:id/reverse",
+          "purpose": "Cancels an approved bill that turned out wrong, keeping it on record. Payments against it are reversed first.",
+          "input": "reason",
+          "access": "Needs bill.delete",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reverses an unpaid approved bill",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/reverse",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"reason\":\"Duplicate bill\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A bill with a payment against it",
+              "expected": 409,
+              "code": "bill_has_payments",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payments",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"vendor\",\"amount\":10000,\"paymentDate\":\"2026-06-05\",\"method\":\"bank_transfer\",\"reference\":\"TRX-1001\"}",
+                  "save": {
+                    "paymentId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/reverse",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"reason\":\"Duplicate bill\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bills/:id/history",
+          "method": "GET",
+          "path": "/accounts/bills/:id/history",
+          "purpose": "A bill's field history, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs bill.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads the history",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills/{{billId}}/history",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills/{{billId}}/history",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/payments",
+          "method": "GET",
+          "path": "/accounts/payments",
+          "purpose": "Lists payments, newest first.",
+          "input": "page, pageSize, bankAccountId, billId, payeeVendorId, payeeUserId, from, to",
+          "access": "Needs payment.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant lists a bill's payments",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payments",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"vendor\",\"amount\":10000,\"paymentDate\":\"2026-06-05\",\"method\":\"bank_transfer\",\"reference\":\"TRX-1001\"}",
+                  "save": {
+                    "paymentId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payments?billId={{billId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payments",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payments",
+          "method": "POST",
+          "path": "/accounts/payments",
+          "purpose": "Posts money out of a bank account, in its currency. Against a bill, never more than is owed; the bill's status follows.",
+          "input": "bankAccountId, payeeType, amount, paymentDate, method, and the payee: payeeVendorId, payeeUserId or payeeName; optionally billId, categoryId, projectId, department, reference, notes",
+          "access": "Needs payment.create",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A bill paid to someone other than its vendor",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payments",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"other\",\"payeeName\":\"Tea stall\",\"amount\":100,\"paymentDate\":\"2026-06-05\",\"method\":\"cash\"}"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "The accountant pays part of a bill",
+              "expected": 201,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payments",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"vendor\",\"amount\":10000,\"paymentDate\":\"2026-06-05\",\"method\":\"bank_transfer\",\"reference\":\"TRX-1001\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "More than the bill still owes",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payments",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"vendor\",\"amount\":50000,\"paymentDate\":\"2026-06-05\",\"method\":\"bank_transfer\",\"reference\":\"TRX-1001\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/payments/:id",
+          "method": "GET",
+          "path": "/accounts/payments/:id",
+          "purpose": "Reads one payment.",
+          "input": "payment id",
+          "access": "Needs payment.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads a payment",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payments",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"vendor\",\"amount\":10000,\"paymentDate\":\"2026-06-05\",\"method\":\"bank_transfer\",\"reference\":\"TRX-1001\"}",
+                  "save": {
+                    "paymentId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payments/{{paymentId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such payment",
+              "expected": 404,
+              "code": "unknown_payment",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payments/pay_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payments/:id/reverse",
+          "method": "POST",
+          "path": "/accounts/payments/:id/reverse",
+          "purpose": "Cancels a payment with a linked reversal dated today, such as a transfer the bank returned. Once only.",
+          "input": "reason",
+          "access": "Needs payment.delete",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reverses a returned transfer",
+              "expected": 201,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payments",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"vendor\",\"amount\":10000,\"paymentDate\":\"2026-06-05\",\"method\":\"bank_transfer\",\"reference\":\"TRX-1001\"}",
+                  "save": {
+                    "paymentId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payments/{{paymentId}}/reverse",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"reason\":\"Bank returned it\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A payment already reversed",
+              "expected": 409,
+              "code": "already_reversed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Operating\",\"currency\":\"BDT\",\"openingBalance\":100000,\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "bankAccountId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/approve",
+                  "as": "rumana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payments",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{bankAccountId}}\",\"billId\":\"{{billId}}\",\"payeeType\":\"vendor\",\"amount\":10000,\"paymentDate\":\"2026-06-05\",\"method\":\"bank_transfer\",\"reference\":\"TRX-1001\"}",
+                  "save": {
+                    "paymentId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payments/{{paymentId}}/reverse",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"reason\":\"Bank returned it\"}"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payments/{{paymentId}}/reverse",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"reason\":\"Again\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/receipts",
+          "method": "GET",
+          "path": "/accounts/receipts",
+          "purpose": "Lists receipts, newest first, with their allocations to invoices.",
+          "input": "page, pageSize, bankAccountId, clientId, from, to",
+          "access": "Needs receipt.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant lists a client's receipts",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}",
+                  "save": {
+                    "receiptId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/receipts?clientId={{clientId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/receipts",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/receipts",
+          "method": "POST",
+          "path": "/accounts/receipts",
+          "purpose": "Posts money into a bank account, in its currency, keeping the bank's fee apart from what the client paid.",
+          "input": "bankAccountId, amount, receivedDate, method, and optionally clientId, bankFee, reference, notes",
+          "access": "Needs receipt.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant records a client payment",
+              "expected": 201,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipts",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A bank fee above the amount",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipts",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":500,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/receipts/:id",
+          "method": "GET",
+          "path": "/accounts/receipts/:id",
+          "purpose": "Reads one receipt, with how much is allocated to invoices.",
+          "input": "receipt id",
+          "access": "Needs receipt.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads a receipt",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}",
+                  "save": {
+                    "receiptId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/receipts/{{receiptId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such receipt",
+              "expected": 404,
+              "code": "unknown_receipt",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/receipts/rec_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/receipts/:id/allocations",
+          "method": "POST",
+          "path": "/accounts/receipts/:id/allocations",
+          "purpose": "Counts part of a receipt against an invoice of the same client and currency, never beyond either's amount.",
+          "input": "invoiceId, amount, version",
+          "access": "Needs receipt.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant counts a receipt against an invoice",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}",
+                  "save": {
+                    "receiptId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipts/{{receiptId}}/allocations",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"invoiceId\":\"{{invoiceId}}\",\"amount\":100}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "More than is left on the receipt",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}",
+                  "save": {
+                    "receiptId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipts/{{receiptId}}/allocations",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"invoiceId\":\"{{invoiceId}}\",\"amount\":120}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "DELETE /accounts/receipts/:id/allocations/:allocationId",
+          "method": "DELETE",
+          "path": "/accounts/receipts/:id/allocations/:allocationId",
+          "purpose": "Takes an allocation off a receipt.",
+          "input": "receipt id and allocation id",
+          "access": "Needs receipt.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant removes an allocation",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}",
+                  "save": {
+                    "receiptId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts/{{receiptId}}/allocations",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"invoiceId\":\"{{invoiceId}}\",\"amount\":50}",
+                  "save": {
+                    "allocationId": "allocations.0.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/receipts/{{receiptId}}/allocations/{{allocationId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such allocation",
+              "expected": 404,
+              "code": "unknown_allocation",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}",
+                  "save": {
+                    "receiptId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/receipts/{{receiptId}}/allocations/al_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/receipts/:id/reverse",
+          "method": "POST",
+          "path": "/accounts/receipts/:id/reverse",
+          "purpose": "Cancels a receipt with a linked reversal dated today. Its allocations are removed first.",
+          "input": "reason",
+          "access": "Needs receipt.delete",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reverses a bounced payment",
+              "expected": 201,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}",
+                  "save": {
+                    "receiptId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipts/{{receiptId}}/reverse",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"reason\":\"Cheque bounced\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A receipt still allocated to an invoice",
+              "expected": 409,
+              "code": "receipt_allocated",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bank-accounts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dollar account\",\"currency\":\"USD\",\"openingDate\":\"2026-01-01\"}",
+                  "save": {
+                    "usdBankId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"bankAccountId\":\"{{usdBankId}}\",\"clientId\":\"{{clientId}}\",\"amount\":100,\"bankFee\":2,\"receivedDate\":\"2026-02-10\",\"method\":\"bank_transfer\"}",
+                  "save": {
+                    "receiptId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipts/{{receiptId}}/allocations",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"invoiceId\":\"{{invoiceId}}\",\"amount\":50}"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipts/{{receiptId}}/reverse",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"reason\":\"Bounced\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices",
+          "method": "GET",
+          "path": "/accounts/invoices",
+          "purpose": "Lists invoices, newest first, with what receipts have paid.",
+          "input": "page, pageSize, status, clientId",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead lists a client's invoices",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices?clientId={{clientId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/invoices",
+          "method": "POST",
+          "path": "/accounts/invoices",
+          "purpose": "Bills a client's work from Tasks at an hourly rate: all of a client's work finished in the period (clientId), or work logged on chosen projects (projectIds), with custom lines. Makes a Word document.",
+          "input": "clientId or projectIds, from, to, and optionally hourlyRate, currency, customLines, additionalNotes",
+          "access": "Needs invoice.create",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "An invoice in taka with no rate, since the default rate is in dollars",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"clientId\":\"cl_any\",\"from\":\"2026-06-01\",\"to\":\"2026-06-30\",\"currency\":\"BDT\"}"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "The accountant bills a project with a custom line",
+              "expected": 201,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A client with no work in the period",
+              "expected": 422,
+              "code": "nothing_to_invoice",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"clientId\":\"{{clientId}}\",\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices/unbilled",
+          "method": "GET",
+          "path": "/accounts/invoices/unbilled",
+          "purpose": "Billable hours of finished tasks no invoice has billed yet, by project.",
+          "input": "none",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant checks unbilled work",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/unbilled",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/unbilled",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices/preview",
+          "method": "GET",
+          "path": "/accounts/invoices/preview",
+          "purpose": "What an invoice would bill, without saving it.",
+          "input": "clientId or projectIds (comma-separated), from, to, hourlyRate",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant previews a client's month",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/preview?clientId={{clientId}}&from=2026-01-01&to=2026-01-31&hourlyRate=25",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Both a client and projects",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/preview?clientId=cl_1&projectIds=p_1&from=2026-01-01&to=2026-01-31",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices/:id",
+          "method": "GET",
+          "path": "/accounts/invoices/:id",
+          "purpose": "Reads one invoice with its lines and what has been paid.",
+          "input": "invoice id",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads an invoice",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/{{invoiceId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such invoice",
+              "expected": 404,
+              "code": "unknown_invoice",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/inv_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/invoices/:id",
+          "method": "PATCH",
+          "path": "/accounts/invoices/:id",
+          "purpose": "Changes the status (draft to sent to paid, or paid back to sent) or the notes, which remakes the document.",
+          "input": "status, additionalNotes, version",
+          "access": "Needs invoice.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant adds payment terms",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/invoices/{{invoiceId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"additionalNotes\":\"Payment due within 30 days.\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Straight from draft to paid",
+              "expected": 409,
+              "code": "invalid_status",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/invoices/{{invoiceId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"status\":\"paid\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "DELETE /accounts/invoices/:id",
+          "method": "DELETE",
+          "path": "/accounts/invoices/:id",
+          "purpose": "Deletes a draft invoice, so its tasks count as unbilled again.",
+          "input": "invoice id",
+          "access": "Needs invoice.delete",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant deletes a draft",
+              "expected": 204,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/invoices/{{invoiceId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "An invoice already sent",
+              "expected": 409,
+              "code": "invalid_status",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                },
+                {
+                  "method": "PATCH",
+                  "path": "/accounts/invoices/{{invoiceId}}",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"status\":\"sent\"}"
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/invoices/{{invoiceId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/invoices/:id/lines",
+          "method": "PATCH",
+          "path": "/accounts/invoices/:id/lines",
+          "purpose": "Corrects a draft's lines and rate. Totals and the document follow.",
+          "input": "hourlyRate, lines (id, description, hours, billable), version",
+          "access": "Needs invoice.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant corrects a line",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/invoices/{{invoiceId}}/lines",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"lines\":[{\"id\":\"{{lineId}}\",\"hours\":5,\"description\":\"Server setup and hardening\"}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A line from another invoice",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/invoices/{{invoiceId}}/lines",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"lines\":[{\"id\":\"il_missing\",\"hours\":1}]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices/:id/document",
+          "method": "GET",
+          "path": "/accounts/invoices/:id/document",
+          "purpose": "A short-lived address to download the Word document.",
+          "input": "invoice id",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead downloads the document",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/{{invoiceId}}/document",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such invoice",
+              "expected": 404,
+              "code": "unknown_invoice",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/inv_missing/document",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/invoices/:id/send",
+          "method": "POST",
+          "path": "/accounts/invoices/:id/send",
+          "purpose": "Emails the document to the client's contact, or the address given, and marks a draft sent.",
+          "input": "to, subject, message",
+          "access": "Needs invoice.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant emails the invoice",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/send",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"message\":\"Please find this month's invoice attached.\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The finance lead can only read invoices",
+              "expected": 403,
+              "code": "forbidden",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/send",
+                "as": "rumana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices/:id/history",
+          "method": "GET",
+          "path": "/accounts/invoices/:id/history",
+          "purpose": "An invoice's field history, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant reads the history",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/{{invoiceId}}/history",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Acme Logistics\",\"contactEmail\":\"ap@acme.test\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/tasks/projects",
+                  "as": "rahim@twintrack.test",
+                  "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
+                  "save": {
+                    "projectId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"projectIds\":[\"{{projectId}}\"],\"from\":\"2026-01-01\",\"to\":\"2026-01-31\",\"hourlyRate\":25,\"customLines\":[{\"projectId\":\"{{projectId}}\",\"description\":\"Server setup\",\"hours\":6}]}",
+                  "save": {
+                    "invoiceId": "id",
+                    "lineId": "lines.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/{{invoiceId}}/history",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/payroll-runs",
+          "method": "GET",
+          "path": "/accounts/payroll-runs",
+          "purpose": "Lists payroll runs, newest month first, with how many people are paid.",
+          "input": "page, pageSize, year, status",
+          "access": "Needs payrollRun.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead lists runs",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":1,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs?year=2031",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs",
+          "method": "POST",
+          "path": "/accounts/payroll-runs",
+          "purpose": "Makes a month's run: each person's approved HR salary for the month, plus their unpaid Tasks incentive. One run a month.",
+          "input": "month, year, and optionally userIds, bankAccountId, notes",
+          "access": "Needs payrollRun.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant makes a run",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"month\":2,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"],\"notes\":\"February\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone with no approved salary",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"month\":3,\"year\":2031,\"userIds\":[\"u_09\"]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/payroll-runs/:id",
+          "method": "GET",
+          "path": "/accounts/payroll-runs/:id",
+          "purpose": "Reads one run with each person's pay.",
+          "input": "payroll run id",
+          "access": "Needs payrollRun.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads a run",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":4,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs/{{runId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such run",
+              "expected": 404,
+              "code": "unknown_payroll_run",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs/pr_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/payroll-runs/:id",
+          "method": "PATCH",
+          "path": "/accounts/payroll-runs/:id",
+          "purpose": "Changes a draft's notes, bank account, or deductions from someone's pay.",
+          "input": "notes, bankAccountId, deductions (itemId, amount), version",
+          "access": "Needs payrollRun.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant deducts an advance",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":5,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payroll-runs/{{runId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"deductions\":[{\"itemId\":\"{{itemId}}\",\"amount\":5000}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A deduction above the pay",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":6,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payroll-runs/{{runId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"deductions\":[{\"itemId\":\"{{itemId}}\",\"amount\":99999999}]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "DELETE /accounts/payroll-runs/:id",
+          "method": "DELETE",
+          "path": "/accounts/payroll-runs/:id",
+          "purpose": "Deletes a draft run, which frees its month.",
+          "input": "payroll run id",
+          "access": "Needs payrollRun.delete",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant deletes a draft run",
+              "expected": 204,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":7,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/payroll-runs/{{runId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A run sent for approval",
+              "expected": 409,
+              "code": "invalid_status",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":8,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/payroll-runs/{{runId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs/:id/submit",
+          "method": "POST",
+          "path": "/accounts/payroll-runs/:id/submit",
+          "purpose": "Sends a draft run for approval.",
+          "input": "payroll run id",
+          "access": "Needs payrollRun.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant submits a run",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":9,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/submit",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":10,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/submit",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs/:id/approve",
+          "method": "POST",
+          "path": "/accounts/payroll-runs/:id/approve",
+          "purpose": "Approves a run, so its pay can be settled. Never by whoever made it.",
+          "input": "payroll run id",
+          "access": "Needs payrollRun.approve",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead approves",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":11,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/approve",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The accountant can not approve",
+              "expected": 403,
+              "code": "forbidden",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":12,\"year\":2031,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/approve",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs/:id/return",
+          "method": "POST",
+          "path": "/accounts/payroll-runs/:id/return",
+          "purpose": "Sends a run back to draft with the reason. Never by whoever made it.",
+          "input": "reason",
+          "access": "Needs payrollRun.approve",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead sends it back",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":1,\"year\":2032,\"userIds\":[\"u_04\"]}",
+                  "save": {
+                    "runId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/return",
+                "as": "rumana@twintrack.test",
+                "body": "{\"reason\":\"Missing two people\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A draft run",
+              "expected": 409,
+              "code": "invalid_status",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":2,\"year\":2032,\"userIds\":[\"u_04\"]}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/return",
+                "as": "rumana@twintrack.test",
+                "body": "{\"reason\":\"Check\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/payroll-runs/:id/items/:itemId",
+          "method": "PATCH",
+          "path": "/accounts/payroll-runs/:id/items/:itemId",
+          "purpose": "Records how one person's pay went: paid, failed, returned, or back to unpaid. Once everyone is settled, the run completes.",
+          "input": "settlementStatus, reference, notes, version",
+          "access": "Needs payrollRun.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant marks someone's pay sent",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":3,\"year\":2032,\"userIds\":[\"u_04\",\"u_05\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "kamrul@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/approve",
+                  "as": "rumana@twintrack.test"
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payroll-runs/{{runId}}/items/{{itemId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"settlementStatus\":\"paid\",\"reference\":\"TRX-2001\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A run not approved yet",
+              "expected": 409,
+              "code": "invalid_status",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":4,\"year\":2032,\"userIds\":[\"u_04\"]}",
+                  "save": {
+                    "runId": "id",
+                    "itemId": "items.0.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payroll-runs/{{runId}}/items/{{itemId}}",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"settlementStatus\":\"paid\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/payroll-runs/:id/history",
+          "method": "GET",
+          "path": "/accounts/payroll-runs/:id/history",
+          "purpose": "A run's field history, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs payrollRun.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead reads the history",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":5,\"year\":2032,\"userIds\":[\"u_04\"]}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs/{{runId}}/history",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without Accounts access",
+              "expected": 403,
+              "code": "forbidden",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"month\":6,\"year\":2032,\"userIds\":[\"u_04\"]}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs/{{runId}}/history",
+                "as": "rahim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/documents",
+          "method": "GET",
+          "path": "/accounts/documents",
+          "purpose": "Lists the evidence on a bill, payment, receipt or payroll item.",
+          "input": "ownerType, ownerId",
+          "access": "Needs document.read, and read on the owner's record",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The finance lead lists a bill's evidence",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/documents?ownerType=bill&ownerId={{billId}}",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A record that does not exist",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/documents?ownerType=bill&ownerId=bill_missing",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/documents",
+          "method": "POST",
+          "path": "/accounts/documents",
+          "purpose": "Starts uploading evidence, up to 100 MB, and says how to split it into parts.",
+          "input": "ownerType, ownerId, fileName, mimeType, sizeBytes",
+          "access": "Needs document.create, and read on the owner's record",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant starts uploading a scan",
+              "expected": 201,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/documents",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"ownerType\":\"bill\",\"ownerId\":\"{{billId}}\",\"fileName\":\"scan.pdf\",\"mimeType\":\"application/pdf\",\"sizeBytes\":12}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A file over 100 MB",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/documents",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"ownerType\":\"bill\",\"ownerId\":\"{{billId}}\",\"fileName\":\"scan.pdf\",\"mimeType\":\"application/pdf\",\"sizeBytes\":209715200}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/documents/:id/part-urls",
+          "method": "POST",
+          "path": "/accounts/documents/:id/part-urls",
+          "purpose": "Signed addresses to upload each part to. Only for whoever started the upload.",
+          "input": "partNumbers",
+          "access": "Needs document.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant gets the part address",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/documents",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"ownerType\":\"bill\",\"ownerId\":\"{{billId}}\",\"fileName\":\"scan.pdf\",\"mimeType\":\"application/pdf\",\"sizeBytes\":12}",
+                  "save": {
+                    "documentId": "document.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/documents/{{documentId}}/part-urls",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"partNumbers\":[1]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone else's upload",
+              "expected": 403,
+              "code": "not_your_upload",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/documents",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"ownerType\":\"bill\",\"ownerId\":\"{{billId}}\",\"fileName\":\"scan.pdf\",\"mimeType\":\"application/pdf\",\"sizeBytes\":12}",
+                  "save": {
+                    "documentId": "document.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/documents/{{documentId}}/part-urls",
+                "as": "farhana@twintrack.test",
+                "body": "{\"partNumbers\":[1]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/documents/:id/complete",
+          "method": "POST",
+          "path": "/accounts/documents/:id/complete",
+          "purpose": "Joins the uploaded parts and checks the size.",
+          "input": "parts (partNumber, etag)",
+          "access": "Needs document.create",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A document that does not exist",
+              "expected": 404,
+              "code": "unknown_document",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/documents/doc_missing/complete",
+                "as": "kamrul@twintrack.test",
+                "body": "{\"parts\":[{\"partNumber\":1,\"etag\":\"abc\"}]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/documents/:id/url",
+          "method": "GET",
+          "path": "/accounts/documents/:id/url",
+          "purpose": "A short-lived address to view or download a document.",
+          "input": "mode: view or download",
+          "access": "Needs document.read",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A document still uploading",
+              "expected": 404,
+              "code": "unknown_document",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/documents",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"ownerType\":\"bill\",\"ownerId\":\"{{billId}}\",\"fileName\":\"scan.pdf\",\"mimeType\":\"application/pdf\",\"sizeBytes\":12}",
+                  "save": {
+                    "documentId": "document.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/documents/{{documentId}}/url",
+                "as": "kamrul@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "DELETE /accounts/documents/:id",
+          "method": "DELETE",
+          "path": "/accounts/documents/:id",
+          "purpose": "Removes a document, or cancels an unfinished upload. Removing someone else's needs document.delete.",
+          "input": "document id",
+          "access": "Needs document.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The accountant cancels an upload",
+              "expected": 204,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/documents",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"ownerType\":\"bill\",\"ownerId\":\"{{billId}}\",\"fileName\":\"scan.pdf\",\"mimeType\":\"application/pdf\",\"sizeBytes\":12}",
+                  "save": {
+                    "documentId": "document.id"
+                  }
+                }
+              ],
+              "changesData": true,
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/documents/{{documentId}}",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Cancelling someone else's upload",
+              "expected": 403,
+              "code": "not_your_upload",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"name\":\"Dhaka Office Supplies\",\"bankAccountNumber\":\"0011223344\"}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"businessDate\":\"2026-06-01\",\"dueDate\":\"2026-06-30\",\"currency\":\"BDT\",\"amount\":30000}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/documents",
+                  "as": "kamrul@twintrack.test",
+                  "body": "{\"ownerType\":\"bill\",\"ownerId\":\"{{billId}}\",\"fileName\":\"scan.pdf\",\"mimeType\":\"application/pdf\",\"sizeBytes\":12}",
+                  "save": {
+                    "documentId": "document.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "path": "/accounts/documents/{{documentId}}",
+                "as": "farhana@twintrack.test"
+              }
             }
           ]
         }

@@ -19,7 +19,7 @@ function ConsentForm() {
 
   useEffect(() => {
     if (status === 'signed-out' || status === 'unavailable') {
-      router.replace(`/sign-in?next=${encodeURIComponent(`${pathname}?request=${requestId}`)}`);
+      router.replace(`/sign-in?next=${encodeURIComponent(`${pathname}?request=${encodeURIComponent(requestId)}`)}`);
     }
   }, [status, pathname, requestId, router]);
 

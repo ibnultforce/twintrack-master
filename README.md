@@ -194,7 +194,13 @@ Projects and their tasks, from start through QA to approval, in `backend/src/mod
 | `POST /tasks/tasks/:id/cancel` | `task.delete` | Cancel an open task. Tasks are never deleted. |
 | `GET /tasks/tasks/:id/history`, `GET`, `POST /tasks/tasks/:id/comments`, `PUT /tasks/tasks/:id/references` | `task.read`, `task.update` for references | History, comments and links between tasks |
 
-A task belongs to its assignee, TL, QA person and project lead, so the scope reaches it through any of them. The rules about the assignee, the QA person and approving your own work come from the task's fields, never from role names. QA hours are protected fields. Invoices wait for the Accounts module. The Tasks frontend is in `twintrack-tasks/`.
+A task belongs to its assignee, TL, QA person and project lead, so the scope reaches it through any of them. The rules about the assignee, the QA person and approving your own work come from the task's fields, never from role names. QA hours are protected fields. Accounts invoices bill finished tasks at their estimate. The Tasks frontend is in `twintrack-tasks/`.
+
+## Accounts
+
+The company's money, in `backend/src/modules/accounts/`: categories, vendors, bank accounts with balances and statements, bills with two-person approval, payments, receipts allocated to invoices, invoices billed from Tasks work with a Word document emailed through Resend, monthly payroll from HR salaries and Tasks incentives, and evidence documents. Accounts has no frontend yet. The full reference is in [docs/api/accounts.md](docs/api/accounts.md).
+
+Posted payments and receipts are never edited: a mistake gets a linked reversal. Whoever made a bill or payroll run can't approve it. Accounts reads and marks Tasks work only through `modules/tasks/billing/taskBilling.ts`, reads HR salaries through `findSalariesInEffect`, and marks Tasks incentives paid when payroll pays them.
 
 ## Checks
 

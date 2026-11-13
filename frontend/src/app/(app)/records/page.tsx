@@ -128,6 +128,7 @@ export default function RecordsPage() {
   const [showDeleted, setShowDeleted] = useState(false);
   const [dialog, setDialog] = useState<RecordsDialog>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const object = objects.data?.find((candidate) => `${candidate.module}.${candidate.key}` === chosen) ?? objects.data?.[0];
   const records = useLoad(
@@ -148,6 +149,7 @@ export default function RecordsPage() {
               {object.can.create && !showDeleted ? <button type="button" className="btn btn-primary" onClick={() => setDialog({ kind: 'new' })}>+ New record</button> : null}
             </div>
             {outcome ? <Notice tone="good">{outcome}</Notice> : null}
+            {failure ? <Notice tone="danger">{failure}</Notice> : null}
             <Loaded state={records}>
               {({ total, records: rows }) => (
                 <Card title={showDeleted ? `${object.label} in the recycle bin` : object.label} aside={<span className="note">{total} records</span>}>
@@ -166,7 +168,7 @@ export default function RecordsPage() {
                                 <td>
                                   <div className="resource-actions">
                                     {showDeleted ? (
-                                      <button type="button" className="link" onClick={() => void restoreRecord(object.module, object.key, record.id).then(() => { setOutcome('Restored.'); records.reload(); })}>Restore</button>
+                                      <button type="button" className="link" onClick={() => void restoreRecord(object.module, object.key, record.id).then(() => { setFailure(null); setOutcome('Restored.'); records.reload(); }, (error: unknown) => { setOutcome(null); setFailure(describeError(error)); })}>Restore</button>
                                     ) : (
                                       <>
                                         {object.can.update ? <button type="button" className="link" onClick={() => setDialog({ kind: 'edit', record })}>Edit</button> : null}

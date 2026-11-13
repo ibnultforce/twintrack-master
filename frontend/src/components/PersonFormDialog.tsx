@@ -84,6 +84,8 @@ export function PersonFormDialog({ title, submitLabel, intro, person, onSubmit, 
           <select className="input" id="person-manager" value={managerId} onChange={(event) => setManagerId(event.target.value)}>
             <option value="">None</option>
             {(everyone.data ?? []).filter((candidate) => candidate.id !== person?.id).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}
+            {/* A manager outside the viewer's reach isn't listed, but stays set unless changed. */}
+            {managerId && !everyone.data?.some((candidate) => candidate.id === managerId) ? <option value={managerId}>Current manager</option> : null}
           </select>
         </div>
         <div className="field">
@@ -91,6 +93,8 @@ export function PersonFormDialog({ title, submitLabel, intro, person, onSubmit, 
           <select className="input" id="person-org-role" required value={orgRoleId} onChange={(event) => setOrgRoleId(event.target.value)}>
             <option value="" disabled>Choose an org role</option>
             {(orgRoles.data ?? []).map((orgRole) => <option key={orgRole.id} value={orgRole.id}>{`${'— '.repeat(orgRole.depth)}${orgRole.name}`}</option>)}
+            {/* Without orgRole.read the list is empty, and a required select with no matching option would block saving. */}
+            {orgRoleId && !orgRoles.data?.some((orgRole) => orgRole.id === orgRoleId) ? <option value={orgRoleId}>Current org role</option> : null}
           </select>
           {orgRoles.error ? <p className="meta">The org tree could not be read, which needs orgRole.read.</p> : null}
         </div>

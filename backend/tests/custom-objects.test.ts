@@ -95,6 +95,22 @@ describe('custom objects', () => {
       await CustomRecord.deleteMany({});
       expect((await farhana.delete('/modules/hr/objects/training')).status).toBe(200);
     });
+
+    it('refuses removing an object with records as a plain resource too, so they are never orphaned', async () => {
+      const farhana = await as('farhana');
+      await farhana.post('/modules/hr/objects', trainingDefinition);
+      const { id } = (await farhana.post(TRAINING, { values: { title: 'Safety' } })).body as { id: string };
+      // A record in the recycle bin still counts, because it can be restored.
+      await farhana.delete(`${TRAINING}/${id}`);
+
+      const refused = await farhana.delete('/modules/hr/resources/training');
+      expect(refused.status).toBe(409);
+      expect(refused.body.error.code).toBe('object_in_use');
+      expect((await Module.findOne({ key: 'hr' }).lean())?.resources.map((resource) => resource.key)).toContain('training');
+
+      await CustomRecord.deleteMany({});
+      expect((await farhana.delete('/modules/hr/resources/training')).status).toBe(200);
+    });
   });
 
   describe('records', () => {

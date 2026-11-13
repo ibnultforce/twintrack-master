@@ -95,7 +95,7 @@ export function createAuthRoutes(config: Config): ApiRoute[] {
 
   const handleUpdateProfile: RequestHandler = async (req, res) => {
     const { name } = parseRequestBody(updateProfileBodySchema, req.body);
-    res.json(await updateOwnName(getCaller(req), name, req.ip));
+    res.json(await updateOwnName(getCaller(req), name, req.ip, settings));
   };
 
   const handleVerifyPassword: RequestHandler = async (req, res) => {

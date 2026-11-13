@@ -3,10 +3,9 @@ import { ApiError } from '../../../lib/errors.js';
 import { fieldErrors } from '../../../lib/validation.js';
 import type { Actor } from '../access/caller.js';
 import { findAllProfiles } from '../accessProfiles/accessProfiles.repository.js';
-import { CustomRecord } from '../models/customRecord.js';
 import type { ModuleDoc } from '../models/module.js';
 import { SHARING_MODELS, type ManifestResource } from '../moduleRegistry/manifest.js';
-import { editModuleRules, saveRules } from '../moduleRegistry/permissionRules.service.js';
+import { assertCustomObjectHasNoRecords, editModuleRules, saveRules } from '../moduleRegistry/permissionRules.service.js';
 
 export const FIELD_TYPES = ['text', 'number', 'date', 'boolean', 'select'] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
@@ -116,8 +115,7 @@ export function updateCustomObject(actor: Actor, moduleKey: string, objectKey: s
 export function removeCustomObject(actor: Actor, moduleKey: string, objectKey: string) {
   return editModuleRules(moduleKey, async (module, session) => {
     const existing = findCustomObject(module, objectKey);
-    const records = await CustomRecord.countDocuments({ module: moduleKey, object: objectKey }).setOptions({ withDeleted: true }).session(session);
-    if (records > 0) throw new ApiError(409, 'object_in_use', `${records} records use this object. Delete them first.`);
+    await assertCustomObjectHasNoRecords(moduleKey, objectKey, session);
     const profiles = await findAllProfiles(session);
     const inUse = profiles.some((profile) => {
       const grants = Object.hasOwn(profile.grants, moduleKey) ? profile.grants[moduleKey] : undefined;

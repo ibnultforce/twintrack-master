@@ -335,8 +335,8 @@ describe('access checks', () => {
 
     it('lists every loaded module for a super admin, with no address when none is set', async () => {
       const { body } = await getAs(await signIn('farhana@twintrack.test'), '/me/modules');
-      expect(moduleKeys(body)).toEqual(['hr', 'master', 'tasks']);
-      expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules[1]?.frontendUrl).toBeNull();
+      expect(moduleKeys(body)).toEqual(['accounts', 'hr', 'master', 'tasks']);
+      expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules.find((module) => module.key === 'master')?.frontendUrl).toBeNull();
     });
 
     it('lists a module reached through a profile alone, and follows a profile change on the next call', async () => {

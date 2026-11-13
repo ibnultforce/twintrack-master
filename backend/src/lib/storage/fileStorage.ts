@@ -15,6 +15,10 @@ export interface FileStorage {
   /** A short-lived address that serves the file, shown in the browser or saved as a download. */
   downloadUrl(key: string, options: DownloadOptions): Promise<string>;
   deleteObject(key: string): Promise<void>;
+  /** Saves a whole file the server made itself, such as a generated invoice, replacing any file at that key. */
+  putObject(key: string, body: Buffer, contentType: string): Promise<void>;
+  /** Reads a whole file, for small files the server sends on, such as an email attachment. */
+  readObject(key: string): Promise<Buffer>;
 }
 
 export interface DownloadOptions {

@@ -2,7 +2,7 @@
 
 Projects, their members, and tasks from first start through QA to approval. Every route starts with `/tasks`. Read the [getting-started guide](README.md) first for tokens, error format and errors every route can return.
 
-Also here: career points and the revert penalty, project logins with one-time codes, task files, and monthly and project incentives. Invoices belong to the Accounts module, which isn't built yet; tasks carry only `billable` for it.
+Also here: career points and the revert penalty, project logins with one-time codes, task files, and monthly and project incentives. Invoices are in the [Accounts API](accounts.md), which bills tasks at their estimate and sets `invoiceId` on each task it bills.
 
 ## Getting access
 
@@ -26,7 +26,7 @@ A person reaches Tasks through their profile, given with `PUT /users/:id/profile
 
 - Only the assignee starts, pauses and completes a task (`403 not_assignee`), and only its QA person runs QA (`403 not_qa`).
 - Nobody approves or reverts a task they worked on or tested (`403 own_work`).
-- The assignee and QA person must be the project lead or a member, and the QA person can't be the assignee.
+- The assignee and QA person must be the project lead or a member, and the QA person can't be the assignee, including by reassigning the task to them while their QA round is open or its result stands (`422`).
 
 **Field access** controls a project's `name`, `description`, `status`, `totalAllocatedHours` and `deadline`, and a task's `title`, `description`, `dueDate`, `estimatedHours`, `actualHours`, `approvedHours`, `qaResult` and QA hours. A field the grant doesn't name follows its actions. Steps such as start or approve set status and hours themselves, and those aren't checked as writes. **QA hours** (`qaEstimatedHours`, `qaActualHours`, `qaApprovedHours`) are protected fields. They're left out of responses and history unless a grant's `fieldAccess` gives `read`, `create` or `edit`, and setting one needs `edit`, since tasks set them only on records that already exist (`403 field_not_editable`). `qaResult` is visible to everyone who can read the task, unless a grant sets it to `hidden`.
 
@@ -41,7 +41,7 @@ A project has `id`, `name`, `description`, `status` (`active`, `on_hold` or `com
 | `GET /tasks/projects/roster` | `project.read` | optionally `leadId` | `teamLeads` (projects, tasks done this month, average hours over or under estimate) and `developers` (open and done tasks, `totalPoints`) |
 | `POST /tasks/projects` | `project.create` | `name`, and optionally `description`, `totalAllocatedHours`, `deadline`, `leadId` (default: the caller), `clientId`, `memberIds` | `201`. The scope must reach the lead or a member. |
 | `GET /tasks/projects/:id` | `project.read` | | `404 unknown_project` |
-| `PATCH /tasks/projects/:id` | `project.update` | Any of `name`, `description`, `totalAllocatedHours`, `deadline`, `leadId`, `clientId`, `status`, and `version` | |
+| `PATCH /tasks/projects/:id` | `project.update` | Any of `name`, `description`, `totalAllocatedHours`, `deadline`, `leadId`, `clientId`, `status`, and `version` | The old lead leaves the project when replaced, so `409 member_has_open_tasks` while they still have open tasks there |
 | `PUT /tasks/projects/:id/members` | `project.update` | `memberIds`, `version` | Replaces the list. `409 member_has_open_tasks` if a removed person still has open tasks there. |
 
 A completed project takes no new tasks (`409 project_closed`).
@@ -113,7 +113,7 @@ Logins the project's people share, such as a client's sandbox. Passwords, passco
 | Route | Needs | Body | Notes |
 |---|---|---|---|
 | `GET /tasks/projects/:id/credentials` | `credential.read` | | `credentials` |
-| `POST /tasks/projects/:id/credentials` | `credential.create` | `label`, `loginUrl`, `username`, `password`, optionally `otpSecret` (an `otpauth://` link or the base32 secret), `passcode`, `notes` | `201` |
+| `POST /tasks/projects/:id/credentials` | `credential.create` | `label`, `loginUrl` (an `http` or `https` address only), `username`, `password`, optionally `otpSecret` (an `otpauth://` link or the base32 secret), `passcode`, `notes` | `201` |
 | `PATCH /tasks/projects/:id/credentials/:credentialId` | `credential.update` | Any of those, and `version`. `null` removes `otpSecret` or `passcode`. | `404 unknown_credential` |
 | `DELETE /tasks/projects/:id/credentials/:credentialId` | `credential.delete` | | |
 
@@ -142,8 +142,8 @@ Each person has an incentive setting: whether they earn the **monthly incentive*
 | `GET /tasks/incentives/ledger` | `incentive.read` | `userId`, `month`, `year` | Saved and paid months, newest first |
 | `GET /tasks/incentives/settings` | `incentive.read` | | `defaultHourlyRate` and `settings` |
 | `PUT /tasks/incentives/settings/:userId` | `incentive.update` | `earnsMonthlyIncentive`, `hourlyRate` (`null` for the default), `eligibleForProjectIncentives` | |
-| `GET /tasks/projects/:id/incentives` | `incentive.read` | | The project's people, each with `eligible` and any `grant` |
-| `PUT /tasks/projects/:id/incentives/:userId` | `incentive.update` | `enabled`, `amount`, `notes` | `409 not_eligible` unless their setting allows it |
+| `GET /tasks/projects/:id/incentives` | `incentive.read` | | The project's people within the scope, each with `eligible` and any `grant`. An own scope sees only itself. |
+| `PUT /tasks/projects/:id/incentives/:userId` | `incentive.update` | `enabled`, `amount`, `notes` | `409 not_eligible` unless their setting allows it. `403 out_of_scope` for a member the scope doesn't reach. |
 
 ## MCP tools
 

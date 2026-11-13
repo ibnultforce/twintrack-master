@@ -237,6 +237,21 @@ describe('Tasks: points, QA tasks, flags, billing and reporting', () => {
       expect((await mehedi.post(`/tasks/tasks/${taskId}/qa-start`)).status).toBe(200);
     });
 
+    it("won't give the task to its QA person while their round is open or its result stands", async () => {
+      const { rahim, taskId } = await setUp();
+      await workThrough(taskId);
+      await rahim.post(`/tasks/tasks/${taskId}/qa-handover`, { qaId: ID.MEHEDI, qaEstimatedHours: 2 });
+      const duringQa = await rahim.patch(`/tasks/tasks/${taskId}`, { assignedDevId: ID.MEHEDI });
+      expect(duringQa.status).toBe(422);
+      expect(duringQa.body.error.fields[0].path).toBe('assignedDevId');
+
+      const mehedi = await as('mehedi');
+      await mehedi.post(`/tasks/tasks/${taskId}/qa-start`);
+      await mehedi.post(`/tasks/tasks/${taskId}/qa-complete`, { result: 'pass' });
+      expect((await rahim.patch(`/tasks/tasks/${taskId}`, { assignedDevId: ID.MEHEDI })).status).toBe(422);
+      expect((await Task.findById(taskId).lean())?.assignedDevId).toBe(ID.ARIF);
+    });
+
     it('clears an earlier estimate when a task goes to QA again without one', async () => {
       const { rahim, taskId } = await setUp();
       await workThrough(taskId);
@@ -311,6 +326,15 @@ describe('Tasks: points, QA tasks, flags, billing and reporting', () => {
       expect((await rahim.get(`/tasks/tasks?search=${number}`)).body.tasks[0].id).toBe(taskId);
       expect((await rahim.get(`/tasks/tasks?search=${number.slice(2)}`)).body.tasks[0].id).toBe(taskId);
       expect((await rahim.get('/tasks/tasks/search?search=fix')).body.tasks).toEqual([expect.objectContaining({ title: 'Fix login', projectName: 'Payroll revamp' })]);
+    });
+
+    it('keeps a hidden title out of the picker search too', async () => {
+      const { rahim, taskId } = await threeTasks();
+      const number = (await rahim.get(`/tasks/tasks/${taskId}`)).body.number as string;
+      await AccessProfile.updateOne({ _id: 'ap_engineering_lead' }, { $set: { 'grants.tasks.task.fieldAccess.title': 'hidden' } });
+      const [found] = (await rahim.get(`/tasks/tasks/search?search=${number}`)).body.tasks;
+      expect(found).toMatchObject({ number: expect.stringMatching(/^T-/), projectName: 'Payroll revamp' });
+      expect(found).not.toHaveProperty('title');
     });
 
     it('sorts by estimate and by variance', async () => {

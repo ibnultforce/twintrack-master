@@ -86,9 +86,9 @@ describe('what the product ships', () => {
 describe('seedDatabase', () => {
   useTestDatabase();
 
-  it('loads Master, HR, Tasks and the 12-person team', async () => {
+  it('loads Master, HR, Tasks, Accounts and the 12-person team', async () => {
     const result = await seed();
-    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr', 'tasks']);
+    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr', 'tasks', 'accounts']);
     expect(result.usersCreated).toBe(12);
 
     expect((await Module.findOne({ key: 'master' }).lean())?.core).toBe(true);
@@ -108,7 +108,7 @@ describe('seedDatabase', () => {
     expect(again.usersCreated).toBe(0);
     expect(again.modules.every((module) => !module.created)).toBe(true);
     expect(await User.countDocuments()).toBe(12);
-    expect(await Module.countDocuments()).toBe(3);
+    expect(await Module.countDocuments()).toBe(4);
   });
 
   it('resets access on re-run but keeps passwords already set', async () => {

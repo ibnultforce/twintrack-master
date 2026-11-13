@@ -13,13 +13,21 @@ export type ClientChanges = Partial<Pick<ClientDoc, 'name' | 'status'>> &
 
 export const clientNotFound = () => new ApiError(404, 'unknown_client', 'No such client.');
 
-const SEARCHED_FIELDS = ['name', 'initials', 'contactEmail'] as const;
+export const SEARCHED_CLIENT_FIELDS = ['name', 'initials', 'contactEmail'] as const;
+export type SearchedClientField = (typeof SEARCHED_CLIENT_FIELDS)[number];
 
-export async function findClientsPage({ search, status, ...page }: PageRequest & { search?: string; status?: ClientStatus }) {
+/** searchedFields are the ones the caller may see, so a search can't tell them anything about a hidden field. */
+export async function findClientsPage({
+  search,
+  status,
+  searchedFields = SEARCHED_CLIENT_FIELDS,
+  ...page
+}: PageRequest & { search?: string; status?: ClientStatus; searchedFields?: readonly SearchedClientField[] }) {
   const searchPattern = search ? { $regex: escapeRegex(search), $options: 'i' } : null;
   const filter = {
     ...(status && { status }),
-    ...(searchPattern && { $or: SEARCHED_FIELDS.map((field) => ({ [field]: searchPattern })) }),
+    // With no field to search, nothing matches.
+    ...(searchPattern && (searchedFields.length > 0 ? { $or: searchedFields.map((field) => ({ [field]: searchPattern })) } : { _id: { $in: [] } })),
   };
   const [clients, total] = await Promise.all([
     Client.find(filter).sort({ name: 1, _id: 1 }).skip(pageOffset(page)).limit(page.pageSize).lean(),

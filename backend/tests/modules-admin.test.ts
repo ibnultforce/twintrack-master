@@ -72,6 +72,7 @@ describe('module and activity administration', () => {
       const response = await (await as('alia')).get('/modules');
       expect(response.status).toBe(200);
       expect(response.body.modules).toEqual([
+        expect.objectContaining({ key: 'accounts', name: 'Accounts', core: false, frontendUrl: null }),
         expect.objectContaining({ key: 'hr', name: 'HR', core: false, frontendUrl: HR_ORIGIN }),
         expect.objectContaining({ key: 'master', core: true, frontendUrl: null }),
         expect.objectContaining({ key: 'tasks', name: 'Tasks', core: false, frontendUrl: null }),

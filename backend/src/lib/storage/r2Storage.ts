@@ -5,6 +5,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  PutObjectCommand,
   S3Client,
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
@@ -64,6 +65,14 @@ export function createR2Storage(settings: R2Settings): FileStorage {
     },
     async deleteObject(key) {
       await client.send(new DeleteObjectCommand({ Bucket, Key: key }));
+    },
+    async putObject(key, body, contentType) {
+      await client.send(new PutObjectCommand({ Bucket, Key: key, Body: body, ContentType: contentType }));
+    },
+    async readObject(key) {
+      const { Body } = await client.send(new GetObjectCommand({ Bucket, Key: key }));
+      if (!Body) throw new Error(`Stored file ${key} has no content.`);
+      return Buffer.from(await Body.transformToByteArray());
     },
   };
 }

@@ -101,7 +101,7 @@
     {
       "id": "ap_auditor",
       "name": "Auditor",
-      "description": "Reads the activity log, people and profiles.",
+      "description": "Reads the activity log, people and profiles, reads Accounts and approves bills and payroll.",
       "grants": {
         "master": {
           "audit": {
@@ -125,15 +125,156 @@
             ]
           }
         },
-        "hr": {}
+        "hr": {},
+        "accounts": {
+          "category": {
+            "actions": [
+              "read"
+            ]
+          },
+          "vendor": {
+            "actions": [
+              "read"
+            ],
+            "fieldAccess": {
+              "bankAccountNumber": "read"
+            }
+          },
+          "bankAccount": {
+            "actions": [
+              "read"
+            ],
+            "fieldAccess": {
+              "accountNumber": "read"
+            }
+          },
+          "companyBankDetails": {
+            "actions": [
+              "read"
+            ]
+          },
+          "bill": {
+            "actions": [
+              "read",
+              "approve"
+            ]
+          },
+          "payment": {
+            "actions": [
+              "read"
+            ]
+          },
+          "receipt": {
+            "actions": [
+              "read"
+            ]
+          },
+          "invoice": {
+            "actions": [
+              "read"
+            ]
+          },
+          "payrollRun": {
+            "actions": [
+              "read",
+              "approve"
+            ]
+          },
+          "document": {
+            "actions": [
+              "read"
+            ]
+          }
+        }
       }
     },
     {
       "id": "ap_hr_admin",
       "name": "HR admin",
-      "description": "Everything in HR.",
+      "description": "Everything in HR, and runs Accounts day to day.",
       "grants": {
-        "hr": "*"
+        "hr": "*",
+        "accounts": {
+          "category": {
+            "actions": [
+              "read",
+              "create",
+              "update"
+            ]
+          },
+          "vendor": {
+            "actions": [
+              "read",
+              "create",
+              "update"
+            ],
+            "fieldAccess": {
+              "bankAccountNumber": "edit"
+            }
+          },
+          "bankAccount": {
+            "actions": [
+              "read",
+              "create",
+              "update"
+            ],
+            "fieldAccess": {
+              "accountNumber": "edit"
+            }
+          },
+          "companyBankDetails": {
+            "actions": [
+              "read",
+              "update"
+            ]
+          },
+          "bill": {
+            "actions": [
+              "read",
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "payment": {
+            "actions": [
+              "read",
+              "create",
+              "delete"
+            ]
+          },
+          "receipt": {
+            "actions": [
+              "read",
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "invoice": {
+            "actions": [
+              "read",
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "payrollRun": {
+            "actions": [
+              "read",
+              "create",
+              "update",
+              "delete"
+            ]
+          },
+          "document": {
+            "actions": [
+              "read",
+              "create",
+              "delete"
+            ]
+          }
+        }
       }
     },
     {
