@@ -1,0 +1,28 @@
+{
+  "manifestVersion": 1,
+  "module": {
+    "key": "test",
+    "name": "Test",
+    "version": "1.0.0",
+    "description": "A one-route module for checking that a module's routes, permissions and sessions work end to end.",
+    "repository": "twintrack-test",
+    "baseUrl": "/test"
+  },
+  "resources": [
+    {
+      "key": "test",
+      "label": "Test",
+      "actions": [
+        "read"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/",
+      "access": "private",
+      "permission": "test.read"
+    }
+  ]
+}

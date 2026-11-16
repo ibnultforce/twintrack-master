@@ -76,6 +76,7 @@ describe('module and activity administration', () => {
         expect.objectContaining({ key: 'hr', name: 'HR', core: false, frontendUrl: HR_ORIGIN }),
         expect.objectContaining({ key: 'master', core: true, frontendUrl: null }),
         expect.objectContaining({ key: 'projects', name: 'Project management', core: false, frontendUrl: null }),
+        expect.objectContaining({ key: 'test', name: 'Test', core: false, frontendUrl: null }),
       ]);
     });
   });

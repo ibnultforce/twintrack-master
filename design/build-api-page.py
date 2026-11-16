@@ -24,6 +24,8 @@ MODULES = [
      'about': 'Salaries, with scope, approval, a recycle bin, history and sharing. Every salary field has its own access level (hidden, read, create only or edit), and amount is protected.'},
     {'key': 'projects', 'name': 'Project management', 'prefix': '/projects',
      'about': 'Projects and members, and tasks from start through QA to approval, with comments, links, history and per-field access.'},
+    {'key': 'test', 'name': 'Test', 'prefix': '/test',
+     'about': 'One route for checking a module end to end: it answers a caller who holds its permission.'},
 ]
 
 

@@ -16656,6 +16656,87 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Test",
+      "description": "The Test module. The super admin holds test.read; nobody else does until a profile grants it.",
+      "item": [
+        {
+          "name": "Super admin calls the test route",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "test"
+              ]
+            },
+            "description": "Needs test.read in Test. Returns 200 with the module key and server time."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 200 with status ok for the test module', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ok');",
+                  "  pm.expect(body.module).to.eql('test');",
+                  "  pm.expect(Date.parse(body.time)).to.not.be.NaN;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Someone without test.read is refused",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{noRoleToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "test"
+              ]
+            },
+            "description": "Refused with 403 forbidden when the caller's profile doesn't grant test.read."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refuses with 403 forbidden', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -13048,6 +13048,52 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Test",
+      "routes": [
+        {
+          "id": "GET /test",
+          "method": "GET",
+          "path": "/test",
+          "purpose": "Says the caller reached the Test module and holds its test permission.",
+          "input": "nothing",
+          "access": "Needs test.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Super admin calls the test route",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/test",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without test.read",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/test",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No session",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/test"
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
