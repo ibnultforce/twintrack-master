@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveDependencies } from '../src/appDependencies.js';
 import type { ApiRoute } from '../src/lib/apiRoute.js';
 import { createAccountsRoutes } from '../src/modules/accounts/accounts.routes.js';
+import { apiTestRoutes } from '../src/modules/api-test/apiTest.routes.js';
 import { hrRoutes } from '../src/modules/hr/hr.routes.js';
 import { validateManifest, type ManifestRoute } from '../src/modules/master/moduleRegistry/manifest.js';
 import { createProjectsRoutes } from '../src/modules/projects/projects.routes.js';
@@ -16,6 +17,7 @@ const moduleRouteLists: Record<string, ApiRoute[]> = {
   hr: hrRoutes,
   projects: createProjectsRoutes(config, dependencies),
   accounts: createAccountsRoutes(config, dependencies),
+  'api-test': apiTestRoutes,
 };
 
 function loadManifest(moduleKey: string) {

@@ -10,6 +10,7 @@ import { handleApiError } from './lib/errorHandler.js';
 import { createRequestLogger } from './lib/requestLogger.js';
 import { serveTestPage } from './lib/testPage.js';
 import { ACCOUNTS_MODULE_KEY, createAccountsRoutes } from './modules/accounts/accounts.routes.js';
+import { API_TEST_MODULE_KEY, apiTestRoutes } from './modules/api-test/apiTest.routes.js';
 import { accountsUserReferenceChecks } from './modules/accounts/accountsUserReferences.js';
 import { HR_MODULE_KEY, hrRoutes } from './modules/hr/hr.routes.js';
 import { hrUserReferenceChecks } from './modules/hr/hrUserReferences.js';
@@ -49,6 +50,7 @@ export function createApp(config: Config, dependencyOverrides: Partial<AppDepend
   registerRoutes(app, hrRoutes, createAccessMiddleware(config.auth, HR_MODULE_KEY));
   registerRoutes(app, createProjectsRoutes(config, dependencies), createAccessMiddleware(config.auth, PROJECTS_MODULE_KEY));
   registerRoutes(app, createAccountsRoutes(config, dependencies), createAccessMiddleware(config.auth, ACCOUNTS_MODULE_KEY));
+  registerRoutes(app, apiTestRoutes, createAccessMiddleware(config.auth, API_TEST_MODULE_KEY));
 
   app.use((_req, res) => {
     res.status(404).json({ error: { code: 'no_route', message: 'No such route.' } });

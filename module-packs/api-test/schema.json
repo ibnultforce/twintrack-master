@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TwinTrack API Test API",
+  "description": "What the API Test API returns. Read with DATA_MODEL.md.",
+  "$defs": {
+    "Scope": {
+      "type": "string",
+      "enum": [
+        "own",
+        "team",
+        "all"
+      ]
+    },
+    "Id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "DateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "TestStatus": {
+      "type": "string",
+      "enum": [
+        "ok"
+      ]
+    },
+    "TestResult": {
+      "description": "GET /api-test/test",
+      "type": "object",
+      "required": [
+        "status",
+        "module",
+        "time"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/TestStatus"
+        },
+        "module": {
+          "type": "string",
+          "const": "api-test"
+        },
+        "time": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "ModuleAccess": {
+      "description": "GET /me/permissions/api-test: what the signed-in person may do here.",
+      "type": "object",
+      "required": [
+        "module",
+        "hasAccess",
+        "permissions",
+        "fieldAccess"
+      ],
+      "properties": {
+        "module": {
+          "const": "hr"
+        },
+        "hasAccess": {
+          "type": "boolean"
+        },
+        "profileName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Scope"
+          },
+          "description": "Such as { \"task.read\": \"team\" }. A missing key means no permission."
+        },
+        "fieldAccess": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "hidden",
+              "read",
+              "create",
+              "edit"
+            ]
+          },
+          "description": "Keyed resource.field, such as \"task.estimatedHours\"."
+        }
+      }
+    },
+    "ApiError": {
+      "type": "object",
+      "required": [
+        "error"
+      ],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string",
+              "description": "Written for people; show it as is."
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "message"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

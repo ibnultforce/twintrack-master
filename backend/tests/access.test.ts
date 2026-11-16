@@ -335,7 +335,7 @@ describe('access checks', () => {
 
     it('lists every loaded module for a super admin, with no address when none is set', async () => {
       const { body } = await getAs(await signIn('farhana@twintrack.test'), '/me/modules');
-      expect(moduleKeys(body)).toEqual(['accounts', 'hr', 'master', 'projects']);
+      expect(moduleKeys(body)).toEqual(['accounts', 'api-test', 'hr', 'master', 'projects']);
       expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules.find((module) => module.key === 'master')?.frontendUrl).toBeNull();
     });
 
