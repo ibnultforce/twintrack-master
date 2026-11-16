@@ -510,8 +510,10 @@ dialog.side-panel { margin: 0 0 0 auto; height: 100vh; max-height: 100vh; width:
 .side-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .side-panel-head h2 { margin: 0; }
 .side-panel-links { display: flex; flex-wrap: wrap; gap: 16px; }
-.guide-steps { padding-left: 20px; display: grid; gap: 14px; }
-.guide-steps h3 { margin: 0 0 4px; font-size: 14px; }
+.guide-steps { margin: 0; padding-left: 20px; display: grid; gap: 14px; }
+.guide-section { display: grid; gap: 8px; margin-top: 8px; }
+.guide-section > h3 { margin: 0; font-size: 15px; }
+.guide-steps h4 { margin: 0 0 4px; font-size: 14px; }
 .guide-steps p { margin: 0; }
 .guide-prompt { margin-top: 8px; display: grid; gap: 6px; justify-items: start; }
 .guide-prompt pre { margin: 0; width: 100%; white-space: pre-wrap; font-size: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--accent-soft); }

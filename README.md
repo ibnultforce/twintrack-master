@@ -47,7 +47,7 @@ The Next.js app in `frontend/` is the portal and admin console. It runs entirely
 | Permissions | `module.read` |
 | Modules | `module.read` |
 | Activity log | `audit.read` |
-| Claude Code on the web (side panel, from the sidebar footer): setting up, testing and screenshotting this repo from any computer. Its steps are in `src/lib/claudeWebGuide.ts`. | Super admins only |
+| Claude Code on the web (side panel, from the sidebar footer): working on this repo from any browser, and letting someone else work on it (GitHub collaborator, their own Claude session, or a demo account for testers). Its text is in `src/lib/claudeWebGuide.ts`. | Super admins only |
 
 - **Access is still enforced by the API.** The menu and buttons only hide what wouldn't work.
 - **Tokens:** the access token stays in memory, so a reload gets a new one through the refresh cookie.
