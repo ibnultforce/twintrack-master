@@ -398,6 +398,15 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>16 November 2026: failed checks get fixed, and the live commit shows</h3>
+      <ul>
+        <li>The seed test no longer hard-codes 4 modules. It failed on main once API Test was added, which stopped that deploy.</li>
+        <li>New workflow <code>fix-failed-check.yml</code>: when the deploy check fails on a push, Claude Code fixes it, pushes to main and deploys again, once per push. Needs the secret <code>CLAUDE_CODE_OAUTH_TOKEN</code>.</li>
+        <li><code>GET /api-check</code> now returns <code>commit</code>, the commit the server runs (<code>DEPLOYED_COMMIT</code>, set by the deploy). The README has a deploy badge.</li>
+        <li>Cloud sessions now wait for the deploy run after pushing and fix a failing check themselves.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>16 November 2026: API Test module</h3>
       <ul>
         <li>New <code>api-test</code> module (manifest 1.0.0) with one route, <code>GET /api-test/test</code>, which needs the new permission <code>test.read</code>. Only the super admin holds it until a profile grants it.</li>

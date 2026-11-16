@@ -18,7 +18,7 @@ Each person holds one **profile**, and it is where all of their permissions in e
 
 **Access:** `public`
 
-**Returns:** `200` with `{ "status": "ok", "module": "master", "time": "<ISO timestamp>" }`. It does not touch the database, so it answers even while `/health` reports `503`.
+**Returns:** `200` with `{ "status": "ok", "module": "master", "commit": "<git hash>", "time": "<ISO timestamp>" }`. `commit` is the commit the server runs, set by the deploy (`DEPLOYED_COMMIT`), and `null` locally. Compare it with the latest commit on `main` to see whether the live server is up to date. It does not touch the database, so it answers even while `/health` reports `503`.
 
 ## Sign-in
 

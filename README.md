@@ -1,5 +1,7 @@
 # twintrack-master
 
+[![Deploy demo](https://github.com/ibnultforce/twintrack-master/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/ibnultforce/twintrack-master/actions/workflows/deploy.yml)
+
 The TwinTrack Master module: login, users and permissions, and the API behind every module.
 
 | App | Folder | Local address |
@@ -223,6 +225,10 @@ npm run build
 ## Deploying
 
 Every push to `main` deploys to the demo, https://demo.twintrack.work (API at https://api.demo.twintrack.work). [.github/workflows/deploy.yml](.github/workflows/deploy.yml) runs the checks above and, if they pass, connects to the server, which runs [scripts/deploy-server.sh](scripts/deploy-server.sh): reset to `origin/main`, `npm ci`, `npm run build`, `npm run seed:modules`, restart the pm2 processes `twintrack-demo-api` and `twintrack-demo-web`, then wait for `/health`. A failed check deploys nothing. Run the workflow by hand from the Actions tab, or run the script on the server.
+
+**Is the demo up to date?** The badge at the top of this page shows whether the latest deploy passed. Each commit on GitHub's commit list has a green tick once it is checked and deployed, and a red cross if not. The live server says which commit it runs: https://api.demo.twintrack.work/api-check answers with `commit`, which should match the latest commit on `main`.
+
+**When a check fails**, [.github/workflows/fix-failed-check.yml](.github/workflows/fix-failed-check.yml) runs Claude Code on the failure: it fixes the cause, runs the checks, pushes the fix to `main` and starts the deploy again. It tries once per push, and if its fix fails too it stops. It needs the repository secret `CLAUDE_CODE_OAUTH_TOKEN` (made with `claude setup-token`).
 
 On the server, the checkout is `~/twintrack-demo/master`, cloned through the SSH host alias `github-twintrack-master`, which uses a read-only deploy key. `backend/.env` and `frontend/.env.production.local` live only on the server. MongoDB is a one-node replica set in the Docker container `twintrack-demo-mongo`, and nginx serves the site `twintrack-demo` with Let's Encrypt certificates. The demo runs with `NODE_ENV=production`. The workflow's secrets are listed at the top of the workflow file.
 

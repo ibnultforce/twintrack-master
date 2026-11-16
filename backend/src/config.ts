@@ -78,6 +78,7 @@ const envSchema = z
     INVOICE_NUMBER_PREFIX: z.string().trim().regex(/^[A-Za-z0-9]{1,10}$/, 'must be 1 to 10 letters or digits').default('INV'),
     COMPANY_NAME: z.string().trim().min(1).default('TwinTrack'),
     COMPANY_ADDRESS: z.string().trim().optional(),
+    DEPLOYED_COMMIT: z.string().trim().regex(/^[0-9a-f]{7,40}$/i, 'must be a git commit hash').optional(),
   })
   .superRefine((env, context) => {
     // A module frontend that isn't allowed to call the API would open and then fail on its first request.
@@ -174,6 +175,8 @@ export interface Config {
   trustProxyHops: number;
   /** Serves the browser test page at /try. Never allowed in production. */
   isTestPageEnabled: boolean;
+  /** The git commit the server runs, set by scripts/deploy-server.sh. Absent in local development. */
+  deployedCommit?: string;
   /** This API's own public address. OAuth and the MCP endpoint name it to the apps that connect. */
   publicApiUrl: string;
   /**
@@ -218,6 +221,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     logLevel: values.LOG_LEVEL,
     trustProxyHops: values.TRUST_PROXY_HOPS,
     isTestPageEnabled: values.TEST_PAGE_ENABLED === 'true',
+    deployedCommit: values.DEPLOYED_COMMIT,
     publicApiUrl: values.PUBLIC_API_URL ?? DEFAULT_PUBLIC_API_URL,
     encryptionKey: values.ENCRYPTION_KEY ? Buffer.from(values.ENCRYPTION_KEY, 'hex') : randomBytes(ENCRYPTION_KEY_BYTES),
     auth: {

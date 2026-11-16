@@ -27,6 +27,8 @@ npm run build
 # Loads the manifests into the database, keeping people, profiles and custom objects made in the app.
 npm run seed:modules
 
+# GET /api-check reports this, so anyone can see which commit is live.
+export DEPLOYED_COMMIT="$(git rev-parse HEAD)"
 pm2 restart "$API_PROCESS" "$WEB_PROCESS" --update-env
 
 for attempt in $(seq 1 15); do

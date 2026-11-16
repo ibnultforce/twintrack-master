@@ -12,7 +12,7 @@ import { clientsRoutes } from './clients/clients.routes.js';
 import { customObjectsRoutes } from './customObjects/customObjects.routes.js';
 import { createAuthRoutes } from './auth/auth.routes.js';
 import { createImpersonationRoutes } from './auth/impersonation.routes.js';
-import { healthRoutes } from './health/health.routes.js';
+import { createHealthRoutes } from './health/health.routes.js';
 import { createMasterMcpTools } from './mcp/masterMcpTools.js';
 import { createMcpRoutes } from './mcp/mcp.routes.js';
 import type { McpToolProvider } from './mcp/mcpTools.js';
@@ -53,7 +53,7 @@ export function createMasterRoutes(
   const mailer = { emailSender: dependencies.emailSender, settings: config.email };
   const mcpToolProviders = [createMasterMcpTools(config.moduleFrontendUrls), ...extensions.mcpToolProviders];
   return [
-    ...healthRoutes,
+    ...createHealthRoutes(config),
     ...createAuthRoutes(config),
     ...createImpersonationRoutes(config.auth),
     ...createAccessRoutes(config),

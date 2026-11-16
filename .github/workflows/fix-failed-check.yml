@@ -1,0 +1,70 @@
+# When the check job of "Deploy demo" fails on a push to main, Claude Code reads the failure, fixes it,
+# runs the checks and pushes the fix to main, then starts "Deploy demo" again.
+# Secret (repo Settings → Secrets and variables → Actions): CLAUDE_CODE_OAUTH_TOKEN, made with
+# `claude setup-token`, or swap it for ANTHROPIC_API_KEY below.
+#
+# It answers only runs started by a person's push. Its own pushes and the run it starts afterwards come
+# from a bot or a workflow_dispatch, so a fix that still fails is reported, not retried in a loop.
+name: Fix failed check
+
+on:
+  workflow_run:
+    workflows: [Deploy demo]
+    types: [completed]
+
+concurrency:
+  group: fix-failed-check
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.actor.type != 'Bot' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      actions: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 20
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      - name: Save the failure log
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run view ${{ github.event.workflow_run.id }} --log-failed > "$RUNNER_TEMP/failed-check.log" || true
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
+          prompt: |
+            The "Deploy demo" check failed on main at commit ${{ github.event.workflow_run.head_sha }}.
+            Its log is in ${{ runner.temp }}/failed-check.log.
+            Follow CLAUDE.md. Find the cause and fix it in the code or the tests, whichever is wrong.
+            Never delete or skip a test to make it pass. Then run npm run typecheck, npm run lint and npm test
+            (MongoDB downloads fine here). If all three pass, commit with a message that says what failed and
+            why, and push to main. If you can't fix it, push nothing and explain why.
+
+      - name: Deploy the fix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch -q origin main
+          if [ "$(git rev-parse origin/main)" != "${{ github.event.workflow_run.head_sha }}" ]; then
+            gh workflow run deploy.yml --ref main
+          else
+            echo "No fix was pushed." >&2
+            exit 1
+          fi

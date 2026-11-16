@@ -124,7 +124,7 @@ describe('app foundation', () => {
   it('answers /api-check even while the database is disconnected', async () => {
     const res = await request(app).get('/api-check');
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ status: 'ok', module: 'master' });
+    expect(res.body).toMatchObject({ status: 'ok', module: 'master', commit: null });
     expect(Number.isNaN(Date.parse(res.body.time))).toBe(false);
   });
 
