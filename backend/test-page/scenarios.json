@@ -13050,13 +13050,13 @@
       ]
     },
     {
-      "name": "API Test",
+      "name": "New test",
       "routes": [
         {
-          "id": "GET /api-test/test",
+          "id": "GET /new-test/test",
           "method": "GET",
-          "path": "/api-test/test",
-          "purpose": "Says the caller reached the API Test module and holds its test permission.",
+          "path": "/new-test/test",
+          "purpose": "Says the caller reached the New test module and holds its test permission.",
           "input": "nothing",
           "access": "Needs test.read",
           "scenarios": [
@@ -13066,7 +13066,7 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/api-test/test",
+                "path": "/new-test/test",
                 "as": "farhana@twintrack.test"
               }
             },
@@ -13077,7 +13077,7 @@
               "code": "forbidden",
               "request": {
                 "method": "GET",
-                "path": "/api-test/test",
+                "path": "/new-test/test",
                 "as": "kamrul@twintrack.test"
               }
             },
@@ -13088,7 +13088,36 @@
               "code": "no_token",
               "request": {
                 "method": "GET",
-                "path": "/api-test/test"
+                "path": "/new-test/test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /new-test/health",
+          "method": "GET",
+          "path": "/new-test/health",
+          "purpose": "Says the New test module's routes are answering. Public.",
+          "input": "nothing",
+          "access": "Public",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Anyone, without a session",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/new-test/health"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Someone with no New test permissions",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/new-test/health",
+                "as": "kamrul@twintrack.test"
               }
             }
           ]

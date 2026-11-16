@@ -32,9 +32,9 @@ describe('validateManifest', () => {
   it('finds one manifest for each module', () => {
     expect(manifestFiles.sort()).toEqual([
       'accounts.manifest.json',
-      'api-test.manifest.json',
       'hr.manifest.json',
       'master.manifest.json',
+      'new-test.manifest.json',
       'projects.manifest.json',
     ]);
   });

@@ -1,0 +1,33 @@
+{
+  "manifestVersion": 1,
+  "module": {
+    "key": "new-test",
+    "name": "New test",
+    "version": "1.0.0",
+    "description": "A two-route module for checking that a module answers (/health) and that its permissions work end to end (/test).",
+    "repository": "twintrack-new-test",
+    "baseUrl": "/new-test"
+  },
+  "resources": [
+    {
+      "key": "test",
+      "label": "Test",
+      "actions": [
+        "read"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/test",
+      "access": "private",
+      "permission": "test.read"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "access": "public"
+    }
+  ]
+}

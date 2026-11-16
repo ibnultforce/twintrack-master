@@ -16658,8 +16658,8 @@
       ]
     },
     {
-      "name": "API Test",
-      "description": "The one-route API Test module. The super admin holds test.read; nobody else does until a profile grants it.",
+      "name": "New test",
+      "description": "The New test module. GET /new-test/health is public. The super admin holds test.read; nobody else does until a profile grants it.",
       "item": [
         {
           "name": "Super admin calls the test route",
@@ -16672,16 +16672,16 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api-test/test",
+              "raw": "{{baseUrl}}/new-test/test",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "api-test",
+                "new-test",
                 "test"
               ]
             },
-            "description": "Needs test.read in API Test. Returns 200 with the module key and server time."
+            "description": "Needs test.read in New test. Returns 200 with the module key and server time."
           },
           "event": [
             {
@@ -16689,11 +16689,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('answers 200 with status ok for the api-test module', () => {",
+                  "pm.test('answers 200 with status ok for the new-test module', () => {",
                   "  pm.response.to.have.status(200);",
                   "  const body = pm.response.json();",
                   "  pm.expect(body.status).to.eql('ok');",
-                  "  pm.expect(body.module).to.eql('api-test');",
+                  "  pm.expect(body.module).to.eql('new-test');",
                   "  pm.expect(Date.parse(body.time)).to.not.be.NaN;",
                   "});"
                 ]
@@ -16712,12 +16712,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api-test/test",
+              "raw": "{{baseUrl}}/new-test/test",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "api-test",
+                "new-test",
                 "test"
               ]
             },
@@ -16732,6 +16732,41 @@
                   "pm.test('refuses with 403 forbidden', () => {",
                   "  pm.response.to.have.status(403);",
                   "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health check, no token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/new-test/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "new-test",
+                "health"
+              ]
+            },
+            "description": "Public. Returns 200 with the module key and server time."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 200 with status ok for the new-test module', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ok');",
+                  "  pm.expect(body.module).to.eql('new-test');",
+                  "  pm.expect(Date.parse(body.time)).to.not.be.NaN;",
                   "});"
                 ]
               }

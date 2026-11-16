@@ -1,8 +1,8 @@
-# API Test: data model
+# New test: data model
 
-What the API Test API returns. Module key: `api-test`. Every route starts with `/api-test`. It stores no records.
+What the New test API returns. Module key: `new-test`. Every route starts with `/new-test`. It stores no records.
 
-The same model is in `schema.json` as JSON Schema. Routes and error codes are in `api/api-test.md`.
+The same model is in `schema.json` as JSON Schema. Routes and error codes are in `api/new-test.md`.
 
 ## Reading this document
 
@@ -15,12 +15,12 @@ The same model is in `schema.json` as JSON Schema. Routes and error codes are in
 
 ## TestResult
 
-The answer to `GET /api-test/test`.
+The answer to `GET /new-test/test` and to `GET /new-test/health`.
 
 | Field | Type | Always | Field access | Meaning |
 |---|---|---|---|---|
 | `status` | TestStatus | yes | | |
-| `module` | string | yes | | Always `api-test` |
+| `module` | string | yes | | Always `new-test` |
 | `time` | date-time | yes | | The server's time when it answered |
 
 ### TestStatus

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "TwinTrack API Test API",
-  "description": "What the API Test API returns. Read with DATA_MODEL.md.",
+  "title": "TwinTrack New test API",
+  "description": "What the New test API returns. Read with DATA_MODEL.md.",
   "$defs": {
     "Scope": {
       "type": "string",
@@ -26,7 +26,7 @@
       ]
     },
     "TestResult": {
-      "description": "GET /api-test/test",
+      "description": "GET /new-test/test and GET /new-test/health",
       "type": "object",
       "required": [
         "status",
@@ -40,7 +40,7 @@
         },
         "module": {
           "type": "string",
-          "const": "api-test"
+          "const": "new-test"
         },
         "time": {
           "$ref": "#/$defs/DateTime"
@@ -48,7 +48,7 @@
       }
     },
     "ModuleAccess": {
-      "description": "GET /me/permissions/api-test: what the signed-in person may do here.",
+      "description": "GET /me/permissions/new-test: what the signed-in person may do here.",
       "type": "object",
       "required": [
         "module",
@@ -58,7 +58,7 @@
       ],
       "properties": {
         "module": {
-          "const": "hr"
+          "const": "new-test"
         },
         "hasAccess": {
           "type": "boolean"

@@ -1,6 +1,6 @@
-# API Test frontend: instructions
+# New test frontend: instructions
 
-These are the instructions for building the **API Test** frontend of TwinTrack. Put this whole folder in the new project as `docs/` and point Claude Code at this file first. Other people are building other TwinTrack modules from instructions just like these, so **follow them exactly, and when they don't cover something, choose the simplest option that matches what's already here.**
+These are the instructions for building the **New test** frontend of TwinTrack. Put this whole folder in the new project as `docs/` and point Claude Code at this file first. Other people are building other TwinTrack modules from instructions just like these, so **follow them exactly, and when they don't cover something, choose the simplest option that matches what's already here.**
 
 ## Files in this pack
 
@@ -10,16 +10,16 @@ These are the instructions for building the **API Test** frontend of TwinTrack. 
 | `DATA_MODEL.md` | Every record, field, allowed value and rule, explained |
 | `schema.json` | The same data model as JSON Schema. Generate the TypeScript types from it |
 | `design.css` | The shared TwinTrack stylesheet. Use it unchanged |
-| `api/api-test.md` | Every route: what it takes, what it returns, and its errors |
+| `api/new-test.md` | Every route: what it takes, what it returns, and its errors |
 | `api/README.md` | Signing in, tokens, the error format and errors any route returns |
 | `api/manifest.json` | Routes, permissions and field rules, as the backend loads them |
 | `api/postman_collection.json` | Working requests for every route |
 
-When these disagree, `api/api-test.md` wins, then `DATA_MODEL.md`. Never invent a route, field, permission or value that isn't in them; if something you need is missing, stop and say so.
+When these disagree, `api/new-test.md` wins, then `DATA_MODEL.md`. Never invent a route, field, permission or value that isn't in them; if something you need is missing, stop and say so.
 
 ## 1. What you're building
 
-A small web app for checking that a TwinTrack module works end to end: signing in through Master, reading the person's access, and calling a permission-checked route. The API has one route, **`GET /api-test/test`**, which answers with the module key and the server time. Build only what that route allows.
+A small web app for checking that a TwinTrack module works end to end: signing in through Master, reading the person's access, and calling a permission-checked route. The API has two routes: **`GET /new-test/test`**, which needs `test.read`, and the public **`GET /new-test/health`**. Both answer with the module key and the server time. Build only what those routes allow.
 
 It has **no backend of its own**. Everything comes from the TwinTrack API (the Master backend), which also decides who may see and do what. People sign in at the Master frontend; this app reuses that session.
 
@@ -62,7 +62,7 @@ Screens never call `fetch` or `http.ts` directly; they call functions from `lib/
 
 Follow `api/README.md`. In short:
 
-- **Start-up:** call `POST /auth/refresh` with `credentials: 'include'`. A `200` gives an `accessToken`; anything else means signed out. Then load `GET /auth/me` and `GET /me/permissions/api-test`.
+- **Start-up:** call `POST /auth/refresh` with `credentials: 'include'`. A `200` gives an `accessToken`; anything else means signed out. Then load `GET /auth/me` and `GET /me/permissions/new-test`.
 - Keep the access token **in memory only**, never in storage. Send it as `Authorization: Bearer <token>` on every call, always with `credentials: 'include'`.
 - On `401` with code `no_token`, `invalid_token` or `token_expired`, refresh **once** (one refresh shared by every call waiting on it) and retry. If the refresh fails, the session has ended: show the signed-out gate.
 - A `5xx` or `429` from refresh is an outage, not a sign-out: show "TwinTrack can't be reached".
@@ -74,9 +74,9 @@ The session exposes `status` (`loading`, `signed-out`, `no-access`, `signed-in`,
 
 ## 4. Access: the API decides, the screen follows
 
-From `GET /me/permissions/api-test` (`ModuleAccess` in the schema):
+From `GET /me/permissions/new-test` (`ModuleAccess` in the schema):
 
-- `hasAccess: false`, or a `403`/`404` from that call, shows the **no-access gate**: "No access to API Test. Your profile doesn't include API Test. Ask whoever gives profiles in your organisation." with a "Back to TwinTrack" link to `<MASTER_URL>/modules`.
+- `hasAccess: false`, or a `403`/`404` from that call, shows the **no-access gate**: "No access to New test. Your profile doesn't include New test. Ask whoever gives profiles in your organisation." with a "Back to TwinTrack" link to `<MASTER_URL>/modules`.
 - `can('<resource>.<action>')` is true when `permissions['<resource>.<action>']` exists. Show a screen, button or menu item **only** when the person holds its permission.
 - Never check profile names, titles or departments in code.
 
@@ -88,7 +88,7 @@ Permissions in this module:
 
 ## 5. Screens
 
-Sidebar, in this order, under the heading "API Test". Each entry shows only with its permission. The sidebar ends with a "TwinTrack" group holding "All modules" (link to `<MASTER_URL>/modules`), and a footer with the profile name (or "Super admin"), the person's name and "Sign out".
+Sidebar, in this order, under the heading "New test". Each entry shows only with its permission. The sidebar ends with a "TwinTrack" group holding "All modules" (link to `<MASTER_URL>/modules`), and a footer with the profile name (or "Super admin"), the person's name and "Sign out".
 
 | Path | Sidebar label | Needs |
 |---|---|---|
@@ -96,15 +96,16 @@ Sidebar, in this order, under the heading "API Test". Each entry shows only with
 
 ### Test (`/test`)
 - Head: "Test", subtitle "Check that this module answers you." Action "Run test" with `test.read`.
-- **Result card:** calls `GET /api-test/test` on load and on "Run test", and shows status as a pill (`ok` "OK", `good` tone), the module key, and the server time formatted with `format.ts`. While it loads, the card shows "Loading…"; a refusal shows the API's error message.
+- **Result card:** calls `GET /new-test/test` on load and on "Run test", and shows status as a pill (`ok` "OK", `good` tone), the module key, and the server time formatted with `format.ts`. While it loads, the card shows "Loading…"; a refusal shows the API's error message.
 
-`/` sends people to `/test` when they hold `test.read`, or says "Your API Test profile doesn't include any screens yet."
+`/` sends people to `/test` when they hold `test.read`, or says "Your New test profile doesn't include any screens yet."
 
 Routes this module can call:
 
 | Route | Needs |
 |---|---|
-| `GET /api-test/test` | `test.read` |
+| `GET /new-test/test` | `test.read` |
+| `GET /new-test/health` | Nothing (public) |
 
 ## 6. Look and feel
 
@@ -139,7 +140,7 @@ Routes this module can call:
 - Dates: `13 Nov 2026`. Calendar days are shown in UTC so they never slip a day. Times: `13 Nov, 14:05`. Hours: `6 h`. Numbers: `1,250`. Money: `৳12,500`. Missing: `·`.
 - API keys shown to people go through one function that turns `on_hold` into "On hold".
 - Error messages come from the API. Don't write your own for API failures.
-- The four gates: loading ("Loading…"), signed out ("Sign in to TwinTrack. API Test uses your TwinTrack sign-in. Sign in there, then open API Test again." with "Go to sign in" to `<MASTER_URL>/sign-in`), no access (section 4), and unavailable ("TwinTrack can't be reached. The API isn't answering. Check that it is running, then reload this page.").
+- The four gates: loading ("Loading…"), signed out ("Sign in to TwinTrack. New test uses your TwinTrack sign-in. Sign in there, then open New test again." with "Go to sign in" to `<MASTER_URL>/sign-in`), no access (section 4), and unavailable ("TwinTrack can't be reached. The API isn't answering. Check that it is running, then reload this page.").
 - A screen the person can't open shows "Your access doesn't include this screen."
 
 ## 8. Code

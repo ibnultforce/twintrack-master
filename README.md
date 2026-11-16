@@ -54,7 +54,7 @@ The Next.js app in `frontend/` is the portal and admin console. It runs entirely
 
 ## Example data
 
-`npm run seed` loads the Master, HR, Project management, Accounts and API Test modules and the 12-person example team. from `seed/`, with a sample org tree. **No profile comes ready-made:** only the super admin has access until they create profiles and give them to people. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
+`npm run seed` loads the Master, HR, Project management, Accounts and New test modules and the 12-person example team. from `seed/`, with a sample org tree. **No profile comes ready-made:** only the super admin has access until they create profiles and give them to people. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
 
 - **Safe to re-run:** it updates records by id and creates no duplicates. It resets each person's profile to what the files say, and keeps passwords already set.
 - **All or nothing:** every file is checked first and all problems are listed together. If anything fails, nothing is saved.
@@ -82,7 +82,7 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 
 ## Manifests
 
-`manifests/` has one file per module: `master`, `hr`, `projects`, `accounts` and `api-test`. Each lists only that module's built routes and the resources they use. Access comes from profiles, which are built in the app. They are committed, because deploys and `npm test` need them. The seed loads them, and a test checks that every file in the folder is valid.
+`manifests/` has one file per module: `master`, `hr`, `projects`, `accounts` and `new-test`. Each lists only that module's built routes and the resources they use. Access comes from profiles, which are built in the app. They are committed, because deploys and `npm test` need them. The seed loads them, and a test checks that every file in the folder is valid.
 
 To load changed manifests without touching people or profiles, run `npm run seed:modules`. It takes resources and routes from the files, and keeps custom objects created in the app.
 
@@ -209,9 +209,9 @@ The company's money, in `backend/src/modules/accounts/`: categories, vendors, ba
 
 Posted payments and receipts are never edited: a mistake gets a linked reversal. Whoever made a bill or payroll run can't approve it. Accounts reads and marks Project management work only through `modules/projects/billing/taskBilling.ts`, reads HR salaries through `findSalariesInEffect`, and marks Project management incentives paid when payroll pays them.
 
-## API Test
+## New test
 
-A one-route module in `backend/src/modules/api-test/` for checking that a module's routes, permissions and sessions work end to end. `GET /api-test/test` needs `test.read` and answers with the module key and the server time. It has no frontend yet; its handoff pack is in `module-packs/api-test/`. The reference is in [docs/api/api-test.md](docs/api/api-test.md).
+A two-route module in `backend/src/modules/new-test/` for checking that a module's routes, permissions and sessions work end to end. `GET /new-test/test` needs `test.read`, and `GET /new-test/health` is public; both answer with the module key and the server time. It has no frontend yet; its handoff pack is in `module-packs/new-test/`. The reference is in [docs/api/new-test.md](docs/api/new-test.md).
 
 ## Checks
 

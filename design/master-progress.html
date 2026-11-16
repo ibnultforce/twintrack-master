@@ -274,15 +274,15 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
       </ul>
     </div>
     <div class="feature-group">
-      <h3>API Test module (API)</h3>
+      <h3>New test module (API)</h3>
       <ul>
-        <li>A one-route module for checking a module end to end: <code>GET /api-test/test</code> needs <code>test.read</code> and answers with the module key and the server time.</li>
+        <li>A two-route module for checking a module end to end: <code>GET /new-test/test</code> needs <code>test.read</code>, and <code>GET /new-test/health</code> is public. Both answer with the module key and the server time.</li>
       </ul>
     </div>
     <div class="feature-group">
       <h3>Keeping the project consistent</h3>
       <ul>
-        <li>Manifests live in <code>twintrack-master/manifests/</code>, one per module: Master, HR, Tasks, Accounts and API Test.</li>
+        <li>Manifests live in <code>twintrack-master/manifests/</code>, one per module: Master, HR, Tasks, Accounts and New test.</li>
         <li>A test fails if any module's route table and its manifest disagree about which routes are built or who can use them.</li>
         <li>A test fails if a route has no Postman request.</li>
         <li><code>npm run seed</code> now requires <code>SEED_PASSWORD</code>, in place of a password written into the code.</li>
@@ -397,6 +397,15 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
 <section aria-labelledby="log-heading">
   <h2 id="log-heading">Change log</h2>
   <div class="log">
+    <div class="log-entry">
+      <h3>16 November 2026: New test module replaces API Test</h3>
+      <ul>
+        <li>The <code>api-test</code> module is removed: its manifest, routes, Postman folder, <code>/try</code> scenarios, docs and handoff pack.</li>
+        <li>New <code>new-test</code> module, "New test" (manifest 1.0.0), with <code>GET /new-test/test</code> (needs <code>test.read</code>) and the public <code>GET /new-test/health</code>. Only the super admin holds <code>test.read</code> until a profile grants it.</li>
+        <li>Its dev frontend address, port 3500, replaces API Test's in <code>.env.example</code>. The handoff pack is in <code>module-packs/new-test/</code>.</li>
+        <li>On a database that already loaded API Test, the super admin deletes it with <code>DELETE /modules/api-test</code> (or the Modules screen): the deploy loads manifests but never removes a module.</li>
+      </ul>
+    </div>
     <div class="log-entry">
       <h3>16 November 2026: failed checks get fixed, and the live commit shows</h3>
       <ul>
