@@ -87,12 +87,12 @@ draft ──submit──▶ pending_approval ──approve──▶ approved ─
 
 ## Invoices and receipts
 
-Invoices bill clients for work in Tasks, at an hourly rate in US dollars unless `currency` says otherwise. A task is billed at its **estimate**, as the old app did, whatever hours it took. Two ways to choose the work:
+Invoices bill clients for work in Project management, at an hourly rate in US dollars unless `currency` says otherwise. A task is billed at its **estimate**, as the old app did, whatever hours it took. Two ways to choose the work:
 
 - `clientId`: every task finished in the period, in all of the client's projects (`basis: completed`).
 - `projectIds`: every task created in the period, at any status except cancelled, in chosen projects of one client, plus `customLines` (`basis: logged`).
 
-A generated invoice marks its tasks billed (`invoiceId` on the task), so they leave the unbilled total; deleting a draft releases them. The task data is read through `modules/tasks/billing/taskBilling.ts`, the only part of Tasks that Accounts touches. Projects' allocated hours aren't changed. Invoice numbers are `INVOICE_NUMBER_PREFIX`, the client's initials (from Master, or worked out from the name) and the date, such as `INV-AL-02-10-26`, with `-2`, `-3`... for more on the same day.
+A generated invoice marks its tasks billed (`invoiceId` on the task), so they leave the unbilled total; deleting a draft releases them. The task data is read through `modules/projects/billing/taskBilling.ts`, the only part of Project management that Accounts touches. Projects' allocated hours aren't changed. Invoice numbers are `INVOICE_NUMBER_PREFIX`, the client's initials (from Master, or worked out from the name) and the date, such as `INV-AL-02-10-26`, with `-2`, `-3`... for more on the same day.
 
 Each invoice has an editable Word document (`.docx`), laid out as the old app's, with the price columns left for whoever sends it to fill in. It's made again when lines or notes change (`documentVersion`).
 
@@ -118,7 +118,7 @@ Each invoice has an editable Word document (`.docx`), laid out as the old app's,
 
 ## Payroll
 
-A run pays a month. Each person's pay is copied when the run is made: their approved HR salary in effect on the month's last day, plus their **unpaid** monthly incentive for the month from Tasks when pay is in taka. Settling someone's pay as `paid` marks that incentive paid in Tasks too (`incentiveMarkedPaid` on the item), so it's never paid twice; if Tasks paid it after the run was made, settling as `paid` is refused with `409 incentive_already_paid`. The run's `bankAccountId` is given only to items in that account's currency, so pay is never taken from an account in another currency. One run a month; deleting a draft frees the month.
+A run pays a month. Each person's pay is copied when the run is made: their approved HR salary in effect on the month's last day, plus their **unpaid** monthly incentive for the month from Project management when pay is in taka. Settling someone's pay as `paid` marks that incentive paid in Project management too (`incentiveMarkedPaid` on the item), so it's never paid twice; if Project management paid it after the run was made, settling as `paid` is refused with `409 incentive_already_paid`. The run's `bankAccountId` is given only to items in that account's currency, so pay is never taken from an account in another currency. One run a month; deleting a draft frees the month.
 
 ```
 draft ──submit──▶ pending_approval ──approve──▶ approved ──everyone settled──▶ completed

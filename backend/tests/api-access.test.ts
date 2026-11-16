@@ -171,8 +171,8 @@ describe('API tokens, OAuth and MCP', () => {
       expect(tools).toEqual(expect.arrayContaining(['whoami', 'my_permissions', 'find_colleagues', 'list_clients']));
 
       const whoami = toolData(await callTool(app, token, 'whoami'));
-      expect(whoami).toMatchObject({ id: 'karim', name: 'Karim Ahmed', modules: [{ key: 'master' }, { key: 'tasks' }] });
-      expect(toolData(await callTool(app, token, 'my_permissions', { module: 'tasks' }))).toMatchObject({ hasAccess: true, permissions: { 'task.read': 'own' } });
+      expect(whoami).toMatchObject({ id: 'karim', name: 'Karim Ahmed', modules: [{ key: 'master' }, { key: 'projects' }] });
+      expect(toolData(await callTool(app, token, 'my_permissions', { module: 'projects' }))).toMatchObject({ hasAccess: true, permissions: { 'task.read': 'own' } });
       expect(toolData(await callTool(app, token, 'find_colleagues', { search: 'sara' })).people.map((person: { id: string }) => person.id)).toEqual(['sara']);
       expect((await ApiToken.findOne().lean())?.lastUsedAt).toBeInstanceOf(Date);
     });

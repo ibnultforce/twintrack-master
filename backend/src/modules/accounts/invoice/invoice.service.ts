@@ -21,7 +21,7 @@ import {
   sumUnbilledHours,
   type BillableProject,
   type BillableTask,
-} from '../../tasks/billing/taskBilling.js';
+} from '../../projects/billing/taskBilling.js';
 import { fieldRulesFor, invalidField, MONEY_TOLERANCE, readRecordHistory, roundMoney, writeAccountsRecord, writeAccountsRecordIn, type Currency } from '../accountsModule.js';
 import { endOfDay, findRecordPage, requireRecord } from '../accountsFields.js';
 import { readCompanyBankDetails } from '../bankAccount/bankAccount.service.js';
@@ -126,7 +126,7 @@ async function assertCoversAllocations(invoiceId: string, amount: number, sessio
   }
 }
 
-/** Invoices: billing a client's work from Tasks, as a Word document that can be emailed. */
+/** Invoices: billing a client's work from Project management, as a Word document that can be emailed. */
 export function createInvoiceService(settings: AccountsSettings, storage: FileStorage, emailSender: EmailSender) {
   const label = (invoice: InvoiceDoc) => invoice.invoiceNumber;
 

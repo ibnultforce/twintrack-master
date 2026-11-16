@@ -8,14 +8,14 @@ import type { Actor } from '../../master/access/caller.js';
 import { User } from '../../master/models/user.js';
 import { redactRecord, type FieldRules } from '../../master/records/fieldSecurity.service.js';
 import { findSalariesInEffect } from '../../hr/salary/salary.repository.js';
-import { findUnpaidLedgerEntries, markLedgerEntryPaidByPayroll } from '../../tasks/incentive/incentive.repository.js';
+import { findUnpaidLedgerEntries, markLedgerEntryPaidByPayroll } from '../../projects/incentive/incentive.repository.js';
 import { assertNotOwnRecord, fieldRulesFor, findPeopleNames, invalidField, readRecordHistory, roundMoney, writeAccountsRecord, writeAccountsRecordIn } from '../accountsModule.js';
 import { findRecordPage, insertRecord, requireRecord } from '../accountsFields.js';
 import { requireActiveBankAccount } from '../bankAccount/bankAccount.service.js';
 import { PayrollRun, type PayrollItem, type PayrollRunDoc, type PayrollRunStatus, type SettlementStatus } from '../models/payroll.js';
 
 const RESOURCE = 'payrollRun';
-/** Tasks incentives are in taka, so they're only added to pay in taka. */
+/** Project management incentives are in taka, so they're only added to pay in taka. */
 const INCENTIVE_CURRENCY = 'BDT';
 
 export const payrollRunNotFound = () => new ApiError(404, 'unknown_payroll_run', 'No such payroll run.');
@@ -77,7 +77,7 @@ export async function getPayrollRun(actor: Actor, runId: string) {
 
 /**
  * Makes a month's run from HR salaries: each person's approved salary in effect at the month's end, plus their unpaid
- * monthly incentive for the month from Tasks. Without userIds, everyone active with an approved salary is included.
+ * monthly incentive for the month from Project management. Without userIds, everyone active with an approved salary is included.
  */
 export async function createPayrollRun(actor: Actor, request: Month & { userIds?: string[]; bankAccountId?: string; notes?: string }) {
   const account = request.bankAccountId ? await requireActiveBankAccount(request.bankAccountId) : undefined;
@@ -203,7 +203,7 @@ export async function deletePayrollRun(actor: Actor, runId: string): Promise<voi
 
 /**
  * Records how one person's pay went: paid, failed or returned, or back to unpaid. Only once the run is approved.
- * Paying it also marks the person's Tasks incentive for the month paid, since the run included it. When everyone's pay
+ * Paying it also marks the person's Project management incentive for the month paid, since the run included it. When everyone's pay
  * is settled the run completes.
  */
 export async function settlePayrollItem(actor: Actor, runId: string, itemId: string, request: { settlementStatus: SettlementStatus; reference?: string; notes?: string; version?: number }) {
@@ -228,7 +228,7 @@ export async function settlePayrollItem(actor: Actor, runId: string, itemId: str
   const status: PayrollRunStatus = items.every((candidate) => candidate.settlementStatus !== 'unpaid') ? 'completed' : 'approved';
 
   await runInTransaction(async (session) => {
-    // The run is written first, so a stale or second settlement is refused as a version conflict before Tasks is read.
+    // The run is written first, so a stale or second settlement is refused as a version conflict before Project management is read.
     await writeAccountsRecordIn(
       actor,
       {
@@ -240,12 +240,12 @@ export async function settlePayrollItem(actor: Actor, runId: string, itemId: str
       },
       session,
     );
-    // The incentive is in this pay, so if Tasks paid it since the run was made, paying this would pay it twice.
+    // The incentive is in this pay, so if Project management paid it since the run was made, paying this would pay it twice.
     if (marksIncentive && !(await markLedgerEntryPaidByPayroll(item.userId, monthOf(existing), actor.user._id, session))) {
       throw new ApiError(
         409,
         'incentive_already_paid',
-        "This person's Tasks incentive for the month was paid after the run was made, so this pay would pay it twice. Mark it failed and pay the salary on its own.",
+        "This person's Project management incentive for the month was paid after the run was made, so this pay would pay it twice. Mark it failed and pay the salary on its own.",
       );
     }
   });

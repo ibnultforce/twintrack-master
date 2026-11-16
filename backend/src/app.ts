@@ -13,9 +13,9 @@ import { ACCOUNTS_MODULE_KEY, createAccountsRoutes } from './modules/accounts/ac
 import { accountsUserReferenceChecks } from './modules/accounts/accountsUserReferences.js';
 import { HR_MODULE_KEY, hrRoutes } from './modules/hr/hr.routes.js';
 import { hrUserReferenceChecks } from './modules/hr/hrUserReferences.js';
-import { createTasksRoutes, TASKS_MODULE_KEY } from './modules/tasks/tasks.routes.js';
-import { tasksMcpTools } from './modules/tasks/tasksMcpTools.js';
-import { tasksUserReferenceChecks } from './modules/tasks/tasksUserReferences.js';
+import { createProjectsRoutes, PROJECTS_MODULE_KEY } from './modules/projects/projects.routes.js';
+import { projectsMcpTools } from './modules/projects/projectsMcpTools.js';
+import { projectsUserReferenceChecks } from './modules/projects/projectsUserReferences.js';
 import { createAccessMiddleware } from './modules/master/access/access.middleware.js';
 import { createMasterRoutes, MASTER_MODULE_KEY, mountMasterProtocols } from './modules/master/master.routes.js';
 import { OAUTH_PROTOCOL_PATH } from './modules/master/oauth/oauthProtocol.js';
@@ -44,10 +44,10 @@ export function createApp(config: Config, dependencyOverrides: Partial<AppDepend
 
   if (config.isTestPageEnabled) serveTestPage(app);
   mountMasterProtocols(app, config);
-  const masterExtensions = { userReferenceChecks: [...hrUserReferenceChecks, ...tasksUserReferenceChecks, ...accountsUserReferenceChecks], mcpToolProviders: [tasksMcpTools] };
+  const masterExtensions = { userReferenceChecks: [...hrUserReferenceChecks, ...projectsUserReferenceChecks, ...accountsUserReferenceChecks], mcpToolProviders: [projectsMcpTools] };
   registerRoutes(app, createMasterRoutes(config, dependencies, masterExtensions), createAccessMiddleware(config.auth, MASTER_MODULE_KEY));
   registerRoutes(app, hrRoutes, createAccessMiddleware(config.auth, HR_MODULE_KEY));
-  registerRoutes(app, createTasksRoutes(config, dependencies), createAccessMiddleware(config.auth, TASKS_MODULE_KEY));
+  registerRoutes(app, createProjectsRoutes(config, dependencies), createAccessMiddleware(config.auth, PROJECTS_MODULE_KEY));
   registerRoutes(app, createAccountsRoutes(config, dependencies), createAccessMiddleware(config.auth, ACCOUNTS_MODULE_KEY));
 
   app.use((_req, res) => {

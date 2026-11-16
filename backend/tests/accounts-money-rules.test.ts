@@ -5,8 +5,8 @@ import type { Application } from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { createLocalStorage } from '../src/lib/storage/localStorage.js';
-import { markLedgerEntryPaid } from '../src/modules/tasks/incentive/incentive.repository.js';
-import { IncentiveLedgerEntry } from '../src/modules/tasks/models/incentive.js';
+import { markLedgerEntryPaid } from '../src/modules/projects/incentive/incentive.repository.js';
+import { IncentiveLedgerEntry } from '../src/modules/projects/models/incentive.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { useTestDatabase } from './helpers/database.js';
 import { requestsAs, signIn } from './helpers/signedIn.js';
@@ -53,12 +53,12 @@ describe('Accounts money rules', () => {
   async function billableWork() {
     const client = (await (await as('farhana')).post('/clients', { name: 'Acme Logistics Ltd', contactEmail: 'ap@acme.test' })).body;
     const rahim = await as('rahim');
-    const project = (await rahim.post('/tasks/projects', { name: 'Payroll revamp', memberIds: [ID.MEHEDI], clientId: client.id })).body;
+    const project = (await rahim.post('/projects/projects', { name: 'Payroll revamp', memberIds: [ID.MEHEDI], clientId: client.id })).body;
     const mehedi = await as('mehedi');
-    const task = (await rahim.post('/tasks/tasks', { projectId: project.id, title: 'Export salaries', assignedDevId: ID.MEHEDI, estimatedHours: 6 })).body;
-    await mehedi.post(`/tasks/tasks/${task.id}/start`);
-    await mehedi.post(`/tasks/tasks/${task.id}/complete`);
-    await rahim.post(`/tasks/tasks/${task.id}/approve`, { hours: { basis: 'estimated' } });
+    const task = (await rahim.post('/projects/tasks', { projectId: project.id, title: 'Export salaries', assignedDevId: ID.MEHEDI, estimatedHours: 6 })).body;
+    await mehedi.post(`/projects/tasks/${task.id}/start`);
+    await mehedi.post(`/projects/tasks/${task.id}/complete`);
+    await rahim.post(`/projects/tasks/${task.id}/approve`, { hours: { basis: 'estimated' } });
     return { client, project };
   }
 

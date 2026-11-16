@@ -320,7 +320,7 @@ describe('access checks', () => {
       expect(response.body.modules).toEqual([
         { key: 'hr', name: 'HR', description: expect.any(String) as string, frontendUrl: HR_ORIGIN, profileName: 'Engineering lead' },
         { key: 'master', name: 'Master', description: expect.any(String) as string, frontendUrl: null, profileName: 'Engineering lead' },
-        { key: 'tasks', name: 'Tasks', description: expect.any(String) as string, frontendUrl: null, profileName: 'Engineering lead' },
+        { key: 'projects', name: 'Project management', description: expect.any(String) as string, frontendUrl: null, profileName: 'Engineering lead' },
       ]);
     });
 
@@ -335,7 +335,7 @@ describe('access checks', () => {
 
     it('lists every loaded module for a super admin, with no address when none is set', async () => {
       const { body } = await getAs(await signIn('farhana@twintrack.test'), '/me/modules');
-      expect(moduleKeys(body)).toEqual(['accounts', 'hr', 'master', 'tasks']);
+      expect(moduleKeys(body)).toEqual(['accounts', 'hr', 'master', 'projects']);
       expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules.find((module) => module.key === 'master')?.frontendUrl).toBeNull();
     });
 

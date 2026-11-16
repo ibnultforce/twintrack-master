@@ -9,7 +9,7 @@ export type SettlementStatus = (typeof SETTLEMENT_STATUSES)[number];
 
 /**
  * One person's pay in a run, copied when the run is made, so later salary changes don't change a run already made.
- * Pay is the HR salary in effect at the end of the month, plus the month's unpaid monthly incentive from Tasks.
+ * Pay is the HR salary in effect at the end of the month, plus the month's unpaid monthly incentive from Project management.
  */
 export interface PayrollItem {
   _id: string;
@@ -18,9 +18,9 @@ export interface PayrollItem {
   salaryId: string;
   currency: string;
   salaryAmount: number;
-  /** The month's Tasks incentive, in taka. Zero when there is none, or when pay isn't in taka. */
+  /** The month's Project management incentive, in taka. Zero when there is none, or when pay isn't in taka. */
   incentiveAmount: number;
-  /** Set once paying this item has marked the incentive paid in Tasks, so settling it again doesn't look for it. */
+  /** Set once paying this item has marked the incentive paid in Project management, so settling it again doesn't look for it. */
   incentiveMarkedPaid?: boolean;
   deductions: number;
   grossAmount: number;

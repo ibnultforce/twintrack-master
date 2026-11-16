@@ -1,0 +1,47 @@
+# Checks every push to main, then deploys it to the demo server (demo.twintrack.work).
+# Secrets (repo Settings → Secrets and variables → Actions):
+#   DEMO_SSH_HOST         server address
+#   DEMO_SSH_USER         login on the server
+#   DEMO_SSH_KEY          private key in that user's ~/.ssh/authorized_keys, restricted there with
+#                         command="bash <app dir>/scripts/deploy-server.sh", so it can only run the deploy
+#   DEMO_SSH_KNOWN_HOSTS  the server's host key line (ssh-keyscan output), so the connection is verified
+name: Deploy demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time; a newer push waits for the running one instead of cancelling it halfway.
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    environment: demo
+    steps:
+      - name: Set up SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEMO_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEMO_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Deploy
+        # The server's authorized_keys entry fixes the command this key runs.
+        run: ssh "${{ secrets.DEMO_SSH_USER }}@${{ secrets.DEMO_SSH_HOST }}"

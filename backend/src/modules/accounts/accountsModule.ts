@@ -34,7 +34,7 @@ export const fieldRulesFor = (actor: Actor, resource: string): Promise<FieldRule
 
 /**
  * Whoever made a bill or payroll run can't approve or reject it, super admins included, so money always passes two
- * people. The same rule as approving your own work in Tasks.
+ * people. The same rule as approving your own work in Project management.
  */
 export function assertNotOwnRecord(actor: Actor, createdBy: string | undefined, what: string): void {
   if (createdBy === actor.user._id) throw new ApiError(403, 'own_record', `Someone other than whoever made this ${what} has to decide on it.`);

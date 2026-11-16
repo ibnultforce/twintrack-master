@@ -76,7 +76,7 @@ const handleHistory: RequestHandler = async (req, res) => {
   res.json(await getPayrollRunHistory(getActor(req), id(req.params), parseRequestQuery(pageQuerySchema, req.query)));
 };
 
-/** Monthly payroll from HR salaries and Tasks incentives: drafted, approved by someone else, then paid person by person. */
+/** Monthly payroll from HR salaries and Project management incentives: drafted, approved by someone else, then paid person by person. */
 export const payrollRoutes: ApiRoute[] = [
   { method: 'GET', path: '/accounts/payroll-runs', access: 'private', permission: 'payrollRun.read', handler: handleList },
   { method: 'POST', path: '/accounts/payroll-runs', access: 'private', permission: 'payrollRun.create', bodySchema: createBodySchema, handler: handleCreate },

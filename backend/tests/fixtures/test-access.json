@@ -37,7 +37,7 @@
             }
           }
         },
-        "tasks": {
+        "projects": {
           "project": {
             "actions": [
               "read",
@@ -330,7 +330,7 @@
             "scope": "all"
           }
         },
-        "tasks": {
+        "projects": {
           "project": {
             "actions": [
               "read"
@@ -370,7 +370,7 @@
       "name": "Developer",
       "description": "Works on and tests the tasks they are given.",
       "grants": {
-        "tasks": {
+        "projects": {
           "project": {
             "actions": [
               "read"

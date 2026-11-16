@@ -69,7 +69,7 @@ const linesBodySchema = z
   .refine(({ hourlyRate, lines }) => hourlyRate !== undefined || Boolean(lines?.length), { message: 'send hourlyRate or lines to change' });
 const sendBodySchema = z.strictObject({ to: emailField.optional(), subject: nameField.optional(), message: requiredTextField.optional() });
 
-/** Invoices bill clients for work in Tasks. settings name the company and the default rate. */
+/** Invoices bill clients for work in Project management. settings name the company and the default rate. */
 export function createInvoiceRoutes(settings: AccountsSettings, storage: FileStorage, emailSender: EmailSender): ApiRoute[] {
   const service = createInvoiceService(settings, storage, emailSender);
   const id = (params: Record<string, unknown>) => String(params.id);

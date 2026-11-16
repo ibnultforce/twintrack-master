@@ -7,7 +7,7 @@ import { ConfigError, loadConfig } from '../src/config.js';
 import { hrRoutes } from '../src/modules/hr/hr.routes.js';
 import { createMasterRoutes } from '../src/modules/master/master.routes.js';
 import { createAccountsRoutes } from '../src/modules/accounts/accounts.routes.js';
-import { createTasksRoutes } from '../src/modules/tasks/tasks.routes.js';
+import { createProjectsRoutes } from '../src/modules/projects/projects.routes.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { readSeedFiles } from './helpers/testAccess.js';
 import { useTestDatabase } from './helpers/database.js';
@@ -165,7 +165,7 @@ describe('test page', () => {
   });
 
   describe('scenarios', () => {
-    const builtRouteIds = [...createMasterRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...hrRoutes, ...createTasksRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...createAccountsRoutes(createTestConfig(), resolveDependencies(createTestConfig()))].map((route) => `${route.method} ${route.path}`);
+    const builtRouteIds = [...createMasterRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...hrRoutes, ...createProjectsRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...createAccountsRoutes(createTestConfig(), resolveDependencies(createTestConfig()))].map((route) => `${route.method} ${route.path}`);
     const routesWith = (kind: Scenario['kind']) => routes.filter((route) => route.scenarios.some((scenario) => scenario.kind === kind)).map((route) => route.id);
 
     // Succeeding on these needs something neither this replay nor someone using the page can get: a link that only
@@ -182,8 +182,8 @@ describe('test page', () => {
       'DELETE /mcp',
       // Uploads need a part's ETag header, and file links come from the storage, which a replay can't follow.
       // attachments.test.ts and the Postman collection cover their success.
-      'POST /tasks/tasks/:id/attachments/:attachmentId/complete',
-      'GET /tasks/tasks/:id/attachments/:attachmentId/url',
+      'POST /projects/tasks/:id/attachments/:attachmentId/complete',
+      'GET /projects/tasks/:id/attachments/:attachmentId/url',
       'PUT /files/parts',
       'POST /accounts/documents/:id/complete',
       'GET /accounts/documents/:id/url',

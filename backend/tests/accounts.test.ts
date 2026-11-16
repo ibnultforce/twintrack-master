@@ -9,8 +9,8 @@ import { createLocalStorage } from '../src/lib/storage/localStorage.js';
 import { createAccountsRoutes } from '../src/modules/accounts/accounts.routes.js';
 import { Vendor } from '../src/modules/accounts/models/masterData.js';
 import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
-import { IncentiveLedgerEntry } from '../src/modules/tasks/models/incentive.js';
-import { Task } from '../src/modules/tasks/models/task.js';
+import { IncentiveLedgerEntry } from '../src/modules/projects/models/incentive.js';
+import { Task } from '../src/modules/projects/models/task.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { useTestDatabase } from './helpers/database.js';
 import { requestsAs, signIn } from './helpers/signedIn.js';
@@ -207,13 +207,13 @@ describe('Accounts module', () => {
     async function billableWork() {
       const client = (await (await as('farhana')).post('/clients', { name: 'Acme Logistics Ltd', contactEmail: 'ap@acme.test', address: 'Gulshan, Dhaka' })).body;
       const rahim = await as('rahim');
-      const project = (await rahim.post('/tasks/projects', { name: 'Payroll revamp', memberIds: [ID.MEHEDI], clientId: client.id })).body;
+      const project = (await rahim.post('/projects/projects', { name: 'Payroll revamp', memberIds: [ID.MEHEDI], clientId: client.id })).body;
       const mehedi = await as('mehedi');
       const finish = async (title: string, estimatedHours: number, billable = true) => {
-        const task = (await rahim.post('/tasks/tasks', { projectId: project.id, title, assignedDevId: ID.MEHEDI, estimatedHours, billable })).body;
-        await mehedi.post(`/tasks/tasks/${task.id}/start`);
-        await mehedi.post(`/tasks/tasks/${task.id}/complete`);
-        await rahim.post(`/tasks/tasks/${task.id}/approve`, { hours: { basis: 'estimated' } });
+        const task = (await rahim.post('/projects/tasks', { projectId: project.id, title, assignedDevId: ID.MEHEDI, estimatedHours, billable })).body;
+        await mehedi.post(`/projects/tasks/${task.id}/start`);
+        await mehedi.post(`/projects/tasks/${task.id}/complete`);
+        await rahim.post(`/projects/tasks/${task.id}/approve`, { hours: { basis: 'estimated' } });
         return task;
       };
       const export_ = await finish('Export salaries', 6);
@@ -258,7 +258,7 @@ describe('Accounts module', () => {
       expect(created.body.lines).toEqual(expect.arrayContaining([expect.objectContaining({ description: 'Server setup', custom: true })]));
 
       const other = (await (await as('farhana')).post('/clients', { name: 'Beta Corp' })).body;
-      const otherProject = (await (await as('rahim')).post('/tasks/projects', { name: 'Beta site', clientId: other.id })).body;
+      const otherProject = (await (await as('rahim')).post('/projects/projects', { name: 'Beta site', clientId: other.id })).body;
       expect((await kamrul.post('/accounts/invoices', { projectIds: [project.id, otherProject.id], from: today(), to: today() })).body.error.fields[0].path).toBe('projectIds');
       expect((await kamrul.post('/accounts/invoices', { clientId: other.id, from: today(), to: today() })).body.error.code).toBe('nothing_to_invoice');
     });

@@ -5619,12 +5619,12 @@
       ]
     },
     {
-      "name": "Tasks",
+      "name": "Project management",
       "routes": [
         {
-          "id": "GET /tasks/projects",
+          "id": "GET /projects/projects",
           "method": "GET",
-          "path": "/tasks/projects",
+          "path": "/projects/projects",
           "purpose": "Lists projects whose lead or members the caller's scope reaches.",
           "input": "page, pageSize, status",
           "access": "project.read",
@@ -5635,7 +5635,7 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects",
+                "path": "/projects/projects",
                 "as": "rahim@twintrack.test"
               }
             },
@@ -5645,7 +5645,7 @@
               "expected": 403,
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects",
+                "path": "/projects/projects",
                 "as": "karim@twintrack.test"
               },
               "code": "forbidden"
@@ -5653,9 +5653,9 @@
           ]
         },
         {
-          "id": "POST /tasks/projects",
+          "id": "POST /projects/projects",
           "method": "POST",
-          "path": "/tasks/projects",
+          "path": "/projects/projects",
           "purpose": "Creates a project. The caller leads it unless leadId says otherwise.",
           "input": "name, description, totalAllocatedHours, deadline, leadId, memberIds",
           "access": "project.create",
@@ -5666,7 +5666,7 @@
               "expected": 201,
               "request": {
                 "method": "POST",
-                "path": "/tasks/projects",
+                "path": "/projects/projects",
                 "as": "rahim@twintrack.test",
                 "body": "{\"name\":\"Try-page project\",\"memberIds\":[\"u_07\"]}"
               }
@@ -5677,7 +5677,7 @@
               "expected": 403,
               "request": {
                 "method": "POST",
-                "path": "/tasks/projects",
+                "path": "/projects/projects",
                 "as": "rahim@twintrack.test",
                 "body": "{\"name\":\"Finance\",\"leadId\":\"u_05\"}"
               },
@@ -5686,9 +5686,9 @@
           ]
         },
         {
-          "id": "GET /tasks/projects/:id",
+          "id": "GET /projects/projects/:id",
           "method": "GET",
-          "path": "/tasks/projects/:id",
+          "path": "/projects/projects/:id",
           "purpose": "Reads one project with its lead and members.",
           "input": "project id",
           "access": "project.read",
@@ -5699,7 +5699,7 @@
               "expected": 404,
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/p_missing",
+                "path": "/projects/projects/p_missing",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_project"
@@ -5710,7 +5710,7 @@
               "expected": 403,
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/p_missing",
+                "path": "/projects/projects/p_missing",
                 "as": "karim@twintrack.test"
               },
               "code": "forbidden"
@@ -5722,7 +5722,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -5732,16 +5732,16 @@
               ],
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/{{projectId}}",
+                "path": "/projects/projects/{{projectId}}",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "PATCH /tasks/projects/:id",
+          "id": "PATCH /projects/projects/:id",
           "method": "PATCH",
-          "path": "/tasks/projects/:id",
+          "path": "/projects/projects/:id",
           "purpose": "Changes a project's details, status or lead.",
           "input": "name, description, totalAllocatedHours, deadline, leadId, status, version",
           "access": "project.update",
@@ -5752,7 +5752,7 @@
               "expected": 404,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/projects/p_missing",
+                "path": "/projects/projects/p_missing",
                 "as": "rahim@twintrack.test",
                 "body": "{\"name\":\"New\"}"
               },
@@ -5764,7 +5764,7 @@
               "expected": 422,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/projects/p_missing",
+                "path": "/projects/projects/p_missing",
                 "as": "rahim@twintrack.test",
                 "body": "{}"
               },
@@ -5777,7 +5777,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -5788,7 +5788,7 @@
               "changesData": true,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/projects/{{projectId}}",
+                "path": "/projects/projects/{{projectId}}",
                 "as": "rahim@twintrack.test",
                 "body": "{\"status\":\"on_hold\"}"
               }
@@ -5796,9 +5796,9 @@
           ]
         },
         {
-          "id": "PUT /tasks/projects/:id/members",
+          "id": "PUT /projects/projects/:id/members",
           "method": "PUT",
-          "path": "/tasks/projects/:id/members",
+          "path": "/projects/projects/:id/members",
           "purpose": "Replaces the member list. Members with open tasks stay.",
           "input": "memberIds, version",
           "access": "project.update",
@@ -5809,7 +5809,7 @@
               "expected": 404,
               "request": {
                 "method": "PUT",
-                "path": "/tasks/projects/p_missing/members",
+                "path": "/projects/projects/p_missing/members",
                 "as": "rahim@twintrack.test",
                 "body": "{\"memberIds\":[]}"
               },
@@ -5822,7 +5822,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -5833,7 +5833,7 @@
               "changesData": true,
               "request": {
                 "method": "PUT",
-                "path": "/tasks/projects/{{projectId}}/members",
+                "path": "/projects/projects/{{projectId}}/members",
                 "as": "rahim@twintrack.test",
                 "body": "{\"memberIds\":[\"u_07\",\"u_09\",\"u_10\"]}"
               }
@@ -5841,9 +5841,9 @@
           ]
         },
         {
-          "id": "GET /tasks/tasks",
+          "id": "GET /projects/tasks",
           "method": "GET",
-          "path": "/tasks/tasks",
+          "path": "/projects/tasks",
           "purpose": "Lists tasks linked to people the caller's scope reaches.",
           "input": "page, pageSize, projectId, status, assignedDevId, overdue",
           "access": "task.read",
@@ -5854,7 +5854,7 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks",
+                "path": "/projects/tasks",
                 "as": "rahim@twintrack.test"
               }
             },
@@ -5864,7 +5864,7 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks?overdue=true",
+                "path": "/projects/tasks?overdue=true",
                 "as": "rahim@twintrack.test"
               }
             },
@@ -5874,7 +5874,7 @@
               "expected": 403,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks",
+                "path": "/projects/tasks",
                 "as": "karim@twintrack.test"
               },
               "code": "forbidden"
@@ -5882,9 +5882,9 @@
           ]
         },
         {
-          "id": "POST /tasks/tasks",
+          "id": "POST /projects/tasks",
           "method": "POST",
-          "path": "/tasks/tasks",
+          "path": "/projects/tasks",
           "purpose": "Creates a task in a project, for its lead or a member.",
           "input": "projectId, title, description, assignedDevId, tlId, estimatedHours, dueDate",
           "access": "task.create",
@@ -5895,7 +5895,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks",
+                "path": "/projects/tasks",
                 "as": "rahim@twintrack.test",
                 "body": "{\"projectId\":\"p_missing\",\"title\":\"T\",\"assignedDevId\":\"u_07\",\"estimatedHours\":1}"
               },
@@ -5908,7 +5908,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -5919,7 +5919,7 @@
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks",
+                "path": "/projects/tasks",
                 "as": "rahim@twintrack.test",
                 "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}"
               }
@@ -5927,9 +5927,9 @@
           ]
         },
         {
-          "id": "GET /tasks/tasks/:id",
+          "id": "GET /projects/tasks/:id",
           "method": "GET",
-          "path": "/tasks/tasks/:id",
+          "path": "/projects/tasks/:id",
           "purpose": "Reads one task with the tasks it links to and from.",
           "input": "task id",
           "access": "task.read",
@@ -5940,7 +5940,7 @@
               "expected": 404,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/t_missing",
+                "path": "/projects/tasks/t_missing",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -5952,7 +5952,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -5961,7 +5961,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -5971,7 +5971,7 @@
               ],
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/{{taskId}}",
+                "path": "/projects/tasks/{{taskId}}",
                 "as": "arif@twintrack.test"
               }
             },
@@ -5983,7 +5983,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -5992,7 +5992,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6002,16 +6002,16 @@
               ],
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/{{taskId}}",
+                "path": "/projects/tasks/{{taskId}}",
                 "as": "sumaiya@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "PATCH /tasks/tasks/:id",
+          "id": "PATCH /projects/tasks/:id",
           "method": "PATCH",
-          "path": "/tasks/tasks/:id",
+          "path": "/projects/tasks/:id",
           "purpose": "Changes an open task's details or assignee.",
           "input": "title, description, assignedDevId, tlId, estimatedHours, dueDate, version",
           "access": "task.update",
@@ -6022,7 +6022,7 @@
               "expected": 404,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/t_missing",
+                "path": "/projects/tasks/t_missing",
                 "as": "rahim@twintrack.test",
                 "body": "{\"title\":\"New\"}"
               },
@@ -6035,7 +6035,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6044,7 +6044,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6055,7 +6055,7 @@
               "changesData": true,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/{{taskId}}",
+                "path": "/projects/tasks/{{taskId}}",
                 "as": "rahim@twintrack.test",
                 "body": "{\"estimatedHours\":6}"
               }
@@ -6063,9 +6063,9 @@
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/start",
+          "id": "POST /projects/tasks/:id/start",
           "method": "POST",
-          "path": "/tasks/tasks/:id/start",
+          "path": "/projects/tasks/:id/start",
           "purpose": "Starts or resumes the assignee's timer. Only the assignee.",
           "input": "nothing",
           "access": "task.read",
@@ -6076,7 +6076,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/start",
+                "path": "/projects/tasks/t_missing/start",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -6088,7 +6088,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6097,7 +6097,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6108,7 +6108,7 @@
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/start",
+                "path": "/projects/tasks/{{taskId}}/start",
                 "as": "arif@twintrack.test"
               }
             },
@@ -6120,7 +6120,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6129,7 +6129,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6139,16 +6139,16 @@
               ],
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/start",
+                "path": "/projects/tasks/{{taskId}}/start",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/pause",
+          "id": "POST /projects/tasks/:id/pause",
           "method": "POST",
-          "path": "/tasks/tasks/:id/pause",
+          "path": "/projects/tasks/:id/pause",
           "purpose": "Pauses the assignee's timer. Only the assignee.",
           "input": "nothing",
           "access": "task.read",
@@ -6159,7 +6159,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/pause",
+                "path": "/projects/tasks/t_missing/pause",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -6171,7 +6171,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6180,7 +6180,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6189,23 +6189,23 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 }
               ],
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/pause",
+                "path": "/projects/tasks/{{taskId}}/pause",
                 "as": "arif@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/complete",
+          "id": "POST /projects/tasks/:id/complete",
           "method": "POST",
-          "path": "/tasks/tasks/:id/complete",
+          "path": "/projects/tasks/:id/complete",
           "purpose": "Stops the timer and sends the task for approval. Only the assignee.",
           "input": "nothing",
           "access": "task.read",
@@ -6216,7 +6216,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/complete",
+                "path": "/projects/tasks/t_missing/complete",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -6228,7 +6228,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6237,7 +6237,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6246,23 +6246,23 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 }
               ],
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/complete",
+                "path": "/projects/tasks/{{taskId}}/complete",
                 "as": "arif@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/qa-start",
+          "id": "POST /projects/tasks/:id/qa-start",
           "method": "POST",
-          "path": "/tasks/tasks/:id/qa-start",
+          "path": "/projects/tasks/:id/qa-start",
           "purpose": "Starts or resumes the QA timer. Only the QA person.",
           "input": "nothing",
           "access": "task.read",
@@ -6273,7 +6273,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/qa-start",
+                "path": "/projects/tasks/t_missing/qa-start",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -6285,7 +6285,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6294,7 +6294,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6303,17 +6303,17 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-handover",
+                  "path": "/projects/tasks/{{taskId}}/qa-handover",
                   "as": "rahim@twintrack.test",
                   "body": "{\"qaId\":\"u_09\",\"qaEstimatedHours\":2}"
                 }
@@ -6321,7 +6321,7 @@
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/qa-start",
+                "path": "/projects/tasks/{{taskId}}/qa-start",
                 "as": "mehedi@twintrack.test"
               }
             },
@@ -6333,7 +6333,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6342,7 +6342,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6351,33 +6351,33 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-handover",
+                  "path": "/projects/tasks/{{taskId}}/qa-handover",
                   "as": "rahim@twintrack.test",
                   "body": "{\"qaId\":\"u_09\",\"qaEstimatedHours\":2}"
                 }
               ],
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/qa-start",
+                "path": "/projects/tasks/{{taskId}}/qa-start",
                 "as": "arif@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/qa-pause",
+          "id": "POST /projects/tasks/:id/qa-pause",
           "method": "POST",
-          "path": "/tasks/tasks/:id/qa-pause",
+          "path": "/projects/tasks/:id/qa-pause",
           "purpose": "Pauses the QA timer. Only the QA person.",
           "input": "nothing",
           "access": "task.read",
@@ -6388,7 +6388,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/qa-pause",
+                "path": "/projects/tasks/t_missing/qa-pause",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -6400,7 +6400,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6409,7 +6409,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6418,39 +6418,39 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-handover",
+                  "path": "/projects/tasks/{{taskId}}/qa-handover",
                   "as": "rahim@twintrack.test",
                   "body": "{\"qaId\":\"u_09\",\"qaEstimatedHours\":2}"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-start",
+                  "path": "/projects/tasks/{{taskId}}/qa-start",
                   "as": "mehedi@twintrack.test"
                 }
               ],
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/qa-pause",
+                "path": "/projects/tasks/{{taskId}}/qa-pause",
                 "as": "mehedi@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/qa-handover",
+          "id": "POST /projects/tasks/:id/qa-handover",
           "method": "POST",
-          "path": "/tasks/tasks/:id/qa-handover",
+          "path": "/projects/tasks/:id/qa-handover",
           "purpose": "Hands a completed task to a project member for QA.",
           "input": "qaId, qaEstimatedHours",
           "access": "task.update",
@@ -6461,7 +6461,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/qa-handover",
+                "path": "/projects/tasks/t_missing/qa-handover",
                 "as": "rahim@twintrack.test",
                 "body": "{\"qaId\":\"u_09\"}"
               },
@@ -6474,7 +6474,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6483,7 +6483,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6492,19 +6492,19 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 }
               ],
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/qa-handover",
+                "path": "/projects/tasks/{{taskId}}/qa-handover",
                 "as": "rahim@twintrack.test",
                 "body": "{\"qaId\":\"u_09\",\"qaEstimatedHours\":2}"
               }
@@ -6512,9 +6512,9 @@
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/qa-complete",
+          "id": "POST /projects/tasks/:id/qa-complete",
           "method": "POST",
-          "path": "/tasks/tasks/:id/qa-complete",
+          "path": "/projects/tasks/:id/qa-complete",
           "purpose": "Stops the QA timer, records pass or fail, and sends the task for approval.",
           "input": "result",
           "access": "task.read",
@@ -6525,7 +6525,7 @@
               "expected": 422,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/qa-complete",
+                "path": "/projects/tasks/t_missing/qa-complete",
                 "as": "rahim@twintrack.test",
                 "body": "{}"
               },
@@ -6538,7 +6538,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6547,7 +6547,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6556,30 +6556,30 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-handover",
+                  "path": "/projects/tasks/{{taskId}}/qa-handover",
                   "as": "rahim@twintrack.test",
                   "body": "{\"qaId\":\"u_09\",\"qaEstimatedHours\":2}"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-start",
+                  "path": "/projects/tasks/{{taskId}}/qa-start",
                   "as": "mehedi@twintrack.test"
                 }
               ],
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/qa-complete",
+                "path": "/projects/tasks/{{taskId}}/qa-complete",
                 "as": "mehedi@twintrack.test",
                 "body": "{\"result\":\"pass\"}"
               }
@@ -6587,9 +6587,9 @@
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/approve",
+          "id": "POST /projects/tasks/:id/approve",
           "method": "POST",
-          "path": "/tasks/tasks/:id/approve",
+          "path": "/projects/tasks/:id/approve",
           "purpose": "Settles the hours and marks the task done. Nobody approves their own work.",
           "input": "hours, qaHours, version",
           "access": "task.approve",
@@ -6600,7 +6600,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/approve",
+                "path": "/projects/tasks/t_missing/approve",
                 "as": "rahim@twintrack.test",
                 "body": "{\"hours\":{\"basis\":\"estimated\"}}"
               },
@@ -6612,7 +6612,7 @@
               "expected": 403,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/approve",
+                "path": "/projects/tasks/t_missing/approve",
                 "as": "karim@twintrack.test",
                 "body": "{\"hours\":{\"basis\":\"estimated\"}}"
               },
@@ -6625,7 +6625,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6634,7 +6634,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6643,28 +6643,28 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-handover",
+                  "path": "/projects/tasks/{{taskId}}/qa-handover",
                   "as": "rahim@twintrack.test",
                   "body": "{\"qaId\":\"u_09\",\"qaEstimatedHours\":2}"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-start",
+                  "path": "/projects/tasks/{{taskId}}/qa-start",
                   "as": "mehedi@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-complete",
+                  "path": "/projects/tasks/{{taskId}}/qa-complete",
                   "as": "mehedi@twintrack.test",
                   "body": "{\"result\":\"pass\"}"
                 }
@@ -6672,7 +6672,7 @@
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/approve",
+                "path": "/projects/tasks/{{taskId}}/approve",
                 "as": "rahim@twintrack.test",
                 "body": "{\"hours\":{\"basis\":\"estimated\"},\"qaHours\":{\"basis\":\"actual\"}}"
               }
@@ -6685,7 +6685,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6694,7 +6694,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6704,7 +6704,7 @@
               ],
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/approve",
+                "path": "/projects/tasks/{{taskId}}/approve",
                 "as": "rahim@twintrack.test",
                 "body": "{\"hours\":{\"basis\":\"estimated\"}}"
               }
@@ -6712,9 +6712,9 @@
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/revert",
+          "id": "POST /projects/tasks/:id/revert",
           "method": "POST",
-          "path": "/tasks/tasks/:id/revert",
+          "path": "/projects/tasks/:id/revert",
           "purpose": "Sends a task back to the assignee, with the reason saved as a comment.",
           "input": "comment",
           "access": "task.approve",
@@ -6725,7 +6725,7 @@
               "expected": 422,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/revert",
+                "path": "/projects/tasks/t_missing/revert",
                 "as": "rahim@twintrack.test",
                 "body": "{}"
               },
@@ -6738,7 +6738,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6747,7 +6747,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6756,19 +6756,19 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 }
               ],
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/revert",
+                "path": "/projects/tasks/{{taskId}}/revert",
                 "as": "rahim@twintrack.test",
                 "body": "{\"comment\":\"The export drops the last row.\"}"
               }
@@ -6776,9 +6776,9 @@
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/cancel",
+          "id": "POST /projects/tasks/:id/cancel",
           "method": "POST",
-          "path": "/tasks/tasks/:id/cancel",
+          "path": "/projects/tasks/:id/cancel",
           "purpose": "Cancels an open task. A done task can't be cancelled.",
           "input": "nothing",
           "access": "task.delete",
@@ -6789,7 +6789,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/cancel",
+                "path": "/projects/tasks/t_missing/cancel",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -6801,7 +6801,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6810,7 +6810,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6821,16 +6821,16 @@
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/cancel",
+                "path": "/projects/tasks/{{taskId}}/cancel",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/tasks/:id/history",
+          "id": "GET /projects/tasks/:id/history",
           "method": "GET",
-          "path": "/tasks/tasks/:id/history",
+          "path": "/projects/tasks/:id/history",
           "purpose": "What changed on a task, who changed it and when.",
           "input": "page, pageSize",
           "access": "task.read",
@@ -6841,7 +6841,7 @@
               "expected": 404,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/t_missing/history",
+                "path": "/projects/tasks/t_missing/history",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -6853,7 +6853,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6862,7 +6862,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6871,22 +6871,22 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 }
               ],
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/{{taskId}}/history",
+                "path": "/projects/tasks/{{taskId}}/history",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/tasks/:id/comments",
+          "id": "GET /projects/tasks/:id/comments",
           "method": "GET",
-          "path": "/tasks/tasks/:id/comments",
+          "path": "/projects/tasks/:id/comments",
           "purpose": "A task's comments, oldest first.",
           "input": "page, pageSize",
           "access": "task.read",
@@ -6897,7 +6897,7 @@
               "expected": 404,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/t_missing/comments",
+                "path": "/projects/tasks/t_missing/comments",
                 "as": "rahim@twintrack.test"
               },
               "code": "unknown_task"
@@ -6909,7 +6909,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6918,7 +6918,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6928,16 +6928,16 @@
               ],
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/{{taskId}}/comments",
+                "path": "/projects/tasks/{{taskId}}/comments",
                 "as": "arif@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/comments",
+          "id": "POST /projects/tasks/:id/comments",
           "method": "POST",
-          "path": "/tasks/tasks/:id/comments",
+          "path": "/projects/tasks/:id/comments",
           "purpose": "Adds a comment. Comments are never edited or deleted.",
           "input": "body",
           "access": "task.read",
@@ -6948,7 +6948,7 @@
               "expected": 404,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/t_missing/comments",
+                "path": "/projects/tasks/t_missing/comments",
                 "as": "rahim@twintrack.test",
                 "body": "{\"body\":\"Hi\"}"
               },
@@ -6961,7 +6961,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -6970,7 +6970,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -6981,7 +6981,7 @@
               "changesData": true,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/comments",
+                "path": "/projects/tasks/{{taskId}}/comments",
                 "as": "arif@twintrack.test",
                 "body": "{\"body\":\"Started on the CSV part.\"}"
               }
@@ -6989,9 +6989,9 @@
           ]
         },
         {
-          "id": "PUT /tasks/tasks/:id/references",
+          "id": "PUT /projects/tasks/:id/references",
           "method": "PUT",
-          "path": "/tasks/tasks/:id/references",
+          "path": "/projects/tasks/:id/references",
           "purpose": "Replaces the tasks this one links to.",
           "input": "taskIds",
           "access": "task.update",
@@ -7002,7 +7002,7 @@
               "expected": 404,
               "request": {
                 "method": "PUT",
-                "path": "/tasks/tasks/t_missing/references",
+                "path": "/projects/tasks/t_missing/references",
                 "as": "rahim@twintrack.test",
                 "body": "{\"taskIds\":[]}"
               },
@@ -7015,7 +7015,7 @@
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7024,7 +7024,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7033,7 +7033,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Second task\",\"assignedDevId\":\"u_09\",\"estimatedHours\":3}",
                   "save": {
@@ -7044,7 +7044,7 @@
               "changesData": true,
               "request": {
                 "method": "PUT",
-                "path": "/tasks/tasks/{{taskId}}/references",
+                "path": "/projects/tasks/{{taskId}}/references",
                 "as": "rahim@twintrack.test",
                 "body": "{\"taskIds\":[\"{{otherTaskId}}\"]}"
               }
@@ -7052,9 +7052,9 @@
           ]
         },
         {
-          "id": "GET /tasks/tasks/summary",
+          "id": "GET /projects/tasks/summary",
           "method": "GET",
-          "path": "/tasks/tasks/summary",
+          "path": "/projects/tasks/summary",
           "purpose": "Totals over the tasks the filters match within your scope: count, estimated, actual and variance hours, and points.",
           "input": "The list filters",
           "access": "Needs task.read",
@@ -7065,13 +7065,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/summary?projectId={{projectId}}",
+                "path": "/projects/tasks/summary?projectId={{projectId}}",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7080,7 +7080,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7096,16 +7096,16 @@
               "code": "forbidden",
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/summary",
+                "path": "/projects/tasks/summary",
                 "as": "karim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/tasks/export",
+          "id": "GET /projects/tasks/export",
           "method": "GET",
-          "path": "/tasks/tasks/export",
+          "path": "/projects/tasks/export",
           "purpose": "The filtered tasks as a CSV file, one row per task, with fields you may not see left empty. At most 5,000 rows.",
           "input": "The list filters",
           "access": "Needs task.read",
@@ -7116,13 +7116,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/export?projectId={{projectId}}",
+                "path": "/projects/tasks/export?projectId={{projectId}}",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7131,7 +7131,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7147,16 +7147,16 @@
               "code": "validation_failed",
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/export?flagged=maybe",
+                "path": "/projects/tasks/export?flagged=maybe",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/tasks/search",
+          "id": "GET /projects/tasks/search",
           "method": "GET",
-          "path": "/tasks/tasks/search",
+          "path": "/projects/tasks/search",
           "purpose": "Up to 15 tasks matching a title or number (T-00102, 00102 or 102), for pickers.",
           "input": "search",
           "access": "Needs task.read",
@@ -7167,13 +7167,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/search?search=demo",
+                "path": "/projects/tasks/search?search=demo",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7182,7 +7182,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7198,16 +7198,16 @@
               "code": "validation_failed",
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/search",
+                "path": "/projects/tasks/search",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "PATCH /tasks/tasks/:id/qa-estimate",
+          "id": "PATCH /projects/tasks/:id/qa-estimate",
           "method": "PATCH",
-          "path": "/tasks/tasks/:id/qa-estimate",
+          "path": "/projects/tasks/:id/qa-estimate",
           "purpose": "Sets or changes the QA estimate, before QA starts. QA can only start once there is one.",
           "input": "qaEstimatedHours, version (optional)",
           "access": "Needs task.update",
@@ -7218,14 +7218,14 @@
               "expected": 200,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/{{taskId}}/qa-estimate",
+                "path": "/projects/tasks/{{taskId}}/qa-estimate",
                 "as": "rahim@twintrack.test",
                 "body": "{\"qaEstimatedHours\":2}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7234,7 +7234,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7243,17 +7243,17 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/qa-handover",
+                  "path": "/projects/tasks/{{taskId}}/qa-handover",
                   "as": "rahim@twintrack.test",
                   "body": "{\"qaId\":\"u_09\"}"
                 }
@@ -7267,14 +7267,14 @@
               "code": "invalid_status",
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/{{taskId}}/qa-estimate",
+                "path": "/projects/tasks/{{taskId}}/qa-estimate",
                 "as": "rahim@twintrack.test",
                 "body": "{\"qaEstimatedHours\":2}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7283,7 +7283,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7295,9 +7295,9 @@
           ]
         },
         {
-          "id": "PATCH /tasks/tasks/:id/flag",
+          "id": "PATCH /projects/tasks/:id/flag",
           "method": "PATCH",
-          "path": "/tasks/tasks/:id/flag",
+          "path": "/projects/tasks/:id/flag",
           "purpose": "Raises or clears a flag for follow-up, with a note, at any status. Field access to flagged decides who, so HR can be given flagging alone.",
           "input": "flagged, flagNote (optional)",
           "access": "Needs task.update",
@@ -7308,14 +7308,14 @@
               "expected": 200,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/{{taskId}}/flag",
+                "path": "/projects/tasks/{{taskId}}/flag",
                 "as": "rahim@twintrack.test",
                 "body": "{\"flagged\":true,\"flagNote\":\"Check the hours\"}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7324,7 +7324,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7341,7 +7341,7 @@
               "code": "forbidden",
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/t_missing/flag",
+                "path": "/projects/tasks/t_missing/flag",
                 "as": "mehedi@twintrack.test",
                 "body": "{\"flagged\":true}"
               }
@@ -7349,9 +7349,9 @@
           ]
         },
         {
-          "id": "PATCH /tasks/tasks/:id/billable",
+          "id": "PATCH /projects/tasks/:id/billable",
           "method": "PATCH",
-          "path": "/tasks/tasks/:id/billable",
+          "path": "/projects/tasks/:id/billable",
           "purpose": "Marks the hours as billed to the client or not.",
           "input": "billable",
           "access": "Needs task.update",
@@ -7362,14 +7362,14 @@
               "expected": 200,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/{{taskId}}/billable",
+                "path": "/projects/tasks/{{taskId}}/billable",
                 "as": "rahim@twintrack.test",
                 "body": "{\"billable\":false}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7378,7 +7378,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7395,7 +7395,7 @@
               "code": "unknown_task",
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/t_missing/billable",
+                "path": "/projects/tasks/t_missing/billable",
                 "as": "rahim@twintrack.test",
                 "body": "{\"billable\":false}"
               }
@@ -7403,9 +7403,9 @@
           ]
         },
         {
-          "id": "PATCH /tasks/tasks/:id/actual-hours",
+          "id": "PATCH /projects/tasks/:id/actual-hours",
           "method": "PATCH",
-          "path": "/tasks/tasks/:id/actual-hours",
+          "path": "/projects/tasks/:id/actual-hours",
           "purpose": "Corrects the hours the timer recorded, once there are some. Approved hours and points stay as they were.",
           "input": "actualHours, version (optional)",
           "access": "Needs task.update",
@@ -7416,14 +7416,14 @@
               "expected": 200,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/{{taskId}}/actual-hours",
+                "path": "/projects/tasks/{{taskId}}/actual-hours",
                 "as": "rahim@twintrack.test",
                 "body": "{\"actualHours\":7.5}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7432,7 +7432,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7441,12 +7441,12 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/start",
+                  "path": "/projects/tasks/{{taskId}}/start",
                   "as": "arif@twintrack.test"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/complete",
+                  "path": "/projects/tasks/{{taskId}}/complete",
                   "as": "arif@twintrack.test"
                 }
               ],
@@ -7459,14 +7459,14 @@
               "code": "no_actual_hours",
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/tasks/{{taskId}}/actual-hours",
+                "path": "/projects/tasks/{{taskId}}/actual-hours",
                 "as": "rahim@twintrack.test",
                 "body": "{\"actualHours\":3}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7475,7 +7475,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7487,9 +7487,9 @@
           ]
         },
         {
-          "id": "GET /tasks/tasks/:id/attachments",
+          "id": "GET /projects/tasks/:id/attachments",
           "method": "GET",
-          "path": "/tasks/tasks/:id/attachments",
+          "path": "/projects/tasks/:id/attachments",
           "purpose": "A task's files, with the space they take out of 5 GB.",
           "input": "nothing",
           "access": "Needs task.read",
@@ -7500,13 +7500,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/{{taskId}}/attachments",
+                "path": "/projects/tasks/{{taskId}}/attachments",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7515,7 +7515,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7531,16 +7531,16 @@
               "code": "unknown_task",
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/t_missing/attachments",
+                "path": "/projects/tasks/t_missing/attachments",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/attachments",
+          "id": "POST /projects/tasks/:id/attachments",
           "method": "POST",
-          "path": "/tasks/tasks/:id/attachments",
+          "path": "/projects/tasks/:id/attachments",
           "purpose": "Starts uploading a file of any type: reserves its space, and says how to split it into 64 MB parts.",
           "input": "fileName, mimeType (optional), sizeBytes",
           "access": "Needs task.read",
@@ -7551,14 +7551,14 @@
               "expected": 201,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/attachments",
+                "path": "/projects/tasks/{{taskId}}/attachments",
                 "as": "rahim@twintrack.test",
                 "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7567,7 +7567,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7584,14 +7584,14 @@
               "code": "validation_failed",
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/attachments",
+                "path": "/projects/tasks/{{taskId}}/attachments",
                 "as": "rahim@twintrack.test",
                 "body": "{\"fileName\":\"huge.iso\",\"sizeBytes\":6442450944}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7600,7 +7600,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7612,9 +7612,9 @@
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/attachments/:attachmentId/part-urls",
+          "id": "POST /projects/tasks/:id/attachments/:attachmentId/part-urls",
           "method": "POST",
-          "path": "/tasks/tasks/:id/attachments/:attachmentId/part-urls",
+          "path": "/projects/tasks/:id/attachments/:attachmentId/part-urls",
           "purpose": "Short-lived addresses the browser PUTs each part to. Only for whoever started the upload.",
           "input": "partNumbers",
           "access": "Needs task.read",
@@ -7625,14 +7625,14 @@
               "expected": 200,
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}/part-urls",
+                "path": "/projects/tasks/{{taskId}}/attachments/{{attachmentId}}/part-urls",
                 "as": "rahim@twintrack.test",
                 "body": "{\"partNumbers\":[1]}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7641,7 +7641,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7650,7 +7650,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "path": "/projects/tasks/{{taskId}}/attachments",
                   "as": "rahim@twintrack.test",
                   "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
                   "save": {
@@ -7666,14 +7666,14 @@
               "code": "not_your_upload",
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}/part-urls",
+                "path": "/projects/tasks/{{taskId}}/attachments/{{attachmentId}}/part-urls",
                 "as": "arif@twintrack.test",
                 "body": "{\"partNumbers\":[1]}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7682,7 +7682,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7691,7 +7691,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "path": "/projects/tasks/{{taskId}}/attachments",
                   "as": "rahim@twintrack.test",
                   "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
                   "save": {
@@ -7703,9 +7703,9 @@
           ]
         },
         {
-          "id": "POST /tasks/tasks/:id/attachments/:attachmentId/complete",
+          "id": "POST /projects/tasks/:id/attachments/:attachmentId/complete",
           "method": "POST",
-          "path": "/tasks/tasks/:id/attachments/:attachmentId/complete",
+          "path": "/projects/tasks/:id/attachments/:attachmentId/complete",
           "purpose": "Joins the uploaded parts, using each part's ETag, and checks the size.",
           "input": "parts (partNumber and etag each)",
           "access": "Needs task.read",
@@ -7717,14 +7717,14 @@
               "code": "unknown_attachment",
               "request": {
                 "method": "POST",
-                "path": "/tasks/tasks/{{taskId}}/attachments/ta_missing/complete",
+                "path": "/projects/tasks/{{taskId}}/attachments/ta_missing/complete",
                 "as": "rahim@twintrack.test",
                 "body": "{\"parts\":[{\"partNumber\":1,\"etag\":\"\\\"x\\\"\"}]}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7733,7 +7733,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7745,9 +7745,9 @@
           ]
         },
         {
-          "id": "GET /tasks/tasks/:id/attachments/:attachmentId/url",
+          "id": "GET /projects/tasks/:id/attachments/:attachmentId/url",
           "method": "GET",
-          "path": "/tasks/tasks/:id/attachments/:attachmentId/url",
+          "path": "/projects/tasks/:id/attachments/:attachmentId/url",
           "purpose": "A short-lived address that shows the file, or downloads it. Files a browser could run always download.",
           "input": "mode (view or download)",
           "access": "Needs task.read",
@@ -7759,13 +7759,13 @@
               "code": "unknown_attachment",
               "request": {
                 "method": "GET",
-                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}/url",
+                "path": "/projects/tasks/{{taskId}}/attachments/{{attachmentId}}/url",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7774,7 +7774,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7783,7 +7783,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "path": "/projects/tasks/{{taskId}}/attachments",
                   "as": "rahim@twintrack.test",
                   "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
                   "save": {
@@ -7795,9 +7795,9 @@
           ]
         },
         {
-          "id": "DELETE /tasks/tasks/:id/attachments/:attachmentId",
+          "id": "DELETE /projects/tasks/:id/attachments/:attachmentId",
           "method": "DELETE",
-          "path": "/tasks/tasks/:id/attachments/:attachmentId",
+          "path": "/projects/tasks/:id/attachments/:attachmentId",
           "purpose": "Removes a file, or cancels an unfinished upload. A file can be removed by its uploader or someone who can edit the task.",
           "input": "nothing",
           "access": "Needs task.read",
@@ -7808,13 +7808,13 @@
               "expected": 200,
               "request": {
                 "method": "DELETE",
-                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}",
+                "path": "/projects/tasks/{{taskId}}/attachments/{{attachmentId}}",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7823,7 +7823,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7832,7 +7832,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "path": "/projects/tasks/{{taskId}}/attachments",
                   "as": "rahim@twintrack.test",
                   "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
                   "save": {
@@ -7849,13 +7849,13 @@
               "code": "not_your_upload",
               "request": {
                 "method": "DELETE",
-                "path": "/tasks/tasks/{{taskId}}/attachments/{{attachmentId}}",
+                "path": "/projects/tasks/{{taskId}}/attachments/{{attachmentId}}",
                 "as": "arif@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7864,7 +7864,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7873,7 +7873,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks/{{taskId}}/attachments",
+                  "path": "/projects/tasks/{{taskId}}/attachments",
                   "as": "rahim@twintrack.test",
                   "body": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}",
                   "save": {
@@ -7885,9 +7885,9 @@
           ]
         },
         {
-          "id": "GET /tasks/projects/health",
+          "id": "GET /projects/projects/health",
           "method": "GET",
-          "path": "/tasks/projects/health",
+          "path": "/projects/projects/health",
           "purpose": "Each project in reach: hours used against allocated, open tasks, this month's lead hours and their incentive cost.",
           "input": "leadId (optional)",
           "access": "Needs project.read",
@@ -7898,13 +7898,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/health",
+                "path": "/projects/projects/health",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7913,7 +7913,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7929,16 +7929,16 @@
               "code": "forbidden",
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/health",
+                "path": "/projects/projects/health",
                 "as": "karim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/projects/roster",
+          "id": "GET /projects/projects/roster",
           "method": "GET",
-          "path": "/tasks/projects/roster",
+          "path": "/projects/projects/roster",
           "purpose": "Leads and developers on the projects in reach, with their stats and career points.",
           "input": "leadId (optional)",
           "access": "Needs project.read",
@@ -7949,13 +7949,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/roster",
+                "path": "/projects/projects/roster",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -7964,7 +7964,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/tasks",
+                  "path": "/projects/tasks",
                   "as": "rahim@twintrack.test",
                   "body": "{\"projectId\":\"{{projectId}}\",\"title\":\"Demo task\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}",
                   "save": {
@@ -7980,16 +7980,16 @@
               "code": "forbidden",
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/roster",
+                "path": "/projects/projects/roster",
                 "as": "karim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/projects/:id/credentials",
+          "id": "GET /projects/projects/:id/credentials",
           "method": "GET",
-          "path": "/tasks/projects/:id/credentials",
+          "path": "/projects/projects/:id/credentials",
           "purpose": "A project's shared logins, with passwords and the current one-time code. The code's secret is never sent.",
           "input": "nothing",
           "access": "Needs credential.read",
@@ -8000,13 +8000,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/{{projectId}}/credentials",
+                "path": "/projects/projects/{{projectId}}/credentials",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8015,7 +8015,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects/{{projectId}}/credentials",
+                  "path": "/projects/projects/{{projectId}}/credentials",
                   "as": "rahim@twintrack.test",
                   "body": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\"}",
                   "save": {
@@ -8031,13 +8031,13 @@
               "code": "out_of_scope",
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/{{projectId}}/credentials",
+                "path": "/projects/projects/{{projectId}}/credentials",
                 "as": "sumaiya@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8049,9 +8049,9 @@
           ]
         },
         {
-          "id": "POST /tasks/projects/:id/credentials",
+          "id": "POST /projects/projects/:id/credentials",
           "method": "POST",
-          "path": "/tasks/projects/:id/credentials",
+          "path": "/projects/projects/:id/credentials",
           "purpose": "Adds a shared login. Secrets are encrypted. otpSecret takes an otpauth:// link or the secret.",
           "input": "label, loginUrl, username, password, otpSecret, passcode, notes (last three optional)",
           "access": "Needs credential.create",
@@ -8062,14 +8062,14 @@
               "expected": 201,
               "request": {
                 "method": "POST",
-                "path": "/tasks/projects/{{projectId}}/credentials",
+                "path": "/projects/projects/{{projectId}}/credentials",
                 "as": "rahim@twintrack.test",
                 "body": "{\"label\":\"Sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\",\"otpSecret\":\"GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ\"}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8086,14 +8086,14 @@
               "code": "validation_failed",
               "request": {
                 "method": "POST",
-                "path": "/tasks/projects/{{projectId}}/credentials",
+                "path": "/projects/projects/{{projectId}}/credentials",
                 "as": "rahim@twintrack.test",
                 "body": "{\"label\":\"Bad\",\"loginUrl\":\"nope\",\"username\":\"x\",\"password\":\"y\"}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8105,9 +8105,9 @@
           ]
         },
         {
-          "id": "PATCH /tasks/projects/:id/credentials/:credentialId",
+          "id": "PATCH /projects/projects/:id/credentials/:credentialId",
           "method": "PATCH",
-          "path": "/tasks/projects/:id/credentials/:credentialId",
+          "path": "/projects/projects/:id/credentials/:credentialId",
           "purpose": "Changes a login. null clears the code secret, passcode or notes.",
           "input": "any of the fields, version (optional)",
           "access": "Needs credential.update",
@@ -8118,14 +8118,14 @@
               "expected": 200,
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/projects/{{projectId}}/credentials/{{credentialId}}",
+                "path": "/projects/projects/{{projectId}}/credentials/{{credentialId}}",
                 "as": "rahim@twintrack.test",
                 "body": "{\"password\":\"Changed\"}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8134,7 +8134,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects/{{projectId}}/credentials",
+                  "path": "/projects/projects/{{projectId}}/credentials",
                   "as": "rahim@twintrack.test",
                   "body": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\"}",
                   "save": {
@@ -8151,14 +8151,14 @@
               "code": "forbidden",
               "request": {
                 "method": "PATCH",
-                "path": "/tasks/projects/{{projectId}}/credentials/{{credentialId}}",
+                "path": "/projects/projects/{{projectId}}/credentials/{{credentialId}}",
                 "as": "mehedi@twintrack.test",
                 "body": "{\"label\":\"X\"}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8167,7 +8167,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects/{{projectId}}/credentials",
+                  "path": "/projects/projects/{{projectId}}/credentials",
                   "as": "rahim@twintrack.test",
                   "body": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\"}",
                   "save": {
@@ -8179,9 +8179,9 @@
           ]
         },
         {
-          "id": "DELETE /tasks/projects/:id/credentials/:credentialId",
+          "id": "DELETE /projects/projects/:id/credentials/:credentialId",
           "method": "DELETE",
-          "path": "/tasks/projects/:id/credentials/:credentialId",
+          "path": "/projects/projects/:id/credentials/:credentialId",
           "purpose": "Moves a login to the recycle bin.",
           "input": "nothing",
           "access": "Needs credential.delete",
@@ -8192,13 +8192,13 @@
               "expected": 200,
               "request": {
                 "method": "DELETE",
-                "path": "/tasks/projects/{{projectId}}/credentials/{{credentialId}}",
+                "path": "/projects/projects/{{projectId}}/credentials/{{credentialId}}",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8207,7 +8207,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects/{{projectId}}/credentials",
+                  "path": "/projects/projects/{{projectId}}/credentials",
                   "as": "rahim@twintrack.test",
                   "body": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\"}",
                   "save": {
@@ -8224,13 +8224,13 @@
               "code": "unknown_credential",
               "request": {
                 "method": "DELETE",
-                "path": "/tasks/projects/{{projectId}}/credentials/pc_missing",
+                "path": "/projects/projects/{{projectId}}/credentials/pc_missing",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8242,9 +8242,9 @@
           ]
         },
         {
-          "id": "GET /tasks/points",
+          "id": "GET /projects/points",
           "method": "GET",
-          "path": "/tasks/points",
+          "path": "/projects/points",
           "purpose": "Career points per person in your scope, highest first. Earned on approval, 5% lost on a revert.",
           "input": "page, pageSize, since (optional date)",
           "access": "Needs points.read",
@@ -8255,7 +8255,7 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/points",
+                "path": "/projects/points",
                 "as": "rahim@twintrack.test"
               }
             },
@@ -8266,16 +8266,16 @@
               "code": "forbidden",
               "request": {
                 "method": "GET",
-                "path": "/tasks/points",
+                "path": "/projects/points",
                 "as": "karim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/points/:userId",
+          "id": "GET /projects/points/:userId",
           "method": "GET",
-          "path": "/tasks/points/:userId",
+          "path": "/projects/points/:userId",
           "purpose": "One person's points and where they came from, newest first.",
           "input": "page, pageSize, since (optional)",
           "access": "Needs points.read",
@@ -8286,7 +8286,7 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/points/u_09",
+                "path": "/projects/points/u_09",
                 "as": "rahim@twintrack.test"
               }
             },
@@ -8297,16 +8297,16 @@
               "code": "out_of_scope",
               "request": {
                 "method": "GET",
-                "path": "/tasks/points/u_04",
+                "path": "/projects/points/u_04",
                 "as": "mehedi@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/incentives",
+          "id": "GET /projects/incentives",
           "method": "GET",
-          "path": "/tasks/incentives",
+          "path": "/projects/incentives",
           "purpose": "This month's (or a given month's) incentive for everyone in scope who earns one, and whether it's paid.",
           "input": "month and year (optional, together)",
           "access": "Needs incentive.read",
@@ -8317,13 +8317,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/incentives",
+                "path": "/projects/incentives",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "PUT",
-                  "path": "/tasks/incentives/settings/u_04",
+                  "path": "/projects/incentives/settings/u_04",
                   "as": "farhana@twintrack.test",
                   "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
                 }
@@ -8336,16 +8336,16 @@
               "code": "validation_failed",
               "request": {
                 "method": "GET",
-                "path": "/tasks/incentives?month=3",
+                "path": "/projects/incentives?month=3",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "POST /tasks/incentives/generate",
+          "id": "POST /projects/incentives/generate",
           "method": "POST",
-          "path": "/tasks/incentives/generate",
+          "path": "/projects/incentives/generate",
           "purpose": "Saves a month's figures for everyone in scope who earns. Paid months stay as paid.",
           "input": "month, year",
           "access": "Needs incentive.create",
@@ -8356,14 +8356,14 @@
               "expected": 200,
               "request": {
                 "method": "POST",
-                "path": "/tasks/incentives/generate",
+                "path": "/projects/incentives/generate",
                 "as": "rahim@twintrack.test",
                 "body": "{\"month\":1,\"year\":2026}"
               },
               "setup": [
                 {
                   "method": "PUT",
-                  "path": "/tasks/incentives/settings/u_04",
+                  "path": "/projects/incentives/settings/u_04",
                   "as": "farhana@twintrack.test",
                   "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
                 }
@@ -8377,7 +8377,7 @@
               "code": "forbidden",
               "request": {
                 "method": "POST",
-                "path": "/tasks/incentives/generate",
+                "path": "/projects/incentives/generate",
                 "as": "mehedi@twintrack.test",
                 "body": "{\"month\":1,\"year\":2026}"
               }
@@ -8385,9 +8385,9 @@
           ]
         },
         {
-          "id": "POST /tasks/incentives/disburse",
+          "id": "POST /projects/incentives/disburse",
           "method": "POST",
-          "path": "/tasks/incentives/disburse",
+          "path": "/projects/incentives/disburse",
           "purpose": "Pays one person's month, freezing the figures paid.",
           "input": "userId, month, year",
           "access": "Needs incentive.update",
@@ -8398,14 +8398,14 @@
               "expected": 200,
               "request": {
                 "method": "POST",
-                "path": "/tasks/incentives/disburse",
+                "path": "/projects/incentives/disburse",
                 "as": "farhana@twintrack.test",
                 "body": "{\"userId\":\"u_04\",\"month\":1,\"year\":2026}"
               },
               "setup": [
                 {
                   "method": "PUT",
-                  "path": "/tasks/incentives/settings/u_04",
+                  "path": "/projects/incentives/settings/u_04",
                   "as": "farhana@twintrack.test",
                   "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
                 }
@@ -8419,7 +8419,7 @@
               "code": "not_an_earner",
               "request": {
                 "method": "POST",
-                "path": "/tasks/incentives/disburse",
+                "path": "/projects/incentives/disburse",
                 "as": "rahim@twintrack.test",
                 "body": "{\"userId\":\"u_09\",\"month\":1,\"year\":2026}"
               }
@@ -8427,9 +8427,9 @@
           ]
         },
         {
-          "id": "GET /tasks/incentives/ledger",
+          "id": "GET /projects/incentives/ledger",
           "method": "GET",
-          "path": "/tasks/incentives/ledger",
+          "path": "/projects/incentives/ledger",
           "purpose": "Generated and paid months, newest first, within scope.",
           "input": "userId, month, year (all optional)",
           "access": "Needs incentive.read",
@@ -8440,19 +8440,19 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/incentives/ledger?userId=u_04",
+                "path": "/projects/incentives/ledger?userId=u_04",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "PUT",
-                  "path": "/tasks/incentives/settings/u_04",
+                  "path": "/projects/incentives/settings/u_04",
                   "as": "farhana@twintrack.test",
                   "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/incentives/generate",
+                  "path": "/projects/incentives/generate",
                   "as": "rahim@twintrack.test",
                   "body": "{\"month\":1,\"year\":2026}"
                 }
@@ -8465,16 +8465,16 @@
               "code": "out_of_scope",
               "request": {
                 "method": "GET",
-                "path": "/tasks/incentives/ledger?userId=u_04",
+                "path": "/projects/incentives/ledger?userId=u_04",
                 "as": "mehedi@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "GET /tasks/incentives/settings",
+          "id": "GET /projects/incentives/settings",
           "method": "GET",
-          "path": "/tasks/incentives/settings",
+          "path": "/projects/incentives/settings",
           "purpose": "Who earns the monthly incentive, at what rate, and who may get project incentives, plus the default rate.",
           "input": "nothing",
           "access": "Needs incentive.read",
@@ -8485,13 +8485,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/incentives/settings",
+                "path": "/projects/incentives/settings",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "PUT",
-                  "path": "/tasks/incentives/settings/u_04",
+                  "path": "/projects/incentives/settings/u_04",
                   "as": "farhana@twintrack.test",
                   "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
                 }
@@ -8504,16 +8504,16 @@
               "code": "forbidden",
               "request": {
                 "method": "GET",
-                "path": "/tasks/incentives/settings",
+                "path": "/projects/incentives/settings",
                 "as": "karim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "PUT /tasks/incentives/settings/:userId",
+          "id": "PUT /projects/incentives/settings/:userId",
           "method": "PUT",
-          "path": "/tasks/incentives/settings/:userId",
+          "path": "/projects/incentives/settings/:userId",
           "purpose": "Sets one person's incentive setting. A null rate uses the default.",
           "input": "earnsMonthlyIncentive, hourlyRate (or null), eligibleForProjectIncentives",
           "access": "Needs incentive.update",
@@ -8524,7 +8524,7 @@
               "expected": 200,
               "request": {
                 "method": "PUT",
-                "path": "/tasks/incentives/settings/u_04",
+                "path": "/projects/incentives/settings/u_04",
                 "as": "farhana@twintrack.test",
                 "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":true}"
               },
@@ -8537,7 +8537,7 @@
               "code": "out_of_scope",
               "request": {
                 "method": "PUT",
-                "path": "/tasks/incentives/settings/u_05",
+                "path": "/projects/incentives/settings/u_05",
                 "as": "rahim@twintrack.test",
                 "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":null,\"eligibleForProjectIncentives\":false}"
               }
@@ -8549,7 +8549,7 @@
               "code": "own_incentive",
               "request": {
                 "method": "PUT",
-                "path": "/tasks/incentives/settings/u_04",
+                "path": "/projects/incentives/settings/u_04",
                 "as": "rahim@twintrack.test",
                 "body": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":10000,\"eligibleForProjectIncentives\":false}"
               }
@@ -8557,9 +8557,9 @@
           ]
         },
         {
-          "id": "GET /tasks/projects/:id/incentives",
+          "id": "GET /projects/projects/:id/incentives",
           "method": "GET",
-          "path": "/tasks/projects/:id/incentives",
+          "path": "/projects/projects/:id/incentives",
           "purpose": "A project's members, whether each may get a project incentive, and what they were given.",
           "input": "nothing",
           "access": "Needs incentive.read",
@@ -8570,13 +8570,13 @@
               "expected": 200,
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/{{projectId}}/incentives",
+                "path": "/projects/projects/{{projectId}}/incentives",
                 "as": "rahim@twintrack.test"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8592,16 +8592,16 @@
               "code": "unknown_project",
               "request": {
                 "method": "GET",
-                "path": "/tasks/projects/p_missing/incentives",
+                "path": "/projects/projects/p_missing/incentives",
                 "as": "rahim@twintrack.test"
               }
             }
           ]
         },
         {
-          "id": "PUT /tasks/projects/:id/incentives/:userId",
+          "id": "PUT /projects/projects/:id/incentives/:userId",
           "method": "PUT",
-          "path": "/tasks/projects/:id/incentives/:userId",
+          "path": "/projects/projects/:id/incentives/:userId",
           "purpose": "Gives or changes an eligible member's project incentive.",
           "input": "enabled, amount (or null), notes (or null)",
           "access": "Needs incentive.update",
@@ -8612,14 +8612,14 @@
               "expected": 200,
               "request": {
                 "method": "PUT",
-                "path": "/tasks/projects/{{projectId}}/incentives/u_09",
+                "path": "/projects/projects/{{projectId}}/incentives/u_09",
                 "as": "rahim@twintrack.test",
                 "body": "{\"enabled\":true,\"amount\":5000,\"notes\":\"Shipped early\"}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -8628,7 +8628,7 @@
                 },
                 {
                   "method": "PUT",
-                  "path": "/tasks/incentives/settings/u_09",
+                  "path": "/projects/incentives/settings/u_09",
                   "as": "rahim@twintrack.test",
                   "body": "{\"earnsMonthlyIncentive\":false,\"hourlyRate\":null,\"eligibleForProjectIncentives\":true}"
                 }
@@ -8642,14 +8642,14 @@
               "code": "not_eligible",
               "request": {
                 "method": "PUT",
-                "path": "/tasks/projects/{{projectId}}/incentives/u_09",
+                "path": "/projects/projects/{{projectId}}/incentives/u_09",
                 "as": "rahim@twintrack.test",
                 "body": "{\"enabled\":true}"
               },
               "setup": [
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Demo project\",\"memberIds\":[\"u_07\",\"u_09\"]}",
                   "save": {
@@ -10952,7 +10952,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11013,7 +11013,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11082,7 +11082,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11242,7 +11242,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11317,7 +11317,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11390,7 +11390,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11528,7 +11528,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11589,7 +11589,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11632,7 +11632,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11683,7 +11683,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11725,7 +11725,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11781,7 +11781,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11824,7 +11824,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11875,7 +11875,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11936,7 +11936,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -11979,7 +11979,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -12030,7 +12030,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {
@@ -12071,7 +12071,7 @@
                 },
                 {
                   "method": "POST",
-                  "path": "/tasks/projects",
+                  "path": "/projects/projects",
                   "as": "rahim@twintrack.test",
                   "body": "{\"name\":\"Payroll revamp\",\"clientId\":\"{{clientId}}\"}",
                   "save": {

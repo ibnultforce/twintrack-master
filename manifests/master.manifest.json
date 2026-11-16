@@ -1,0 +1,576 @@
+{
+  "manifestVersion": 1,
+  "module": {
+    "key": "master",
+    "name": "Master",
+    "version": "3.8.0",
+    "description": "Login, users, permissions and the API behind every module.",
+    "repository": "twintrack-master",
+    "baseUrl": "/",
+    "core": true
+  },
+  "resources": [
+    {
+      "key": "user",
+      "label": "Users",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    {
+      "key": "userProfile",
+      "label": "People's profiles",
+      "actions": [
+        "update"
+      ],
+      "scoped": true
+    },
+    {
+      "key": "accessProfile",
+      "label": "Profiles",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    {
+      "key": "orgRole",
+      "label": "Org roles",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    {
+      "key": "module",
+      "label": "Modules",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    {
+      "key": "audit",
+      "label": "Activity log",
+      "actions": [
+        "read"
+      ]
+    },
+    {
+      "key": "presence",
+      "label": "Online status",
+      "actions": [
+        "read"
+      ],
+      "scoped": true
+    },
+    {
+      "key": "client",
+      "label": "Clients",
+      "actions": [
+        "read",
+        "create",
+        "update"
+      ],
+      "trackedFields": [
+        "name",
+        "initials",
+        "contactEmail",
+        "contactPhone",
+        "address",
+        "status"
+      ],
+      "recordFields": [
+        "name",
+        "initials",
+        "contactEmail",
+        "contactPhone",
+        "address",
+        "notes",
+        "status"
+      ]
+    },
+    {
+      "key": "apiToken",
+      "label": "API tokens and connected apps",
+      "actions": [
+        "read",
+        "create",
+        "delete"
+      ],
+      "scoped": true
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "access": "public"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "access": "public"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "access": "public"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "access": "public"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/set-password",
+      "access": "public"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "access": "signed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/auth/me",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/verify-password",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/stop-impersonating",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/change-password",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/me/modules",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/me/permissions/:module",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/me/heartbeat",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/directory",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/me/api-tokens",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/me/api-tokens",
+      "access": "private",
+      "permission": "apiToken.create"
+    },
+    {
+      "method": "POST",
+      "path": "/me/api-tokens/:id/revoke",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/api-tokens",
+      "access": "private",
+      "permission": "apiToken.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api-tokens/:id/revoke",
+      "access": "private",
+      "permission": "apiToken.delete"
+    },
+    {
+      "method": "GET",
+      "path": "/me/connected-apps",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/me/connected-apps/:id/revoke",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/connected-apps",
+      "access": "private",
+      "permission": "apiToken.read"
+    },
+    {
+      "method": "POST",
+      "path": "/connected-apps/:id/revoke",
+      "access": "private",
+      "permission": "apiToken.delete"
+    },
+    {
+      "method": "GET",
+      "path": "/oauth/requests/:id",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/oauth/requests/:id/decision",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "access": "private",
+      "permission": "user.read"
+    },
+    {
+      "method": "POST",
+      "path": "/users",
+      "access": "private",
+      "permission": "user.create"
+    },
+    {
+      "method": "POST",
+      "path": "/users/password-links",
+      "access": "private",
+      "permission": "user.update"
+    },
+    {
+      "method": "GET",
+      "path": "/users/next-employee-number",
+      "access": "private",
+      "permission": "user.create"
+    },
+    {
+      "method": "GET",
+      "path": "/users/access-options",
+      "access": "private",
+      "anyPermission": [
+        "user.read",
+        "userProfile.update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/:id",
+      "access": "private",
+      "permission": "user.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/users/:id",
+      "access": "private",
+      "permission": "user.update"
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/:id",
+      "access": "private",
+      "permission": "user.delete"
+    },
+    {
+      "method": "POST",
+      "path": "/users/:id/impersonate",
+      "access": "signed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/users/:id/status",
+      "access": "private",
+      "permission": "user.update"
+    },
+    {
+      "method": "GET",
+      "path": "/users/:id/photo",
+      "access": "signed"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/:id/photo",
+      "access": "signed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/:id/photo",
+      "access": "signed"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/:id/profile",
+      "access": "private",
+      "permission": "userProfile.update"
+    },
+    {
+      "method": "GET",
+      "path": "/modules/:key/people",
+      "access": "private",
+      "anyPermission": [
+        "user.read",
+        "userProfile.update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/modules/:key/addable-people",
+      "access": "private",
+      "permission": "userProfile.update"
+    },
+    {
+      "method": "GET",
+      "path": "/modules",
+      "access": "private",
+      "permission": "module.read"
+    },
+    {
+      "method": "POST",
+      "path": "/modules/import",
+      "access": "private",
+      "permission": "module.create"
+    },
+    {
+      "method": "GET",
+      "path": "/modules/:key/export",
+      "access": "private",
+      "permission": "module.read"
+    },
+    {
+      "method": "DELETE",
+      "path": "/modules/:key",
+      "access": "private",
+      "permission": "module.delete"
+    },
+    {
+      "method": "PUT",
+      "path": "/modules/:key/resources/:resource",
+      "access": "private",
+      "anyPermission": [
+        "module.create",
+        "module.update"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/modules/:key/route-access",
+      "access": "private",
+      "permission": "module.update"
+    },
+    {
+      "method": "DELETE",
+      "path": "/modules/:key/resources/:resource",
+      "access": "private",
+      "permission": "module.delete"
+    },
+    {
+      "method": "GET",
+      "path": "/org-roles",
+      "access": "private",
+      "permission": "orgRole.read"
+    },
+    {
+      "method": "POST",
+      "path": "/org-roles",
+      "access": "private",
+      "permission": "orgRole.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/org-roles/:id",
+      "access": "private",
+      "permission": "orgRole.update"
+    },
+    {
+      "method": "DELETE",
+      "path": "/org-roles/:id",
+      "access": "private",
+      "permission": "orgRole.delete"
+    },
+    {
+      "method": "GET",
+      "path": "/access-profiles",
+      "access": "private",
+      "permission": "accessProfile.read"
+    },
+    {
+      "method": "POST",
+      "path": "/access-profiles",
+      "access": "private",
+      "permission": "accessProfile.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/access-profiles/:id",
+      "access": "private",
+      "permission": "accessProfile.update"
+    },
+    {
+      "method": "DELETE",
+      "path": "/access-profiles/:id",
+      "access": "private",
+      "permission": "accessProfile.delete"
+    },
+    {
+      "method": "GET",
+      "path": "/audit",
+      "access": "private",
+      "permission": "audit.read"
+    },
+    {
+      "method": "POST",
+      "path": "/modules/:key/objects",
+      "access": "private",
+      "permission": "module.create"
+    },
+    {
+      "method": "PUT",
+      "path": "/modules/:key/objects/:object",
+      "access": "private",
+      "permission": "module.update"
+    },
+    {
+      "method": "DELETE",
+      "path": "/modules/:key/objects/:object",
+      "access": "private",
+      "permission": "module.delete"
+    },
+    {
+      "method": "GET",
+      "path": "/records/:module/:object",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/records/:module/:object",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/records/:module/:object/:id",
+      "access": "signed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/records/:module/:object/:id",
+      "access": "signed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/records/:module/:object/:id",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/records/:module/:object/:id/restore",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/records/:module/:object/:id/history",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/records/:module/:object/:id/shares",
+      "access": "signed"
+    },
+    {
+      "method": "POST",
+      "path": "/records/:module/:object/:id/shares",
+      "access": "signed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/records/:module/:object/:id/shares/:shareId",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "access": "signed"
+    },
+    {
+      "method": "GET",
+      "path": "/clients",
+      "access": "private",
+      "permission": "client.read"
+    },
+    {
+      "method": "POST",
+      "path": "/clients",
+      "access": "private",
+      "permission": "client.create"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/:id",
+      "access": "private",
+      "permission": "client.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/clients/:id",
+      "access": "private",
+      "permission": "client.update"
+    },
+    {
+      "method": "PATCH",
+      "path": "/clients/:id/status",
+      "access": "private",
+      "permission": "client.update"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/:id/history",
+      "access": "private",
+      "permission": "client.read"
+    },
+    {
+      "method": "POST",
+      "path": "/mcp",
+      "access": "public"
+    },
+    {
+      "method": "GET",
+      "path": "/mcp",
+      "access": "public"
+    },
+    {
+      "method": "DELETE",
+      "path": "/mcp",
+      "access": "public"
+    },
+    {
+      "method": "PUT",
+      "path": "/files/parts",
+      "access": "public"
+    },
+    {
+      "method": "GET",
+      "path": "/files/content",
+      "access": "public"
+    }
+  ]
+}

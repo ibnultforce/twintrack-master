@@ -214,7 +214,7 @@ describe('user administration', () => {
     it('is not mistaken for a person called access-options', async () => {
       const response = await (await as('alia')).get('/users/access-options');
       expect(response.status).toBe(200);
-      expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(['accounts', 'hr', 'master', 'tasks']);
+      expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(['accounts', 'hr', 'master', 'projects']);
     });
 
     it('lists every module to someone who reads people or gives profiles, and to nobody else', async () => {
@@ -223,7 +223,7 @@ describe('user administration', () => {
           { key: 'accounts', name: 'Accounts' },
           { key: 'hr', name: 'HR' },
           { key: 'master', name: 'Master' },
-          { key: 'tasks', name: 'Tasks' },
+          { key: 'projects', name: 'Project management' },
         ]);
       }
     });
@@ -631,10 +631,10 @@ describe('user administration', () => {
 
       const admin = await as('alia');
       await admin.put(`/users/${nadiaId}/profile`, { profileId: 'ap_developer' });
-      expect((await nadia.get('/me/permissions/tasks')).body).toMatchObject({ profileName: 'Developer', permissions: { 'task.read': 'own' } });
+      expect((await nadia.get('/me/permissions/projects')).body).toMatchObject({ profileName: 'Developer', permissions: { 'task.read': 'own' } });
 
       await admin.put(`/users/${nadiaId}/profile`, { profileId: null });
-      expect((await nadia.get('/me/permissions/tasks')).body.hasAccess).toBe(false);
+      expect((await nadia.get('/me/permissions/projects')).body.hasAccess).toBe(false);
     });
   });
 });

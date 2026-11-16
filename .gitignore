@@ -7,7 +7,6 @@ coverage/
 playwright-report/
 test-results/
 postman/
-manifests/
 .env
 .env.local
 *.log

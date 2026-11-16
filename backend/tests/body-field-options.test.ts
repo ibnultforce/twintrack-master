@@ -25,7 +25,7 @@ describe('fixed values a body field accepts', () => {
 
   it('finds a registered API\'s body schema, as its handler checks it', () => {
     createApp(createTestConfig());
-    const options = listBodyFieldOptions(findBodySchema('PATCH /tasks/projects/:id')!);
+    const options = listBodyFieldOptions(findBodySchema('PATCH /projects/projects/:id')!);
     expect(options.find((option) => option.field === 'status')?.values.length).toBeGreaterThan(1);
   });
 });

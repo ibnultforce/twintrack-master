@@ -5,7 +5,7 @@ import type { PageRequest } from '../../../lib/query.js';
 import { changeRecord, moveToRecycleBin } from '../../../lib/records/recordWrites.js';
 import type { Actor } from '../../master/access/caller.js';
 import { assertMayWriteFields, redactRecord, type FieldRules } from '../../master/records/fieldSecurity.service.js';
-import { findBillableProjects } from '../../tasks/billing/taskBilling.js';
+import { findBillableProjects } from '../../projects/billing/taskBilling.js';
 import {
   assertNotOwnRecord,
   fieldRulesFor,

@@ -52,7 +52,7 @@ The Next.js app in `frontend/` is the portal and admin console. It runs entirely
 
 ## Example data
 
-`npm run seed` loads the Master, HR and Tasks modules and the 12-person example team. from `seed/`, with a sample org tree. **No profile comes ready-made:** only the super admin has access until they create profiles and give them to people. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
+`npm run seed` loads the Master, HR, Project management and Accounts modules and the 12-person example team. from `seed/`, with a sample org tree. **No profile comes ready-made:** only the super admin has access until they create profiles and give them to people. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
 
 - **Safe to re-run:** it updates records by id and creates no duplicates. It resets each person's profile to what the files say, and keeps passwords already set.
 - **All or nothing:** every file is checked first and all problems are listed together. If anything fails, nothing is saved.
@@ -80,9 +80,13 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 
 ## Manifests
 
-`manifests/` has one file per module: `master`, `hr` and `tasks`. Each lists only that module's built routes and the resources they use. Access comes from profiles, which are built in the app. Like `postman/`, this folder is ignored by git, so it has to be added by hand on a new machine, and `npm run seed` and `npm test` need it. The seed loads them, and a test checks that every file in the folder is valid.
+`manifests/` has one file per module: `master`, `hr`, `projects` and `accounts`. Each lists only that module's built routes and the resources they use. Access comes from profiles, which are built in the app. They are committed, because deploys and `npm test` need them. The seed loads them, and a test checks that every file in the folder is valid.
 
 To load changed manifests without touching people or profiles, run `npm run seed:modules`. It takes resources and routes from the files, and keeps custom objects created in the app.
+
+To hand a module to a frontend developer, run `npm run export:module-pack -- <module key>`. It writes `../module-packs/<key>/`: the module's API doc, the API guide, its manifest, its Postman folder with secrets removed, and `MODULE_BRIEF.md` from the starter's template. Fill in the screens, dev server addresses and test accounts, then send it with a copy of `twintrack-module-starter/`.
+
+To give a module a new key, run `npm run migrate:rename-module -- <old key> <new key> <new base URL>` once on each database, then `npm run seed:modules`. It moves the key on the module, profile grants, super admins' API access changes, and the `module` field on audit entries, custom records, field history and shares, in one transaction. Tasks became Project management this way on 13 November 2026: `npm run migrate:rename-module -- tasks projects /projects`. Run it from PowerShell or cmd: Git Bash rewrites `/projects` into a Windows path.
 
 Before adding or changing a route, follow [docs/adding-an-api.md](docs/adding-an-api.md). It lists every place that has to change with it.
 
@@ -172,36 +176,36 @@ Services enforce these rules, because they depend on the data being changed:
 
 The scope from someone's profile decides who that reaches: `own` is the person, `team` adds everyone who reports to them, at any depth, and `all` is everyone. Someone outside their reach gets `out_of_scope`. The activity log leaves out amounts, because people can read it without being allowed to see salaries. Sample salaries are in `seed/salaries.json`.
 
-## Tasks
+## Project management
 
-Projects and their tasks, from start through QA to approval, in `backend/src/modules/tasks/`. The full reference is in [docs/api/tasks.md](docs/api/tasks.md).
+Projects and their tasks, from start through QA to approval, in `backend/src/modules/projects/`. The full reference is in [docs/api/projects.md](docs/api/projects.md).
 
 | Routes | Needs | What they do |
 |---|---|---|
-| `GET`, `POST /tasks/projects`, `GET`, `PATCH /tasks/projects/:id` | `project.read`, `.create`, `.update` | List, create, read and change projects |
-| `PUT /tasks/projects/:id/members` | `project.update` | Replace the members. Someone with open tasks stays. |
-| `GET /tasks/projects/health`, `/roster` | `project.read` | Hours used against allocated, and who works on what |
-| `GET`, `POST /tasks/tasks`, `GET`, `PATCH /tasks/tasks/:id` | `task.read`, `.create`, `.update` | List (with filters, search and sorting), create, read and change tasks |
-| `GET /tasks/tasks/summary`, `/export`, `/search` | `task.read` | Totals, CSV export and quick search |
-| `PATCH /tasks/tasks/:id/qa-estimate`, `/flag`, `/billable`, `/actual-hours` | `task.update` | QA estimate, follow-up flag, billing and timer corrections |
-| `GET /tasks/points`, `/tasks/points/:userId` | `points.read` | Career points and where they came from |
-| `/tasks/projects/:id/credentials` | `credential.*` | Shared project logins with one-time codes |
-| `/tasks/tasks/:id/attachments` | `task.read` | Files, uploaded straight to R2 (or the local disk in development) |
-| `/tasks/incentives`, `/tasks/projects/:id/incentives` | `incentive.*` | Monthly and project incentives |
-| `POST /tasks/tasks/:id/start`, `/pause`, `/complete` | `task.read` | The assignee's timer. Only the assignee. |
-| `POST /tasks/tasks/:id/qa-handover` | `task.update` | Hand to a project member for QA |
-| `POST /tasks/tasks/:id/qa-start`, `/qa-pause`, `/qa-complete` | `task.read` | The QA timer and result. Only the QA person. |
-| `POST /tasks/tasks/:id/approve`, `/revert` | `task.approve` | Settle hours and finish, or send back with a comment. Never on your own work. |
-| `POST /tasks/tasks/:id/cancel` | `task.delete` | Cancel an open task. Tasks are never deleted. |
-| `GET /tasks/tasks/:id/history`, `GET`, `POST /tasks/tasks/:id/comments`, `PUT /tasks/tasks/:id/references` | `task.read`, `task.update` for references | History, comments and links between tasks |
+| `GET`, `POST /projects/projects`, `GET`, `PATCH /projects/projects/:id` | `project.read`, `.create`, `.update` | List, create, read and change projects |
+| `PUT /projects/projects/:id/members` | `project.update` | Replace the members. Someone with open tasks stays. |
+| `GET /projects/projects/health`, `/roster` | `project.read` | Hours used against allocated, and who works on what |
+| `GET`, `POST /projects/tasks`, `GET`, `PATCH /projects/tasks/:id` | `task.read`, `.create`, `.update` | List (with filters, search and sorting), create, read and change tasks |
+| `GET /projects/tasks/summary`, `/export`, `/search` | `task.read` | Totals, CSV export and quick search |
+| `PATCH /projects/tasks/:id/qa-estimate`, `/flag`, `/billable`, `/actual-hours` | `task.update` | QA estimate, follow-up flag, billing and timer corrections |
+| `GET /projects/points`, `/projects/points/:userId` | `points.read` | Career points and where they came from |
+| `/projects/projects/:id/credentials` | `credential.*` | Shared project logins with one-time codes |
+| `/projects/tasks/:id/attachments` | `task.read` | Files, uploaded straight to R2 (or the local disk in development) |
+| `/projects/incentives`, `/projects/projects/:id/incentives` | `incentive.*` | Monthly and project incentives |
+| `POST /projects/tasks/:id/start`, `/pause`, `/complete` | `task.read` | The assignee's timer. Only the assignee. |
+| `POST /projects/tasks/:id/qa-handover` | `task.update` | Hand to a project member for QA |
+| `POST /projects/tasks/:id/qa-start`, `/qa-pause`, `/qa-complete` | `task.read` | The QA timer and result. Only the QA person. |
+| `POST /projects/tasks/:id/approve`, `/revert` | `task.approve` | Settle hours and finish, or send back with a comment. Never on your own work. |
+| `POST /projects/tasks/:id/cancel` | `task.delete` | Cancel an open task. Tasks are never deleted. |
+| `GET /projects/tasks/:id/history`, `GET`, `POST /projects/tasks/:id/comments`, `PUT /projects/tasks/:id/references` | `task.read`, `task.update` for references | History, comments and links between tasks |
 
-A task belongs to its assignee, TL, QA person and project lead, so the scope reaches it through any of them. The rules about the assignee, the QA person and approving your own work come from the task's fields, never from role names. QA hours are protected fields. Accounts invoices bill finished tasks at their estimate. The Tasks frontend is in `twintrack-tasks/`.
+A task belongs to its assignee, TL, QA person and project lead, so the scope reaches it through any of them. The rules about the assignee, the QA person and approving your own work come from the task's fields, never from role names. QA hours are protected fields. Accounts invoices bill finished tasks at their estimate. The Project management frontend is in `twintrack-projects/`.
 
 ## Accounts
 
-The company's money, in `backend/src/modules/accounts/`: categories, vendors, bank accounts with balances and statements, bills with two-person approval, payments, receipts allocated to invoices, invoices billed from Tasks work with a Word document emailed through Resend, monthly payroll from HR salaries and Tasks incentives, and evidence documents. Accounts has no frontend yet. The full reference is in [docs/api/accounts.md](docs/api/accounts.md).
+The company's money, in `backend/src/modules/accounts/`: categories, vendors, bank accounts with balances and statements, bills with two-person approval, payments, receipts allocated to invoices, invoices billed from Project management work with a Word document emailed through Resend, monthly payroll from HR salaries and Project management incentives, and evidence documents. Accounts has no frontend yet. The full reference is in [docs/api/accounts.md](docs/api/accounts.md).
 
-Posted payments and receipts are never edited: a mistake gets a linked reversal. Whoever made a bill or payroll run can't approve it. Accounts reads and marks Tasks work only through `modules/tasks/billing/taskBilling.ts`, reads HR salaries through `findSalariesInEffect`, and marks Tasks incentives paid when payroll pays them.
+Posted payments and receipts are never edited: a mistake gets a linked reversal. Whoever made a bill or payroll run can't approve it. Accounts reads and marks Project management work only through `modules/projects/billing/taskBilling.ts`, reads HR salaries through `findSalariesInEffect`, and marks Project management incentives paid when payroll pays them.
 
 ## Checks
 
@@ -211,6 +215,12 @@ npm run lint
 npm test
 npm run build
 ```
+
+## Deploying
+
+Every push to `main` deploys to the demo, https://demo.twintrack.work (API at https://api.demo.twintrack.work). [.github/workflows/deploy.yml](.github/workflows/deploy.yml) runs the checks above and, if they pass, connects to the server, which runs [scripts/deploy-server.sh](scripts/deploy-server.sh): reset to `origin/main`, `npm ci`, `npm run build`, `npm run seed:modules`, restart the pm2 processes `twintrack-demo-api` and `twintrack-demo-web`, then wait for `/health`. A failed check deploys nothing. Run the workflow by hand from the Actions tab, or run the script on the server.
+
+On the server, the checkout is `~/twintrack-demo/master`, cloned through the SSH host alias `github-twintrack-master`, which uses a read-only deploy key. `backend/.env` and `frontend/.env.production.local` live only on the server. MongoDB is a one-node replica set in the Docker container `twintrack-demo-mongo`, and nginx serves the site `twintrack-demo` with Let's Encrypt certificates. The demo runs with `NODE_ENV=production`. The workflow's secrets are listed at the top of the workflow file.
 
 ## Postman
 

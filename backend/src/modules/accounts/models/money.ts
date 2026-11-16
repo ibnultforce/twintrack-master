@@ -17,7 +17,7 @@ export interface BillDoc extends RecordFields {
   billNumber?: string;
   vendorId: string;
   categoryId?: string;
-  /** A Tasks project the spending was for. */
+  /** A Project management project the spending was for. */
   projectId?: string;
   department?: string;
   businessDate: Date;

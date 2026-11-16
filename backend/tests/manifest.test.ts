@@ -34,7 +34,7 @@ describe('validateManifest', () => {
       'accounts.manifest.json',
       'hr.manifest.json',
       'master.manifest.json',
-      'tasks.manifest.json',
+      'projects.manifest.json',
     ]);
   });
 

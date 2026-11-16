@@ -17,7 +17,7 @@ const readJson = (relativePath: string): unknown =>
 export const readManifestFiles = (): unknown[] => [
   readJson('manifests/master.manifest.json'),
   readJson('manifests/hr.manifest.json'),
-  readJson('manifests/tasks.manifest.json'),
+  readJson('manifests/projects.manifest.json'),
   readJson('manifests/accounts.manifest.json'),
 ];
 

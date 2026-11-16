@@ -37,7 +37,7 @@ export function createMasterMcpTools(moduleFrontendUrls: Map<string, string>): M
     server.registerTool(
       'my_permissions',
       {
-        description: 'What the signed-in person can do in one module, such as "hr" or "tasks", and how far each permission reaches.',
+        description: 'What the signed-in person can do in one module, such as "hr" or "projects", and how far each permission reaches.',
         inputSchema: { module: z.string().min(1).max(MAX_SEARCH_LENGTH).describe('The module key, from whoami') },
         annotations: { readOnlyHint: true },
       },
