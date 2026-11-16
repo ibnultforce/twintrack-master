@@ -29,7 +29,7 @@ The screens never list routes or permissions in frontend code. The **Modules**, 
 - [ ] Raise the module `version`: minor for new routes or actions, patch for fixes.
 - [ ] Run `npm run seed:modules`. This updates the **Modules**, **Profiles**, **Permissions**, **My permissions** and **Access** screens. People, profiles and custom objects stay as they are.
 
-`tests/routes.test.ts` compares Master routes with the Master manifest. It doesn't compare other modules, so check those by hand.
+`tests/routes.test.ts` compares Master routes with the Master manifest, and `tests/module-routes.test.ts` does the same for every other module. Add a new module's route list there.
 
 ### 3. Postman
 - [ ] A request in `postman/` for the route, with path parameters as variables (`{{baseUrl}}/users/{{userId}}`).
@@ -46,8 +46,8 @@ The screens never list routes or permissions in frontend code. The **Modules**, 
 
 ### 6. Published pages (artifacts)
 - [ ] **API scenarios page** (`design/master-api-scenarios.html`):
-  1. Record samples by running `API_SAMPLES_FILE=../../design/api-samples.json npx vitest run tests/test-page.test.ts` from `backend/`.
-  2. Rebuild the page with `python design/build-api-page.py`. Don't edit the HTML by hand.
+  1. Record samples by running `API_SAMPLES_FILE=../design/api-samples.json npx vitest run tests/test-page.test.ts` from `backend/`.
+  2. Rebuild the page with `python design/build-api-page.py` from `twintrack-master/`. Don't edit the HTML by hand.
   3. Republish it.
 - [ ] **Progress page** (`design/master-progress.html`): update its status, add a change log entry and republish it.
 
@@ -62,7 +62,7 @@ npm run test:postman
 ```
 
 ### 8. Change summary
-- [ ] List every file changed, including `manifests/` and `postman/`. Those two are gitignored, so `git status` doesn't show them.
+- [ ] List every file changed, including `manifests/` and `postman/`.
 - [ ] Name any new resource or action and which profiles will need it ticked.
 - [ ] Report which checks ran and their results.
 
@@ -71,7 +71,7 @@ npm run test:postman
 | Missing step | Caught by |
 |---|---|
 | Master route not in the manifest, or a different `access` | `tests/routes.test.ts` |
-| HR, Tasks or other module route not in the manifest | Nothing. Check by hand. |
+| HR, Project management, Accounts or other module route not in the manifest | `tests/module-routes.test.ts` |
 | Manifest not reloaded into the database | Nothing. The screens don't show the route and nobody can be granted it. |
 | No Postman request | `tests/postman-coverage.test.ts` |
 | No test-page scenario | `tests/test-page.test.ts` |

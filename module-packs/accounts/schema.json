@@ -1,0 +1,1292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TwinTrack Accounts API",
+  "description": "Accounts records as the API returns them. Read with DATA_MODEL.md.",
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "DateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "CalendarDay": {
+      "type": "string",
+      "format": "date-time",
+      "description": "A calendar day, returned as midnight UTC. Sent as YYYY-MM-DD. Display it in UTC."
+    },
+    "Money": {
+      "type": "number",
+      "multipleOf": 0.01
+    },
+    "Currency": {
+      "type": "string",
+      "enum": [
+        "BDT",
+        "USD"
+      ]
+    },
+    "ActiveStatus": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ]
+    },
+    "Method": {
+      "type": "string",
+      "enum": [
+        "bank_transfer",
+        "cash",
+        "mobile_banking",
+        "cheque",
+        "card"
+      ]
+    },
+    "BillStatus": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending_approval",
+        "approved",
+        "rejected",
+        "partially_paid",
+        "paid",
+        "reversed"
+      ]
+    },
+    "InvoiceStatus": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent",
+        "paid"
+      ]
+    },
+    "PayrollRunStatus": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending_approval",
+        "approved",
+        "completed"
+      ]
+    },
+    "SettlementStatus": {
+      "type": "string",
+      "enum": [
+        "unpaid",
+        "paid",
+        "failed",
+        "returned"
+      ]
+    },
+    "Category": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "code": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "parentId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "status": {
+          "$ref": "#/$defs/ActiveStatus",
+          "x-fieldAccess": "controlled"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "Vendor": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "contactName": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "contactEmail": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "contactPhone": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "address": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "bankName": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "bankAccountNumber": {
+          "type": "string",
+          "x-fieldAccess": "protected"
+        },
+        "notes": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "status": {
+          "$ref": "#/$defs/ActiveStatus",
+          "x-fieldAccess": "controlled"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "BankAccount": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "bankName": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "accountNumber": {
+          "type": "string",
+          "x-fieldAccess": "protected"
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency",
+          "x-fieldAccess": "controlled"
+        },
+        "openingBalance": {
+          "$ref": "#/$defs/Money",
+          "x-fieldAccess": "controlled"
+        },
+        "openingDate": {
+          "$ref": "#/$defs/CalendarDay",
+          "x-fieldAccess": "controlled"
+        },
+        "currentBalance": {
+          "$ref": "#/$defs/Money",
+          "x-fieldAccess": "controlled"
+        },
+        "status": {
+          "$ref": "#/$defs/ActiveStatus",
+          "x-fieldAccess": "controlled"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "Statement": {
+      "type": "object",
+      "required": [
+        "openingBalance",
+        "closingBalance",
+        "entries"
+      ],
+      "properties": {
+        "openingBalance": {
+          "$ref": "#/$defs/Money"
+        },
+        "closingBalance": {
+          "$ref": "#/$defs/Money"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "amount",
+              "balance"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "receipt",
+                  "receipt_reversal",
+                  "payment",
+                  "payment_reversal",
+                  "salary"
+                ]
+              },
+              "amount": {
+                "$ref": "#/$defs/Money"
+              },
+              "balance": {
+                "$ref": "#/$defs/Money"
+              }
+            }
+          }
+        }
+      }
+    },
+    "CompanyBankDetails": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "bankName": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "accountName": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "accountNumber": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "branchName": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "routingNumber": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "swiftCode": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "address": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "Bill": {
+      "type": "object",
+      "required": [
+        "id",
+        "paidAmount",
+        "outstandingAmount",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "billNumber": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "vendorId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "vendorName": {
+          "type": "string"
+        },
+        "categoryId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "projectId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "department": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "businessDate": {
+          "$ref": "#/$defs/CalendarDay",
+          "x-fieldAccess": "controlled"
+        },
+        "dueDate": {
+          "$ref": "#/$defs/CalendarDay",
+          "x-fieldAccess": "controlled"
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency",
+          "x-fieldAccess": "controlled"
+        },
+        "amount": {
+          "$ref": "#/$defs/Money",
+          "x-fieldAccess": "controlled"
+        },
+        "paidAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "outstandingAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "taxCode": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "notes": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "status": {
+          "$ref": "#/$defs/BillStatus",
+          "x-fieldAccess": "controlled"
+        },
+        "decidedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "decidedAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "rejectionReason": {
+          "type": "string"
+        },
+        "reversedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "reversedAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "reversalReason": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "Payment": {
+      "type": "object",
+      "required": [
+        "id",
+        "inEffect",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "bankAccountId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "billId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "categoryId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "projectId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "department": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "payeeType": {
+          "type": "string",
+          "enum": [
+            "vendor",
+            "employee",
+            "other"
+          ],
+          "x-fieldAccess": "controlled"
+        },
+        "payeeVendorId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "payeeUserId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "payeeName": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "amount": {
+          "$ref": "#/$defs/Money",
+          "x-fieldAccess": "controlled"
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency"
+        },
+        "paymentDate": {
+          "$ref": "#/$defs/CalendarDay",
+          "x-fieldAccess": "controlled"
+        },
+        "method": {
+          "$ref": "#/$defs/Method",
+          "x-fieldAccess": "controlled"
+        },
+        "reference": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "notes": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "reversesId": {
+          "$ref": "#/$defs/Id"
+        },
+        "reversalId": {
+          "$ref": "#/$defs/Id"
+        },
+        "inEffect": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "Allocation": {
+      "type": "object",
+      "required": [
+        "id",
+        "invoiceId",
+        "amount"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "invoiceId": {
+          "$ref": "#/$defs/Id"
+        },
+        "invoiceNumber": {
+          "type": "string"
+        },
+        "amount": {
+          "$ref": "#/$defs/Money"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "Receipt": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "bankAccountId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "clientId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "amount": {
+          "$ref": "#/$defs/Money",
+          "x-fieldAccess": "controlled"
+        },
+        "bankFee": {
+          "$ref": "#/$defs/Money",
+          "x-fieldAccess": "controlled"
+        },
+        "netAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency"
+        },
+        "receivedDate": {
+          "$ref": "#/$defs/CalendarDay",
+          "x-fieldAccess": "controlled"
+        },
+        "method": {
+          "$ref": "#/$defs/Method",
+          "x-fieldAccess": "controlled"
+        },
+        "reference": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "notes": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "allocations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Allocation"
+          }
+        },
+        "allocatedAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "unallocatedAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "reversesId": {
+          "$ref": "#/$defs/Id"
+        },
+        "reversalId": {
+          "$ref": "#/$defs/Id"
+        },
+        "inEffect": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "InvoiceLine": {
+      "type": "object",
+      "required": [
+        "id",
+        "projectId",
+        "description",
+        "hours",
+        "billable",
+        "amount",
+        "custom"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "projectId": {
+          "$ref": "#/$defs/Id"
+        },
+        "taskId": {
+          "$ref": "#/$defs/Id"
+        },
+        "taskNumber": {
+          "type": "string"
+        },
+        "custom": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "date": {
+          "$ref": "#/$defs/CalendarDay"
+        },
+        "hours": {
+          "type": "number"
+        },
+        "billable": {
+          "type": "boolean"
+        },
+        "amount": {
+          "$ref": "#/$defs/Money"
+        }
+      }
+    },
+    "Invoice": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "invoiceNumber": {
+          "type": "string"
+        },
+        "clientId": {
+          "$ref": "#/$defs/Id"
+        },
+        "clientName": {
+          "type": "string"
+        },
+        "periodStart": {
+          "$ref": "#/$defs/CalendarDay"
+        },
+        "periodEnd": {
+          "$ref": "#/$defs/CalendarDay"
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "logged"
+          ]
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency"
+        },
+        "hourlyRate": {
+          "$ref": "#/$defs/Money",
+          "x-fieldAccess": "controlled"
+        },
+        "totalHours": {
+          "type": "number"
+        },
+        "billableHours": {
+          "type": "number"
+        },
+        "amount": {
+          "$ref": "#/$defs/Money",
+          "x-fieldAccess": "controlled"
+        },
+        "paidAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "outstandingAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "status": {
+          "$ref": "#/$defs/InvoiceStatus",
+          "x-fieldAccess": "controlled"
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "projectId"
+            ],
+            "properties": {
+              "projectId": {
+                "$ref": "#/$defs/Id"
+              },
+              "projectName": {
+                "type": "string"
+              },
+              "totalHours": {
+                "type": "number"
+              },
+              "billableHours": {
+                "type": "number"
+              },
+              "amount": {
+                "$ref": "#/$defs/Money"
+              }
+            }
+          }
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InvoiceLine"
+          }
+        },
+        "additionalNotes": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "hasDocument": {
+          "type": "boolean"
+        },
+        "documentVersion": {
+          "type": "integer"
+        },
+        "emailedAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "emailedTo": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "PayrollItem": {
+      "type": "object",
+      "required": [
+        "id",
+        "userId",
+        "settlementStatus"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "userId": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "salaryId": {
+          "$ref": "#/$defs/Id"
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency"
+        },
+        "salaryAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "incentiveAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "incentiveMarkedPaid": {
+          "type": "boolean"
+        },
+        "deductions": {
+          "$ref": "#/$defs/Money"
+        },
+        "grossAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "netAmount": {
+          "$ref": "#/$defs/Money"
+        },
+        "bankAccountId": {
+          "$ref": "#/$defs/Id"
+        },
+        "settlementStatus": {
+          "$ref": "#/$defs/SettlementStatus"
+        },
+        "settledAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "PayrollRun": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "year": {
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/PayrollRunStatus",
+          "x-fieldAccess": "controlled"
+        },
+        "bankAccountId": {
+          "$ref": "#/$defs/Id",
+          "x-fieldAccess": "controlled"
+        },
+        "notes": {
+          "type": "string",
+          "x-fieldAccess": "controlled"
+        },
+        "decidedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "decidedAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "returnReason": {
+          "type": "string"
+        },
+        "employeeCount": {
+          "type": "integer"
+        },
+        "paidCount": {
+          "type": "integer"
+        },
+        "totals": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Money"
+          },
+          "description": "By currency."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PayrollItem"
+          }
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "Document": {
+      "type": "object",
+      "required": [
+        "id",
+        "ownerType",
+        "ownerId",
+        "fileName",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "ownerType": {
+          "type": "string",
+          "enum": [
+            "bill",
+            "payment",
+            "receipt",
+            "payrollItem"
+          ]
+        },
+        "ownerId": {
+          "$ref": "#/$defs/Id"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "uploading",
+            "ready"
+          ]
+        },
+        "uploadedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "CategoryPage": {
+      "type": "object",
+      "required": [
+        "total",
+        "categories"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Category"
+          }
+        }
+      }
+    },
+    "VendorPage": {
+      "type": "object",
+      "required": [
+        "total",
+        "vendors"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "vendors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Vendor"
+          }
+        }
+      }
+    },
+    "BankAccountPage": {
+      "type": "object",
+      "required": [
+        "total",
+        "bankAccounts"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "bankAccounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BankAccount"
+          }
+        }
+      }
+    },
+    "BillPage": {
+      "type": "object",
+      "required": [
+        "total",
+        "bills"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "bills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Bill"
+          }
+        }
+      }
+    },
+    "PaymentPage": {
+      "type": "object",
+      "required": [
+        "total",
+        "payments"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "payments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Payment"
+          }
+        }
+      }
+    },
+    "ReceiptPage": {
+      "type": "object",
+      "required": [
+        "total",
+        "receipts"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "receipts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Receipt"
+          }
+        }
+      }
+    },
+    "InvoicePage": {
+      "type": "object",
+      "required": [
+        "total",
+        "invoices"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "invoices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Invoice"
+          }
+        }
+      }
+    },
+    "PayrollRunPage": {
+      "type": "object",
+      "required": [
+        "total",
+        "payrollRuns"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "payrollRuns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PayrollRun"
+          }
+        }
+      }
+    },
+    "HistoryEntry": {
+      "type": "object",
+      "required": [
+        "id",
+        "at",
+        "action",
+        "changes",
+        "actorName"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "at": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "created",
+            "updated",
+            "deleted",
+            "restored"
+          ]
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "field"
+            ],
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "from": {},
+              "to": {}
+            }
+          }
+        },
+        "actorName": {
+          "type": "string"
+        }
+      }
+    },
+    "ModuleAccess": {
+      "description": "GET /me/permissions/accounts: what the signed-in person may do here.",
+      "type": "object",
+      "required": [
+        "module",
+        "hasAccess",
+        "permissions",
+        "fieldAccess"
+      ],
+      "properties": {
+        "module": {
+          "const": "accounts"
+        },
+        "hasAccess": {
+          "type": "boolean"
+        },
+        "profileName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Scope"
+          },
+          "description": "Such as { \"task.read\": \"team\" }. A missing key means no permission."
+        },
+        "fieldAccess": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "hidden",
+              "read",
+              "create",
+              "edit"
+            ]
+          },
+          "description": "Keyed resource.field, such as \"task.estimatedHours\"."
+        }
+      }
+    },
+    "Scope": {
+      "type": "string",
+      "enum": [
+        "own",
+        "team",
+        "all"
+      ]
+    },
+    "ApiError": {
+      "type": "object",
+      "required": [
+        "error"
+      ],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string",
+              "description": "Written for people; show it as is."
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "message"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

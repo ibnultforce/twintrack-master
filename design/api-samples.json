@@ -1,0 +1,6781 @@
+{
+  "GET /health": {
+    "title": "API and database connected",
+    "request": {
+      "method": "GET",
+      "path": "/health"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "database": "connected"
+      }
+    }
+  },
+  "POST /auth/login": {
+    "title": "Correct email and password",
+    "request": {
+      "method": "POST",
+      "path": "/auth/login",
+      "body": {
+        "email": "rahim@twintrack.test",
+        "password": "YOUR_PASSWORD"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "accessToken": "<accessToken>",
+        "expiresIn": 900
+      }
+    }
+  },
+  "POST /auth/refresh": {
+    "title": "Valid refresh cookie: new token and a replaced cookie",
+    "request": {
+      "method": "POST",
+      "path": "/auth/refresh"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "accessToken": "<accessToken>",
+        "expiresIn": 900
+      }
+    }
+  },
+  "POST /auth/logout": {
+    "title": "No cookie: still confirms sign-out",
+    "request": {
+      "method": "POST",
+      "path": "/auth/logout"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "signedOut": true
+      }
+    }
+  },
+  "GET /auth/me": {
+    "title": "Returns your profile and manager",
+    "request": {
+      "method": "GET",
+      "path": "/auth/me",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "u_04",
+        "name": "Rahim Uddin",
+        "email": "rahim@twintrack.test",
+        "title": "Engineering Lead",
+        "department": "engineering",
+        "team": "platform",
+        "contract": "permanent",
+        "superAdmin": false,
+        "orgRoleId": "or_engineering_lead",
+        "manager": {
+          "id": "u_01",
+          "name": "Farhana Kabir"
+        },
+        "canImpersonate": false
+      }
+    }
+  },
+  "PATCH /auth/me": {
+    "title": "Changes your own name",
+    "request": {
+      "method": "PATCH",
+      "path": "/auth/me",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "name": "Rahim U."
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "u_04",
+        "name": "Rahim U.",
+        "email": "rahim@twintrack.test",
+        "title": "Engineering Lead",
+        "department": "engineering",
+        "team": "platform",
+        "contract": "permanent",
+        "superAdmin": false,
+        "orgRoleId": "or_engineering_lead",
+        "manager": {
+          "id": "u_01",
+          "name": "Farhana Kabir"
+        },
+        "canImpersonate": false
+      }
+    }
+  },
+  "POST /auth/change-password": {
+    "title": "Correct current password: replaces it and ends other sessions",
+    "request": {
+      "method": "POST",
+      "path": "/auth/change-password",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "currentPassword": "YOUR_PASSWORD",
+        "newPassword": "YOUR_PASSWORD-new"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "passwordChanged": true
+      }
+    }
+  },
+  "POST /auth/verify-password": {
+    "title": "Right password",
+    "request": {
+      "method": "POST",
+      "path": "/auth/verify-password",
+      "as": "karim@twintrack.test",
+      "body": {
+        "password": "YOUR_PASSWORD"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "verified": true
+      }
+    }
+  },
+  "POST /auth/stop-impersonating": {
+    "title": "Back to your own session",
+    "request": {
+      "method": "POST",
+      "path": "/auth/stop-impersonating"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "accessToken": "<accessToken>",
+        "expiresIn": 900
+      }
+    }
+  },
+  "POST /me/heartbeat": {
+    "title": "Reports the app as open",
+    "request": {
+      "method": "POST",
+      "path": "/me/heartbeat",
+      "as": "karim@twintrack.test"
+    },
+    "response": {
+      "status": 204,
+      "body": {}
+    }
+  },
+  "GET /directory": {
+    "title": "Anyone signed in can look colleagues up",
+    "request": {
+      "method": "GET",
+      "path": "/directory?search=a",
+      "as": "karim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "people": [
+          {
+            "id": "u_07",
+            "name": "Arif Chowdhury",
+            "email": "arif@twintrack.test",
+            "title": "Frontend Developer",
+            "department": "engineering",
+            "team": "platform"
+          },
+          {
+            "id": "u_13",
+            "name": "Jack",
+            "email": "jack@twintrack.test",
+            "title": "Employee",
+            "department": "people",
+            "team": "people-ops"
+          }
+        ],
+        "total": 10
+      }
+    }
+  },
+  "GET /me/modules": {
+    "title": "Lists modules you can open",
+    "request": {
+      "method": "GET",
+      "path": "/me/modules",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "modules": [
+          {
+            "key": "hr",
+            "name": "HR",
+            "description": "Employee records, leave, attendance and hiring.",
+            "frontendUrl": null,
+            "profileName": "Engineering lead"
+          },
+          {
+            "key": "master",
+            "name": "Master",
+            "description": "Login, users, permissions and the API behind every module.",
+            "frontendUrl": null,
+            "profileName": "Engineering lead"
+          }
+        ]
+      }
+    }
+  },
+  "GET /me/permissions/:module": {
+    "title": "Your role and scoped permissions",
+    "request": {
+      "method": "GET",
+      "path": "/me/permissions/hr",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "module": "hr",
+        "hasAccess": true,
+        "profile": "ap_engineering_lead",
+        "profileName": "Engineering lead",
+        "permissions": {
+          "salary.read": "team"
+        },
+        "fieldAccess": {
+          "salary.amount": "read",
+          "salary.currency": "read",
+          "salary.effectiveFrom": "read",
+          "salary.status": "read"
+        },
+        "apis": {
+          "salary.read": [
+            "GET /hr/salaries",
+            "GET /hr/salaries/:id/history"
+          ]
+        },
+        "guides": {
+          "GET /hr/salaries": {
+            "purpose": "Lists salaries, limited to what the role reaches: own, team or all.",
+            "input": "page, pageSize, and deleted=true for the recycle bin, which needs salary.delete",
+            "examples": [
+              {
+                "title": "HR Admin sees every salary",
+                "outcome": "accepted",
+                "expectedStatus": 200,
+                "sentBy": "Kamrul Islam",
+                "sendFirst": [],
+                "parameters": {},
+                "parameterSources": {},
+                "query": "",
+                "body": "",
+                "needs": [],
+                "changesData": false
+              },
+              {
+                "title": "HR Manager sees only themselves and their team",
+                "outcome": "accepted",
+                "expectedStatus": 200,
+                "sentBy": "Rahim Uddin",
+                "sendFirst": [],
+                "parameters": {},
+                "parameterSources": {},
+                "query": "",
+                "body": "",
+                "needs": [],
+                "changesData": false
+              }
+            ],
+            "fieldOptions": []
+          },
+          "GET /hr/salaries/:id/history": {
+            "purpose": "Lists what changed in a salary, who changed it and when, newest first.",
+            "input": "page, pageSize",
+            "examples": [
+              {
+                "title": "HR Admin reads a salary history",
+                "outcome": "accepted",
+                "expectedStatus": 200,
+                "sentBy": "Kamrul Islam",
+                "sendFirst": [],
+                "parameters": {
+                  "id": "s_08"
+                },
+                "parameterSources": {},
+                "query": "",
+                "body": "",
+                "needs": [],
+                "changesData": false
+              },
+              {
+                "title": "HR Manager reads the history of someone in their team",
+                "outcome": "accepted",
+                "expectedStatus": 200,
+                "sentBy": "Rahim Uddin",
+                "sendFirst": [],
+                "parameters": {
+                  "id": "s_08"
+                },
+                "parameterSources": {},
+                "query": "",
+                "body": "",
+                "needs": [],
+                "changesData": false
+              }
+            ],
+            "fieldOptions": []
+          },
+          "GET /hr/salaries/:id/shares": {
+            "purpose": "Lists who a salary is shared with.",
+            "input": "nothing",
+            "examples": [
+              {
+                "title": "HR Admin lists the shares",
+                "outcome": "accepted",
+                "expectedStatus": 200,
+                "sentBy": "Kamrul Islam",
+                "sendFirst": [],
+                "parameters": {
+                  "id": "s_08"
+                },
+                "parameterSources": {},
+                "query": "",
+                "body": "",
+                "needs": [],
+                "changesData": false
+              },
+              {
+                "title": "HR Manager listing a salary outside their team",
+                "outcome": "refused",
+                "expectedStatus": 403,
+                "expectedCode": "out_of_scope",
+                "sentBy": "Rahim Uddin",
+                "sendFirst": [],
+                "parameters": {
+                  "id": "s_05"
+                },
+                "parameterSources": {},
+                "query": "",
+                "body": "",
+                "needs": [],
+                "changesData": false
+              }
+            ],
+            "fieldOptions": []
+          },
+          "POST /hr/salaries/:id/shares": {
+            "purpose": "Shares a salary with a person or an org role, beyond what their scope reaches.",
+            "input": "granteeType (user, orgRole or orgRoleAndBelow), granteeId, access (read or edit), and optionally expiresAt",
+            "examples": [
+              {
+                "title": "HR Manager shares a salary in their team",
+                "outcome": "accepted",
+                "expectedStatus": 201,
+                "sentBy": "Rahim Uddin",
+                "sendFirst": [],
+                "parameters": {
+                  "id": "s_08"
+                },
+                "parameterSources": {},
+                "query": "",
+                "body": "{\n  \"granteeType\": \"user\",\n  \"granteeId\": \"u_07\",\n  \"access\": \"read\"\n}",
+                "needs": [],
+                "changesData": true
+              },
+              {
+                "title": "HR Admin shares with an org role and everything below it",
+                "outcome": "accepted",
+                "expectedStatus": 201,
+                "sentBy": "Kamrul Islam",
+                "sendFirst": [],
+                "parameters": {
+                  "id": "s_05"
+                },
+                "parameterSources": {},
+                "query": "",
+                "body": "{\n  \"granteeType\": \"orgRoleAndBelow\",\n  \"granteeId\": \"or_engineering_lead\",\n  \"access\": \"read\"\n}",
+                "needs": [],
+                "changesData": true
+              }
+            ],
+            "fieldOptions": [
+              {
+                "field": "granteeType",
+                "values": [
+                  "user",
+                  "orgRole"
+                ],
+                "isMany": false
+              },
+              {
+                "field": "access",
+                "values": [
+                  "read",
+                  "edit"
+                ],
+                "isMany": false
+              }
+            ]
+          },
+          "DELETE /hr/salaries/:id/shares/:shareId": {
+            "purpose": "Stops sharing a salary.",
+            "input": "nothing",
+            "examples": [
+              {
+                "title": "HR Admin removes a share",
+                "outcome": "accepted",
+                "expectedStatus": 200,
+                "sentBy": "Kamrul Islam",
+                "sendFirst": [
+                  "POST /hr/salaries/s_08/shares"
+                ],
+                "parameters": {
+                  "id": "s_08",
+                  "shareId": ""
+                },
+                "parameterSources": {
+                  "shareId": "shareId"
+                },
+                "query": "",
+                "body": "",
+                "needs": [
+                  {
+                    "value": "shareId",
+                    "madeBy": "POST /hr/salaries/s_08/shares"
+                  }
+                ],
+                "changesData": true
+              },
+              {
+                "title": "Share does not exist",
+                "outcome": "refused",
+                "expectedStatus": 404,
+                "expectedCode": "unknown_share",
+                "sentBy": "Kamrul Islam",
+                "sendFirst": [],
+                "parameters": {
+                  "id": "s_08",
+                  "shareId": "sh_nowhere"
+                },
+                "parameterSources": {},
+                "query": "",
+                "body": "",
+                "needs": [],
+                "changesData": false
+              }
+            ],
+            "fieldOptions": []
+          }
+        }
+      }
+    }
+  },
+  "GET /users": {
+    "title": "First page with a total",
+    "request": {
+      "method": "GET",
+      "path": "/users?page=1&pageSize=2",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "users": [
+          {
+            "id": "u_07",
+            "name": "Arif Chowdhury",
+            "email": "arif@twintrack.test",
+            "title": "Frontend Developer",
+            "department": "engineering",
+            "team": "platform",
+            "contract": "permanent",
+            "status": "active",
+            "managerId": "u_04",
+            "orgRoleId": "or_engineering",
+            "superAdmin": false,
+            "profileId": "ap_access_admin",
+            "lastSignedInAt": "2026-11-13T11:08:27.326Z"
+          },
+          {
+            "id": "u_01",
+            "name": "Farhana Kabir",
+            "email": "farhana@twintrack.test",
+            "title": "Founder",
+            "department": "operations",
+            "team": "leadership",
+            "contract": "permanent",
+            "status": "active",
+            "orgRoleId": "or_founder",
+            "superAdmin": true
+          }
+        ],
+        "total": 12
+      }
+    }
+  },
+  "POST /users": {
+    "title": "Adds a person and returns a temporary password once",
+    "request": {
+      "method": "POST",
+      "path": "/users",
+      "as": "arif@twintrack.test",
+      "body": {
+        "name": "Nadia Noor",
+        "email": "nadia@twintrack.test",
+        "title": "Analyst",
+        "contract": "intern",
+        "managerId": "u_04",
+        "orgRoleId": "or_engineering"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "user": {
+          "id": "u_6a9ac9f1-2004-4f1f-b84a-2db0387569f0",
+          "name": "Nadia Noor",
+          "email": "nadia@twintrack.test",
+          "title": "Analyst",
+          "contract": "intern",
+          "status": "active",
+          "managerId": "u_04",
+          "orgRoleId": "or_engineering",
+          "superAdmin": false,
+          "employeeNumber": 1
+        },
+        "invitationSent": true
+      }
+    }
+  },
+  "GET /users/next-employee-number": {
+    "title": "Preview the next number",
+    "request": {
+      "method": "GET",
+      "path": "/users/next-employee-number",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "employeeNumber": 1
+      }
+    }
+  },
+  "GET /users/access-options": {
+    "title": "Lists every module",
+    "request": {
+      "method": "GET",
+      "path": "/users/access-options",
+      "as": "sabbir@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "modules": [
+          {
+            "key": "accounts",
+            "name": "Accounts"
+          },
+          {
+            "key": "hr",
+            "name": "HR"
+          }
+        ]
+      }
+    }
+  },
+  "GET /users/:id": {
+    "title": "One person with their access",
+    "request": {
+      "method": "GET",
+      "path": "/users/u_04",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "u_04",
+        "name": "Rahim Uddin",
+        "email": "rahim@twintrack.test",
+        "title": "Engineering Lead",
+        "department": "engineering",
+        "team": "platform",
+        "contract": "permanent",
+        "status": "active",
+        "managerId": "u_01",
+        "orgRoleId": "or_engineering_lead",
+        "superAdmin": false,
+        "profileId": "ap_engineering_lead"
+      }
+    }
+  },
+  "PATCH /users/:id": {
+    "title": "Changes details; null clears a field",
+    "request": {
+      "method": "PATCH",
+      "path": "/users/u_04",
+      "as": "arif@twintrack.test",
+      "body": {
+        "title": "Head of Engineering",
+        "team": null
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "u_04",
+        "name": "Rahim Uddin",
+        "email": "rahim@twintrack.test",
+        "title": "Head of Engineering",
+        "department": "engineering",
+        "contract": "permanent",
+        "status": "active",
+        "managerId": "u_01",
+        "orgRoleId": "or_engineering_lead",
+        "superAdmin": false,
+        "profileId": "ap_engineering_lead"
+      }
+    }
+  },
+  "DELETE /users/:id": {
+    "title": "Someone who never signed in",
+    "request": {
+      "method": "DELETE",
+      "path": "/users/u_06",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "deleted": true
+      }
+    }
+  },
+  "POST /users/:id/impersonate": {
+    "title": "See the app as an employee",
+    "request": {
+      "method": "POST",
+      "path": "/users/u_08/impersonate",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "accessToken": "<accessToken>",
+        "expiresIn": 900,
+        "user": {
+          "id": "u_08",
+          "name": "Karim Ahmed"
+        }
+      }
+    }
+  },
+  "PATCH /users/:id/status": {
+    "title": "Deactivates and signs out everywhere",
+    "request": {
+      "method": "PATCH",
+      "path": "/users/u_04/status",
+      "as": "arif@twintrack.test",
+      "body": {
+        "status": "inactive"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "u_04",
+        "name": "Rahim Uddin",
+        "email": "rahim@twintrack.test",
+        "title": "Engineering Lead",
+        "department": "engineering",
+        "team": "platform",
+        "contract": "permanent",
+        "status": "inactive",
+        "managerId": "u_01",
+        "orgRoleId": "or_engineering_lead",
+        "superAdmin": false,
+        "profileId": "ap_engineering_lead"
+      }
+    }
+  },
+  "GET /users/:id/photo": {
+    "title": "A colleague's photo",
+    "request": {
+      "method": "GET",
+      "path": "/users/u_08/photo",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "0": 82,
+        "1": 73,
+        "2": 70,
+        "3": 70,
+        "4": 65,
+        "5": 65,
+        "6": 65,
+        "7": 65,
+        "8": 87,
+        "9": 69,
+        "10": 66,
+        "11": 80,
+        "12": 86,
+        "13": 80,
+        "14": 56,
+        "15": 32
+      }
+    }
+  },
+  "PUT /users/:id/photo": {
+    "title": "Your own photo",
+    "request": {
+      "method": "PUT",
+      "path": "/users/u_08/photo",
+      "as": "karim@twintrack.test",
+      "body": "RIFFAAAAWEBPVP8 "
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "photoUpdatedAt": "2026-11-13T11:08:37.890Z"
+      }
+    }
+  },
+  "DELETE /users/:id/photo": {
+    "title": "Your own photo",
+    "request": {
+      "method": "DELETE",
+      "path": "/users/u_08/photo",
+      "as": "karim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "removed": true
+      }
+    }
+  },
+  "POST /users/password-links": {
+    "title": "Link emailed to one person",
+    "request": {
+      "method": "POST",
+      "path": "/users/password-links",
+      "as": "arif@twintrack.test",
+      "body": {
+        "userIds": [
+          "u_04"
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "results": [
+          {
+            "userId": "u_04",
+            "email": "rahim@twintrack.test",
+            "sent": true
+          }
+        ]
+      }
+    }
+  },
+  "PUT /users/:id/profile": {
+    "title": "Super admin builds a profile and gives it",
+    "request": {
+      "method": "PUT",
+      "path": "/users/u_08/profile",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "profileId": "ap_55595f07-ee9d-4536-a325-99e08a5b809d"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "u_08",
+        "name": "Karim Ahmed",
+        "email": "karim@twintrack.test",
+        "title": "Backend Developer",
+        "department": "engineering",
+        "team": "platform",
+        "contract": "permanent",
+        "status": "active",
+        "managerId": "u_04",
+        "orgRoleId": "or_engineering",
+        "superAdmin": false,
+        "profileId": "ap_55595f07-ee9d-4536-a325-99e08a5b809d"
+      }
+    }
+  },
+  "GET /modules/:key/people": {
+    "title": "HR access manager lists the people with access to HR",
+    "request": {
+      "method": "GET",
+      "path": "/modules/hr/people",
+      "as": "sabbir@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "module": "hr",
+        "people": [
+          {
+            "id": "u_12",
+            "name": "Jasmin",
+            "email": "jasmin@twintrack.test",
+            "status": "active",
+            "orgRole": {
+              "id": "or_hr_admin",
+              "name": "HR Admin"
+            },
+            "profile": {
+              "id": "ap_hr_admin",
+              "name": "HR admin"
+            },
+            "profilePermissions": {
+              "salary.read": "all",
+              "salary.create": "all",
+              "salary.update": "all",
+              "salary.approve": "all",
+              "salary.delete": "all",
+              "salary.share": "all"
+            }
+          },
+          {
+            "id": "u_06",
+            "name": "Kamrul Islam",
+            "email": "kamrul@twintrack.test",
+            "status": "active",
+            "orgRole": {
+              "id": "or_finance",
+              "name": "Finance"
+            },
+            "profile": {
+              "id": "ap_hr_admin",
+              "name": "HR admin"
+            },
+            "profilePermissions": {
+              "salary.read": "all",
+              "salary.create": "all",
+              "salary.update": "all",
+              "salary.approve": "all",
+              "salary.delete": "all",
+              "salary.share": "all"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "GET /modules/:key/addable-people": {
+    "title": "HR access manager searches who could be given a profile covering HR",
+    "request": {
+      "method": "GET",
+      "path": "/modules/hr/addable-people",
+      "as": "sabbir@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 5,
+        "people": [
+          {
+            "id": "u_07",
+            "name": "Arif Chowdhury",
+            "email": "arif@twintrack.test",
+            "title": "Frontend Developer",
+            "profileId": "ap_access_admin"
+          },
+          {
+            "id": "u_13",
+            "name": "Jack",
+            "email": "jack@twintrack.test",
+            "title": "Employee"
+          }
+        ]
+      }
+    }
+  },
+  "GET /clients": {
+    "title": "Active clients",
+    "request": {
+      "method": "GET",
+      "path": "/clients?status=active",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "clients": [],
+        "total": 0
+      }
+    }
+  },
+  "POST /clients": {
+    "title": "New client",
+    "request": {
+      "method": "POST",
+      "path": "/clients",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "name": "Acme Ltd",
+        "initials": "ACME",
+        "contactEmail": "billing@acme.test"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "cl_74c20e6d-95e6-4ff5-b927-49de55148a46",
+        "name": "Acme Ltd",
+        "initials": "ACME",
+        "contactEmail": "billing@acme.test",
+        "status": "active",
+        "version": 0,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:08:43.995Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:08:43.995Z"
+      }
+    }
+  },
+  "GET /clients/:id": {
+    "title": "A client",
+    "request": {
+      "method": "GET",
+      "path": "/clients/cl_447247a9-4ddb-477f-9331-36274a8b1051",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cl_447247a9-4ddb-477f-9331-36274a8b1051",
+        "name": "Acme Ltd",
+        "status": "active",
+        "version": 0,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:08:44.954Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:08:44.954Z"
+      }
+    }
+  },
+  "PATCH /clients/:id": {
+    "title": "New name",
+    "request": {
+      "method": "PATCH",
+      "path": "/clients/cl_599a5afa-cfef-4a22-8e79-02d93f528778",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "name": "Acme Limited",
+        "version": 0
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cl_599a5afa-cfef-4a22-8e79-02d93f528778",
+        "name": "Acme Limited",
+        "status": "active",
+        "version": 1,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:08:45.390Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:08:45.481Z"
+      }
+    }
+  },
+  "PATCH /clients/:id/status": {
+    "title": "Make a client inactive",
+    "request": {
+      "method": "PATCH",
+      "path": "/clients/cl_a76a2da3-ca9c-4e76-825a-103559b8fb28/status",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "status": "inactive"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cl_a76a2da3-ca9c-4e76-825a-103559b8fb28",
+        "name": "Acme Ltd",
+        "status": "inactive",
+        "version": 1,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:08:46.089Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:08:46.200Z"
+      }
+    }
+  },
+  "GET /clients/:id/history": {
+    "title": "A client's history",
+    "request": {
+      "method": "GET",
+      "path": "/clients/cl_77247aef-7119-44bc-943c-d68f2fc0884b/history",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "entries": [
+          {
+            "id": "6af6efbea2b2a4b7febec00b",
+            "at": "2026-11-13T11:08:46.558Z",
+            "action": "created",
+            "changes": [
+              {
+                "field": "name",
+                "to": "Acme Ltd"
+              },
+              {
+                "field": "status",
+                "to": "active"
+              }
+            ],
+            "actorId": "u_01",
+            "actorName": "Farhana Kabir"
+          }
+        ]
+      }
+    }
+  },
+  "GET /me/api-tokens": {
+    "title": "Your tokens",
+    "request": {
+      "method": "GET",
+      "path": "/me/api-tokens",
+      "as": "karim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "tokens": []
+      }
+    }
+  },
+  "POST /me/api-tokens": {
+    "title": "A token for 30 days",
+    "request": {
+      "method": "POST",
+      "path": "/me/api-tokens",
+      "as": "mehedi@twintrack.test",
+      "body": {
+        "name": "Claude Code",
+        "expiresInDays": 30
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "at_9e5c73c1-907a-43ee-bba7-b2390de06c70",
+        "name": "Claude Code",
+        "prefix": "tt_pat_0SsY",
+        "expiresAt": "2026-12-13T11:08:47.249Z",
+        "createdAt": "2026-11-13T11:08:47.250Z",
+        "token": "tt_pat_0SsYvE0OHRa0XqkFY6KActe5hb5WFK8WPUJXl9MzPZk"
+      }
+    }
+  },
+  "POST /me/api-tokens/:id/revoke": {
+    "title": "Revoke a token",
+    "request": {
+      "method": "POST",
+      "path": "/me/api-tokens/at_c1f7b598-6be7-4b8f-bb08-9ef29f434e3d/revoke",
+      "as": "mehedi@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "at_c1f7b598-6be7-4b8f-bb08-9ef29f434e3d",
+        "name": "Old laptop",
+        "prefix": "tt_pat_G-Ba",
+        "revokedAt": "2026-11-13T11:08:47.856Z",
+        "createdAt": "2026-11-13T11:08:47.778Z"
+      }
+    }
+  },
+  "GET /api-tokens": {
+    "title": "Everyone's tokens, as an access admin",
+    "request": {
+      "method": "GET",
+      "path": "/api-tokens",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "tokens": [
+          {
+            "id": "at_77f90073-8c1a-4467-9578-a5736a2da51d",
+            "name": "Laptop",
+            "prefix": "tt_pat_i4p7",
+            "createdAt": "2026-11-13T11:08:48.217Z",
+            "owner": {
+              "id": "u_09",
+              "name": "Mehedi Hasan"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "POST /api-tokens/:id/revoke": {
+    "title": "Revoke a developer's token",
+    "request": {
+      "method": "POST",
+      "path": "/api-tokens/at_52ae8767-2691-476b-b82c-319f703c0ea8/revoke",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "at_52ae8767-2691-476b-b82c-319f703c0ea8",
+        "name": "Laptop",
+        "prefix": "tt_pat_87nw",
+        "revokedAt": "2026-11-13T11:08:48.904Z",
+        "createdAt": "2026-11-13T11:08:48.829Z"
+      }
+    }
+  },
+  "GET /me/connected-apps": {
+    "title": "Your connected apps",
+    "request": {
+      "method": "GET",
+      "path": "/me/connected-apps",
+      "as": "karim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "apps": []
+      }
+    }
+  },
+  "GET /connected-apps": {
+    "title": "Everyone's connected apps, as an access admin",
+    "request": {
+      "method": "GET",
+      "path": "/connected-apps",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 0,
+        "apps": []
+      }
+    }
+  },
+  "POST /mcp": {
+    "title": "List the tools",
+    "request": {
+      "method": "POST",
+      "path": "/mcp",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list",
+        "params": {}
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "result": {
+          "tools": [
+            {
+              "name": "whoami",
+              "description": "The signed-in person: name, job details, and the TwinTrack modules they can use.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {}
+              },
+              "annotations": {
+                "readOnlyHint": true
+              },
+              "execution": {
+                "taskSupport": "forbidden"
+              }
+            },
+            {
+              "name": "my_permissions",
+              "description": "What the signed-in person can do in one module, such as \"hr\" or \"projects\", and how far each permission reaches.",
+              "inputSchema": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "properties": {
+                  "module": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "The module key, from whoami"
+                  }
+                },
+                "required": [
+                  "module"
+                ]
+              },
+              "annotations": {
+                "readOnlyHint": true
+              },
+              "execution": {
+                "taskSupport": "forbidden"
+              }
+            }
+          ]
+        },
+        "jsonrpc": "2.0",
+        "id": 1
+      }
+    }
+  },
+  "GET /org-roles": {
+    "title": "Lists the tree",
+    "request": {
+      "method": "GET",
+      "path": "/org-roles",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "orgRoles": [
+          {
+            "id": "or_founder",
+            "name": "Founder",
+            "description": "Runs the company. The root of the tree.",
+            "parentId": null,
+            "depth": 0,
+            "peopleCount": 1,
+            "createdAt": "2026-11-13T11:08:51.907Z",
+            "updatedAt": "2026-11-13T11:08:51.907Z"
+          },
+          {
+            "id": "or_engineering_lead",
+            "name": "Engineering Lead",
+            "description": "Leads engineering.",
+            "parentId": "or_founder",
+            "depth": 1,
+            "peopleCount": 1,
+            "createdAt": "2026-11-13T11:08:51.907Z",
+            "updatedAt": "2026-11-13T11:08:51.907Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /org-roles": {
+    "title": "Adds a role below Engineering Lead",
+    "request": {
+      "method": "POST",
+      "path": "/org-roles",
+      "as": "arif@twintrack.test",
+      "body": {
+        "name": "Platform",
+        "parentId": "or_engineering_lead"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "or_8bb087c5-f671-41ce-8ce4-192c0aa4be86",
+        "name": "Platform",
+        "parentId": "or_engineering_lead",
+        "depth": 2,
+        "peopleCount": 0,
+        "createdAt": "2026-11-13T11:08:52.629Z",
+        "updatedAt": "2026-11-13T11:08:52.629Z"
+      }
+    }
+  },
+  "PATCH /org-roles/:id": {
+    "title": "Renames a role",
+    "request": {
+      "method": "PATCH",
+      "path": "/org-roles/or_finance",
+      "as": "arif@twintrack.test",
+      "body": {
+        "name": "Accounts"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "or_finance",
+        "name": "Accounts",
+        "description": "Accountants.",
+        "parentId": "or_finance_lead",
+        "depth": 2,
+        "peopleCount": 1,
+        "createdAt": "2026-11-13T11:08:53.320Z",
+        "updatedAt": "2026-11-13T11:08:53.415Z"
+      }
+    }
+  },
+  "DELETE /org-roles/:id": {
+    "title": "Removes an empty org role with nothing below it",
+    "request": {
+      "method": "DELETE",
+      "path": "/org-roles/or_e01e91c4-14e6-4dad-9514-27ae7f97cbc9",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 204,
+      "body": {}
+    }
+  },
+  "GET /access-profiles": {
+    "title": "Lists the profiles",
+    "request": {
+      "method": "GET",
+      "path": "/access-profiles",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "profiles": [
+          {
+            "id": "ap_access_admin",
+            "name": "Access admin",
+            "description": "Manages people, modules and the org tree, and gives anyone a profile within their own access. Also a developer.",
+            "grants": {
+              "master": {
+                "user": {
+                  "actions": [
+                    "read",
+                    "create"
+                  ]
+                },
+                "module": {
+                  "actions": [
+                    "read",
+                    "create"
+                  ]
+                },
+                "audit": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "orgRole": {
+                  "actions": [
+                    "read",
+                    "create"
+                  ]
+                },
+                "accessProfile": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "userProfile": {
+                  "actions": [
+                    "update"
+                  ],
+                  "scope": "all"
+                },
+                "apiToken": {
+                  "actions": [
+                    "read",
+                    "create"
+                  ],
+                  "scope": "all"
+                }
+              },
+              "projects": {
+                "project": {
+                  "actions": [
+                    "read"
+                  ],
+                  "scope": "own"
+                },
+                "task": {
+                  "actions": [
+                    "read"
+                  ],
+                  "scope": "own"
+                },
+                "points": {
+                  "actions": [
+                    "read"
+                  ],
+                  "scope": "all"
+                },
+                "credential": {
+                  "actions": [
+                    "read",
+                    "create"
+                  ],
+                  "scope": "all"
+                },
+                "incentive": {
+                  "actions": [
+                    "read"
+                  ],
+                  "scope": "all"
+                }
+              }
+            },
+            "holders": 1,
+            "modules": [
+              {
+                "key": "master",
+                "name": "Master",
+                "loaded": true,
+                "grants": [
+                  "user.read",
+                  "user.create"
+                ],
+                "permissions": {
+                  "user.read": "all",
+                  "user.create": "all",
+                  "user.update": "all",
+                  "module.read": "all",
+                  "module.create": "all",
+                  "module.delete": "all",
+                  "audit.read": "all",
+                  "orgRole.read": "all",
+                  "orgRole.create": "all",
+                  "orgRole.update": "all",
+                  "orgRole.delete": "all",
+                  "accessProfile.read": "all",
+                  "userProfile.update": "all",
+                  "apiToken.read": "all",
+                  "apiToken.create": "all",
+                  "apiToken.delete": "all"
+                },
+                "fieldAccess": {}
+              },
+              {
+                "key": "projects",
+                "name": "Project management",
+                "loaded": true,
+                "grants": [
+                  "project.read (own)",
+                  "task.read (own)"
+                ],
+                "permissions": {
+                  "project.read": "own",
+                  "task.read": "own",
+                  "points.read": "all",
+                  "credential.read": "all",
+                  "credential.create": "all",
+                  "incentive.read": "all"
+                },
+                "fieldAccess": {}
+              }
+            ]
+          },
+          {
+            "id": "ap_auditor",
+            "name": "Auditor",
+            "description": "Reads the activity log, people and profiles, reads Accounts and approves bills and payroll.",
+            "grants": {
+              "master": {
+                "audit": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "user": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "orgRole": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "accessProfile": {
+                  "actions": [
+                    "read"
+                  ]
+                }
+              },
+              "hr": {},
+              "accounts": {
+                "category": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "vendor": {
+                  "actions": [
+                    "read"
+                  ],
+                  "fieldAccess": {
+                    "bankAccountNumber": "read"
+                  }
+                },
+                "bankAccount": {
+                  "actions": [
+                    "read"
+                  ],
+                  "fieldAccess": {
+                    "accountNumber": "read"
+                  }
+                },
+                "companyBankDetails": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "bill": {
+                  "actions": [
+                    "read",
+                    "approve"
+                  ]
+                },
+                "payment": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "receipt": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "invoice": {
+                  "actions": [
+                    "read"
+                  ]
+                },
+                "payrollRun": {
+                  "actions": [
+                    "read",
+                    "approve"
+                  ]
+                },
+                "document": {
+                  "actions": [
+                    "read"
+                  ]
+                }
+              }
+            },
+            "holders": 1,
+            "modules": [
+              {
+                "key": "master",
+                "name": "Master",
+                "loaded": true,
+                "grants": [
+                  "audit.read",
+                  "user.read"
+                ],
+                "permissions": {
+                  "audit.read": "all",
+                  "user.read": "all",
+                  "orgRole.read": "all",
+                  "accessProfile.read": "all"
+                },
+                "fieldAccess": {}
+              },
+              {
+                "key": "hr",
+                "name": "HR",
+                "loaded": true,
+                "grants": [],
+                "permissions": {},
+                "fieldAccess": {}
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "POST /access-profiles": {
+    "title": "Super admin adds a profile",
+    "request": {
+      "method": "POST",
+      "path": "/access-profiles",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "name": "Staff",
+        "grants": {
+          "hr": {
+            "salary": {
+              "actions": [
+                "read"
+              ],
+              "scope": "own"
+            }
+          }
+        }
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "ap_d0cb13dd-218a-4cc2-a836-a99b2ed621a3",
+        "name": "Staff",
+        "description": "",
+        "grants": {
+          "hr": {
+            "salary": {
+              "actions": [
+                "read"
+              ],
+              "scope": "own"
+            }
+          }
+        },
+        "holders": 0,
+        "modules": [
+          {
+            "key": "hr",
+            "name": "HR",
+            "loaded": true,
+            "grants": [
+              "salary.read (own)"
+            ],
+            "permissions": {
+              "salary.read": "own"
+            },
+            "fieldAccess": {}
+          }
+        ]
+      }
+    }
+  },
+  "PATCH /access-profiles/:id": {
+    "title": "Renames a profile",
+    "request": {
+      "method": "PATCH",
+      "path": "/access-profiles/ap_742220d6-cb55-401a-8f14-17da16a1f7b5",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "name": "Demo profile, renamed"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "ap_742220d6-cb55-401a-8f14-17da16a1f7b5",
+        "name": "Demo profile, renamed",
+        "description": "",
+        "grants": {
+          "hr": {
+            "salary": {
+              "actions": [
+                "read"
+              ],
+              "scope": "own"
+            }
+          }
+        },
+        "holders": 0,
+        "modules": [
+          {
+            "key": "hr",
+            "name": "HR",
+            "loaded": true,
+            "grants": [
+              "salary.read (own)"
+            ],
+            "permissions": {
+              "salary.read": "own"
+            },
+            "fieldAccess": {}
+          }
+        ]
+      }
+    }
+  },
+  "DELETE /access-profiles/:id": {
+    "title": "Removes a profile nobody holds",
+    "request": {
+      "method": "DELETE",
+      "path": "/access-profiles/ap_4ee0e99a-036c-4a9e-b56c-f831c9dd3ec5",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "removed": true,
+        "id": "ap_4ee0e99a-036c-4a9e-b56c-f831c9dd3ec5"
+      }
+    }
+  },
+  "GET /modules": {
+    "title": "Lists loaded modules",
+    "request": {
+      "method": "GET",
+      "path": "/modules",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "modules": [
+          {
+            "key": "accounts",
+            "name": "Accounts",
+            "version": "1.0.1",
+            "description": "Vendors, bills, payments, receipts, bank accounts, invoices and payroll.",
+            "core": false,
+            "frontendUrl": null,
+            "resources": [
+              {
+                "key": "category",
+                "label": "Categories",
+                "actions": [
+                  "read",
+                  "create"
+                ],
+                "trackedFields": [
+                  "name",
+                  "code"
+                ],
+                "recordFields": [
+                  "name",
+                  "code"
+                ]
+              },
+              {
+                "key": "vendor",
+                "label": "Vendors",
+                "actions": [
+                  "read",
+                  "create"
+                ],
+                "trackedFields": [
+                  "name",
+                  "contactName"
+                ],
+                "recordFields": [
+                  "name",
+                  "contactName"
+                ],
+                "protectedFields": [
+                  "bankAccountNumber"
+                ]
+              }
+            ],
+            "apis": {
+              "category.read": [
+                "GET /accounts/categories",
+                "GET /accounts/categories/:id"
+              ],
+              "category.create": [
+                "POST /accounts/categories"
+              ],
+              "category.update": [
+                "PATCH /accounts/categories/:id"
+              ],
+              "vendor.read": [
+                "GET /accounts/vendors",
+                "GET /accounts/vendors/:id"
+              ],
+              "vendor.create": [
+                "POST /accounts/vendors"
+              ],
+              "vendor.update": [
+                "PATCH /accounts/vendors/:id"
+              ],
+              "bankAccount.read": [
+                "GET /accounts/bank-accounts",
+                "GET /accounts/bank-accounts/:id"
+              ],
+              "bankAccount.create": [
+                "POST /accounts/bank-accounts"
+              ],
+              "bankAccount.update": [
+                "PATCH /accounts/bank-accounts/:id"
+              ],
+              "companyBankDetails.read": [
+                "GET /accounts/company-bank-details"
+              ],
+              "companyBankDetails.update": [
+                "PATCH /accounts/company-bank-details"
+              ],
+              "bill.read": [
+                "GET /accounts/bills",
+                "GET /accounts/bills/:id"
+              ],
+              "bill.create": [
+                "POST /accounts/bills"
+              ],
+              "bill.update": [
+                "PATCH /accounts/bills/:id",
+                "POST /accounts/bills/:id/submit"
+              ],
+              "bill.delete": [
+                "DELETE /accounts/bills/:id",
+                "POST /accounts/bills/:id/reverse"
+              ],
+              "bill.approve": [
+                "POST /accounts/bills/:id/approve",
+                "POST /accounts/bills/:id/reject"
+              ],
+              "payment.read": [
+                "GET /accounts/payments",
+                "GET /accounts/payments/:id"
+              ],
+              "payment.create": [
+                "POST /accounts/payments"
+              ],
+              "payment.delete": [
+                "POST /accounts/payments/:id/reverse"
+              ],
+              "receipt.read": [
+                "GET /accounts/receipts",
+                "GET /accounts/receipts/:id"
+              ],
+              "receipt.create": [
+                "POST /accounts/receipts"
+              ],
+              "receipt.update": [
+                "POST /accounts/receipts/:id/allocations",
+                "DELETE /accounts/receipts/:id/allocations/:allocationId"
+              ],
+              "receipt.delete": [
+                "POST /accounts/receipts/:id/reverse"
+              ],
+              "invoice.read": [
+                "GET /accounts/invoices",
+                "GET /accounts/invoices/unbilled"
+              ],
+              "invoice.create": [
+                "POST /accounts/invoices"
+              ],
+              "invoice.update": [
+                "PATCH /accounts/invoices/:id",
+                "PATCH /accounts/invoices/:id/lines"
+              ],
+              "invoice.delete": [
+                "DELETE /accounts/invoices/:id"
+              ],
+              "payrollRun.read": [
+                "GET /accounts/payroll-runs",
+                "GET /accounts/payroll-runs/:id"
+              ],
+              "payrollRun.create": [
+                "POST /accounts/payroll-runs"
+              ],
+              "payrollRun.update": [
+                "PATCH /accounts/payroll-runs/:id",
+                "POST /accounts/payroll-runs/:id/submit"
+              ],
+              "payrollRun.delete": [
+                "DELETE /accounts/payroll-runs/:id"
+              ],
+              "payrollRun.approve": [
+                "POST /accounts/payroll-runs/:id/approve",
+                "POST /accounts/payroll-runs/:id/return"
+              ],
+              "document.read": [
+                "GET /accounts/documents",
+                "GET /accounts/documents/:id/url"
+              ],
+              "document.create": [
+                "POST /accounts/documents",
+                "POST /accounts/documents/:id/part-urls"
+              ]
+            },
+            "routes": [
+              {
+                "method": "GET",
+                "path": "/accounts/categories",
+                "access": "private",
+                "permissions": [
+                  "category.read"
+                ],
+                "declaredAccess": "private",
+                "declaredPermissions": [
+                  "category.read"
+                ],
+                "isChanged": false,
+                "allowedAccess": [
+                  "signed",
+                  "private"
+                ]
+              },
+              {
+                "method": "POST",
+                "path": "/accounts/categories",
+                "access": "private",
+                "permissions": [
+                  "category.create"
+                ],
+                "declaredAccess": "private",
+                "declaredPermissions": [
+                  "category.create"
+                ],
+                "isChanged": false,
+                "allowedAccess": [
+                  "signed",
+                  "private"
+                ]
+              }
+            ],
+            "usedBy": {
+              "category.read": [
+                "GET /accounts/categories",
+                "GET /accounts/categories/:id"
+              ],
+              "category.create": [
+                "POST /accounts/categories",
+                "profile HR admin"
+              ],
+              "category.update": [
+                "PATCH /accounts/categories/:id",
+                "profile HR admin"
+              ],
+              "vendor.read": [
+                "GET /accounts/vendors",
+                "GET /accounts/vendors/:id"
+              ],
+              "vendor.create": [
+                "POST /accounts/vendors",
+                "profile HR admin"
+              ],
+              "vendor.update": [
+                "PATCH /accounts/vendors/:id",
+                "profile HR admin"
+              ],
+              "bankAccount.read": [
+                "GET /accounts/bank-accounts",
+                "GET /accounts/bank-accounts/:id"
+              ],
+              "bankAccount.create": [
+                "POST /accounts/bank-accounts",
+                "profile HR admin"
+              ],
+              "bankAccount.update": [
+                "PATCH /accounts/bank-accounts/:id",
+                "profile HR admin"
+              ],
+              "companyBankDetails.read": [
+                "GET /accounts/company-bank-details",
+                "profile Auditor"
+              ],
+              "companyBankDetails.update": [
+                "PATCH /accounts/company-bank-details",
+                "profile HR admin"
+              ],
+              "bill.read": [
+                "GET /accounts/bills",
+                "GET /accounts/bills/:id"
+              ],
+              "bill.create": [
+                "POST /accounts/bills",
+                "profile HR admin"
+              ],
+              "bill.update": [
+                "PATCH /accounts/bills/:id",
+                "POST /accounts/bills/:id/submit"
+              ],
+              "bill.delete": [
+                "DELETE /accounts/bills/:id",
+                "POST /accounts/bills/:id/reverse"
+              ],
+              "bill.approve": [
+                "POST /accounts/bills/:id/approve",
+                "POST /accounts/bills/:id/reject"
+              ],
+              "payment.read": [
+                "GET /accounts/payments",
+                "GET /accounts/payments/:id"
+              ],
+              "payment.create": [
+                "POST /accounts/payments",
+                "profile HR admin"
+              ],
+              "payment.delete": [
+                "POST /accounts/payments/:id/reverse",
+                "profile HR admin"
+              ],
+              "receipt.read": [
+                "GET /accounts/receipts",
+                "GET /accounts/receipts/:id"
+              ],
+              "receipt.create": [
+                "POST /accounts/receipts",
+                "profile HR admin"
+              ],
+              "receipt.update": [
+                "POST /accounts/receipts/:id/allocations",
+                "DELETE /accounts/receipts/:id/allocations/:allocationId"
+              ],
+              "receipt.delete": [
+                "POST /accounts/receipts/:id/reverse",
+                "profile HR admin"
+              ],
+              "invoice.read": [
+                "GET /accounts/invoices",
+                "GET /accounts/invoices/unbilled"
+              ],
+              "invoice.create": [
+                "POST /accounts/invoices",
+                "profile HR admin"
+              ],
+              "invoice.update": [
+                "PATCH /accounts/invoices/:id",
+                "PATCH /accounts/invoices/:id/lines"
+              ],
+              "invoice.delete": [
+                "DELETE /accounts/invoices/:id",
+                "profile HR admin"
+              ],
+              "payrollRun.read": [
+                "GET /accounts/payroll-runs",
+                "GET /accounts/payroll-runs/:id"
+              ],
+              "payrollRun.create": [
+                "POST /accounts/payroll-runs",
+                "profile HR admin"
+              ],
+              "payrollRun.update": [
+                "PATCH /accounts/payroll-runs/:id",
+                "POST /accounts/payroll-runs/:id/submit"
+              ],
+              "payrollRun.delete": [
+                "DELETE /accounts/payroll-runs/:id",
+                "profile HR admin"
+              ],
+              "payrollRun.approve": [
+                "POST /accounts/payroll-runs/:id/approve",
+                "POST /accounts/payroll-runs/:id/return"
+              ],
+              "document.read": [
+                "GET /accounts/documents",
+                "GET /accounts/documents/:id/url"
+              ],
+              "document.create": [
+                "POST /accounts/documents",
+                "POST /accounts/documents/:id/part-urls"
+              ],
+              "document.delete": [
+                "profile HR admin"
+              ]
+            }
+          },
+          {
+            "key": "hr",
+            "name": "HR",
+            "version": "1.11.0",
+            "description": "Employee records, leave, attendance and hiring.",
+            "core": false,
+            "frontendUrl": null,
+            "resources": [
+              {
+                "key": "salary",
+                "label": "Salaries",
+                "actions": [
+                  "read",
+                  "create"
+                ],
+                "scoped": true,
+                "trackedFields": [
+                  "amount",
+                  "currency"
+                ],
+                "recordFields": [
+                  "amount",
+                  "currency"
+                ],
+                "protectedFields": [
+                  "amount"
+                ],
+                "sharingModel": "private"
+              }
+            ],
+            "apis": {
+              "salary.read": [
+                "GET /hr/salaries",
+                "GET /hr/salaries/:id/history"
+              ],
+              "salary.create": [
+                "POST /hr/salaries"
+              ],
+              "salary.update": [
+                "PATCH /hr/salaries/:id"
+              ],
+              "salary.approve": [
+                "PATCH /hr/salaries/:id/approve"
+              ],
+              "salary.delete": [
+                "DELETE /hr/salaries/:id",
+                "POST /hr/salaries/:id/restore"
+              ]
+            },
+            "routes": [
+              {
+                "method": "GET",
+                "path": "/hr/salaries",
+                "access": "private",
+                "permissions": [
+                  "salary.read"
+                ],
+                "declaredAccess": "private",
+                "declaredPermissions": [
+                  "salary.read"
+                ],
+                "isChanged": false,
+                "allowedAccess": [
+                  "signed",
+                  "private"
+                ]
+              },
+              {
+                "method": "POST",
+                "path": "/hr/salaries",
+                "access": "private",
+                "permissions": [
+                  "salary.create"
+                ],
+                "declaredAccess": "private",
+                "declaredPermissions": [
+                  "salary.create"
+                ],
+                "isChanged": false,
+                "allowedAccess": [
+                  "signed",
+                  "private"
+                ]
+              }
+            ],
+            "usedBy": {
+              "salary.read": [
+                "GET /hr/salaries",
+                "GET /hr/salaries/:id/history"
+              ],
+              "salary.create": [
+                "POST /hr/salaries"
+              ],
+              "salary.update": [
+                "PATCH /hr/salaries/:id"
+              ],
+              "salary.approve": [
+                "PATCH /hr/salaries/:id/approve"
+              ],
+              "salary.delete": [
+                "DELETE /hr/salaries/:id",
+                "POST /hr/salaries/:id/restore"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "POST /modules/import": {
+    "title": "New module",
+    "request": {
+      "method": "POST",
+      "path": "/modules/import",
+      "as": "arif@twintrack.test",
+      "body": {
+        "password": "YOUR_PASSWORD",
+        "manifest": {
+          "manifestVersion": 1,
+          "module": {
+            "key": "inventory",
+            "name": "Inventory",
+            "version": "1.0.0"
+          },
+          "resources": [
+            {
+              "key": "task",
+              "label": "Tasks",
+              "actions": [
+                "read",
+                "create"
+              ]
+            }
+          ],
+          "routes": []
+        }
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "key": "inventory",
+        "name": "Inventory",
+        "version": "1.0.0",
+        "core": false,
+        "frontendUrl": null,
+        "created": true
+      }
+    }
+  },
+  "GET /modules/:key/export": {
+    "title": "Exports a module",
+    "request": {
+      "method": "GET",
+      "path": "/modules/hr/export",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "manifestVersion": 1,
+        "module": {
+          "key": "hr",
+          "name": "HR",
+          "version": "1.11.0",
+          "description": "Employee records, leave, attendance and hiring.",
+          "repository": "twintrack-hr",
+          "baseUrl": "/hr"
+        },
+        "resources": [
+          {
+            "key": "salary",
+            "label": "Salaries",
+            "actions": [
+              "read",
+              "create"
+            ],
+            "scoped": true,
+            "trackedFields": [
+              "amount",
+              "currency"
+            ],
+            "recordFields": [
+              "amount",
+              "currency"
+            ],
+            "protectedFields": [
+              "amount"
+            ],
+            "sharingModel": "private"
+          }
+        ],
+        "routes": [
+          {
+            "method": "GET",
+            "path": "/salaries",
+            "access": "private",
+            "permission": "salary.read"
+          },
+          {
+            "method": "POST",
+            "path": "/salaries",
+            "access": "private",
+            "permission": "salary.create"
+          }
+        ]
+      }
+    }
+  },
+  "DELETE /modules/:key": {
+    "title": "Removes a module and counts affected people",
+    "request": {
+      "method": "DELETE",
+      "path": "/modules/hr",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "removed": true,
+        "key": "hr",
+        "affectedUsers": 5
+      }
+    }
+  },
+  "PUT /modules/:key/resources/:resource": {
+    "title": "Adds a resource with its permissions",
+    "request": {
+      "method": "PUT",
+      "path": "/modules/hr/resources/bonus",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "label": "Bonuses",
+        "actions": [
+          "read",
+          "approve"
+        ]
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "created": true,
+        "module": "hr",
+        "resource": {
+          "key": "bonus",
+          "label": "Bonuses",
+          "actions": [
+            "read",
+            "approve"
+          ],
+          "scoped": false
+        }
+      }
+    }
+  },
+  "PUT /modules/:key/route-access": {
+    "title": "Super admin opens the salary list to every signed-in person",
+    "request": {
+      "method": "PUT",
+      "path": "/modules/hr/route-access",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "method": "GET",
+        "path": "/hr/salaries",
+        "access": "signed"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "route": {
+          "method": "GET",
+          "path": "/hr/salaries",
+          "access": "signed",
+          "permissions": [],
+          "declaredAccess": "private",
+          "declaredPermissions": [
+            "salary.read"
+          ],
+          "isChanged": true,
+          "allowedAccess": [
+            "signed",
+            "private"
+          ]
+        }
+      }
+    }
+  },
+  "DELETE /modules/:key/resources/:resource": {
+    "title": "Super admin removes a resource a role uses, which the role loses",
+    "request": {
+      "method": "DELETE",
+      "path": "/modules/hr/resources/salary",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "removed": true,
+        "module": "hr",
+        "resource": "salary"
+      }
+    }
+  },
+  "GET /audit": {
+    "title": "Newest entries first, with a total",
+    "request": {
+      "method": "GET",
+      "path": "/audit?page=1&pageSize=2",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "entries": [
+          {
+            "id": "6af6efd2a2b2a4b7febec085",
+            "at": "2026-11-13T11:09:06.480Z",
+            "actorId": "u_05",
+            "actorName": "Rumana Akter",
+            "action": "auth.login",
+            "ip": "127.0.0.1"
+          }
+        ]
+      }
+    }
+  },
+  "GET /hr/salaries": {
+    "title": "HR Admin sees every salary",
+    "request": {
+      "method": "GET",
+      "path": "/hr/salaries",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "scope": "all",
+        "total": 6,
+        "salaries": [
+          {
+            "id": "s_07",
+            "employeeId": "u_07",
+            "employeeName": "Arif Chowdhury",
+            "amount": 80000,
+            "currency": "BDT",
+            "effectiveFrom": "2026-12-01T00:00:00.000Z",
+            "status": "pending",
+            "version": 0,
+            "createdAt": "2026-11-13T11:09:07.559Z",
+            "updatedAt": "2026-11-13T11:09:07.559Z"
+          },
+          {
+            "id": "s_01",
+            "employeeId": "u_01",
+            "employeeName": "Farhana Kabir",
+            "amount": 250000,
+            "currency": "BDT",
+            "effectiveFrom": "2026-01-01T00:00:00.000Z",
+            "status": "approved",
+            "version": 0,
+            "createdAt": "2026-11-13T11:09:07.559Z",
+            "updatedAt": "2026-11-13T11:09:07.559Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /hr/salaries": {
+    "title": "HR Admin adds a salary, which starts as pending",
+    "request": {
+      "method": "POST",
+      "path": "/hr/salaries",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "employeeId": "u_08",
+        "amount": 99000,
+        "effectiveFrom": "2027-01-01"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "s_aeb26ed9-5fdb-4389-9b6b-98bdd8251009",
+        "employeeId": "u_08",
+        "employeeName": "Karim Ahmed",
+        "amount": 99000,
+        "currency": "BDT",
+        "effectiveFrom": "2027-01-01T00:00:00.000Z",
+        "status": "pending",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:09:09.152Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:09:09.152Z"
+      }
+    }
+  },
+  "PATCH /hr/salaries/:id": {
+    "title": "HR Admin changes an amount, which sends it back to pending",
+    "request": {
+      "method": "PATCH",
+      "path": "/hr/salaries/s_08",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "amount": 100000
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "s_08",
+        "employeeId": "u_08",
+        "employeeName": "Karim Ahmed",
+        "amount": 100000,
+        "currency": "BDT",
+        "effectiveFrom": "2026-01-01T00:00:00.000Z",
+        "status": "pending",
+        "version": 1,
+        "createdAt": "2026-11-13T11:09:10.438Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:09:10.545Z"
+      }
+    }
+  },
+  "PATCH /hr/salaries/:id/approve": {
+    "title": "HR Admin approves a pending salary",
+    "request": {
+      "method": "PATCH",
+      "path": "/hr/salaries/s_07/approve",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "s_07",
+        "employeeId": "u_07",
+        "employeeName": "Arif Chowdhury",
+        "amount": 80000,
+        "currency": "BDT",
+        "effectiveFrom": "2026-12-01T00:00:00.000Z",
+        "status": "approved",
+        "approvedBy": "u_06",
+        "approvedAt": "2026-11-13T11:09:12.051Z",
+        "version": 1,
+        "createdAt": "2026-11-13T11:09:11.972Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:09:12.051Z"
+      }
+    }
+  },
+  "DELETE /hr/salaries/:id": {
+    "title": "HR Admin deletes a salary",
+    "request": {
+      "method": "DELETE",
+      "path": "/hr/salaries/s_08",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "s_08",
+        "employeeId": "u_08",
+        "employeeName": "Karim Ahmed",
+        "amount": 95000,
+        "currency": "BDT",
+        "effectiveFrom": "2026-01-01T00:00:00.000Z",
+        "status": "approved",
+        "version": 1,
+        "createdAt": "2026-11-13T11:09:12.549Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:09:12.618Z",
+        "deletedAt": "2026-11-13T11:09:12.618Z",
+        "deletedBy": "u_06"
+      }
+    }
+  },
+  "POST /hr/salaries/:id/restore": {
+    "title": "HR Admin restores a salary from the recycle bin",
+    "request": {
+      "method": "POST",
+      "path": "/hr/salaries/s_08/restore",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "s_08",
+        "employeeId": "u_08",
+        "employeeName": "Karim Ahmed",
+        "amount": 95000,
+        "currency": "BDT",
+        "effectiveFrom": "2026-01-01T00:00:00.000Z",
+        "status": "approved",
+        "version": 2,
+        "createdAt": "2026-11-13T11:09:13.692Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:09:13.864Z"
+      }
+    }
+  },
+  "GET /hr/salaries/:id/history": {
+    "title": "HR Admin reads a salary history",
+    "request": {
+      "method": "GET",
+      "path": "/hr/salaries/s_08/history",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 0,
+        "entries": []
+      }
+    }
+  },
+  "GET /hr/salaries/:id/shares": {
+    "title": "HR Admin lists the shares",
+    "request": {
+      "method": "GET",
+      "path": "/hr/salaries/s_08/shares",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "shares": []
+      }
+    }
+  },
+  "POST /hr/salaries/:id/shares": {
+    "title": "HR Manager shares a salary in their team",
+    "request": {
+      "method": "POST",
+      "path": "/hr/salaries/s_08/shares",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "granteeType": "user",
+        "granteeId": "u_07",
+        "access": "read"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "sh_71088c30-ec9c-4d0f-a59b-c0e08c5b33c2",
+        "granteeType": "user",
+        "granteeId": "u_07",
+        "access": "read",
+        "sharedBy": "u_04",
+        "createdAt": "2026-11-13T11:09:16.465Z"
+      }
+    }
+  },
+  "DELETE /hr/salaries/:id/shares/:shareId": {
+    "title": "HR Admin removes a share",
+    "request": {
+      "method": "DELETE",
+      "path": "/hr/salaries/s_08/shares/sh_9cd31b69-11f2-4d77-9ff2-c72d6b1456ea",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "removed": true,
+        "id": "sh_9cd31b69-11f2-4d77-9ff2-c72d6b1456ea"
+      }
+    }
+  },
+  "GET /records": {
+    "title": "Super admin lists the custom objects",
+    "request": {
+      "method": "GET",
+      "path": "/records",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "objects": []
+      }
+    }
+  },
+  "POST /modules/:key/objects": {
+    "title": "Super admin defines Trainings in HR",
+    "request": {
+      "method": "POST",
+      "path": "/modules/hr/objects",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "key": "training",
+        "label": "Trainings",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "type": "text",
+            "required": true,
+            "tracked": true
+          },
+          {
+            "key": "cost",
+            "label": "Cost",
+            "type": "number",
+            "protected": true
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "module": "hr",
+        "object": {
+          "key": "training",
+          "label": "Trainings",
+          "actions": [
+            "read",
+            "create"
+          ],
+          "scoped": true,
+          "custom": true,
+          "fields": [
+            {
+              "key": "title",
+              "label": "Title",
+              "type": "text",
+              "required": true,
+              "tracked": true,
+              "protected": false
+            },
+            {
+              "key": "cost",
+              "label": "Cost",
+              "type": "number",
+              "required": false,
+              "tracked": false,
+              "protected": true
+            }
+          ],
+          "sharingModel": "private",
+          "trackedFields": [
+            "title"
+          ],
+          "protectedFields": [
+            "cost"
+          ]
+        }
+      }
+    }
+  },
+  "PUT /modules/:key/objects/:object": {
+    "title": "Super admin renames a custom object",
+    "request": {
+      "method": "PUT",
+      "path": "/modules/hr/objects/training",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "label": "Training courses",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "type": "text",
+            "required": true,
+            "tracked": true
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "module": "hr",
+        "object": {
+          "key": "training",
+          "label": "Training courses",
+          "actions": [
+            "read",
+            "create"
+          ],
+          "scoped": true,
+          "custom": true,
+          "fields": [
+            {
+              "key": "title",
+              "label": "Title",
+              "type": "text",
+              "required": true,
+              "tracked": true,
+              "protected": false
+            }
+          ],
+          "sharingModel": "private",
+          "trackedFields": [
+            "title"
+          ],
+          "protectedFields": []
+        }
+      }
+    }
+  },
+  "DELETE /modules/:key/objects/:object": {
+    "title": "Removes a custom object with no records",
+    "request": {
+      "method": "DELETE",
+      "path": "/modules/hr/objects/training",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "removed": true,
+        "module": "hr",
+        "object": "training"
+      }
+    }
+  },
+  "GET /records/:module/:object": {
+    "title": "Lists a custom object's records",
+    "request": {
+      "method": "GET",
+      "path": "/records/hr/training",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "scope": "all",
+        "total": 1,
+        "records": [
+          {
+            "id": "cr_8f6f48c3-dac6-415f-84fa-62e6ba2f439a",
+            "module": "hr",
+            "object": "training",
+            "ownerId": "u_01",
+            "values": {
+              "title": "First aid"
+            },
+            "version": 0,
+            "createdBy": "u_01",
+            "createdAt": "2026-11-13T11:09:21.598Z",
+            "updatedBy": "u_01",
+            "updatedAt": "2026-11-13T11:09:21.598Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /records/:module/:object": {
+    "title": "Adds a record",
+    "request": {
+      "method": "POST",
+      "path": "/records/hr/training",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "values": {
+          "title": "First aid"
+        }
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "cr_8d0b79c2-049c-459a-bd86-2f42031586a3",
+        "module": "hr",
+        "object": "training",
+        "ownerId": "u_01",
+        "values": {
+          "title": "First aid"
+        },
+        "version": 0,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:09:22.409Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:09:22.409Z"
+      }
+    }
+  },
+  "GET /records/:module/:object/:id": {
+    "title": "Reads one record",
+    "request": {
+      "method": "GET",
+      "path": "/records/hr/training/cr_b711c123-b470-43aa-b079-4afdc051a089",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cr_b711c123-b470-43aa-b079-4afdc051a089",
+        "module": "hr",
+        "object": "training",
+        "ownerId": "u_01",
+        "values": {
+          "title": "First aid"
+        },
+        "version": 0,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:09:23.119Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:09:23.119Z"
+      }
+    }
+  },
+  "PATCH /records/:module/:object/:id": {
+    "title": "Changes a record",
+    "request": {
+      "method": "PATCH",
+      "path": "/records/hr/training/cr_9d9e2e2b-e652-4f7a-9567-43f00b268798",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "values": {
+          "title": "Fire safety"
+        }
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cr_9d9e2e2b-e652-4f7a-9567-43f00b268798",
+        "module": "hr",
+        "object": "training",
+        "ownerId": "u_01",
+        "values": {
+          "title": "Fire safety"
+        },
+        "version": 1,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:09:23.927Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:09:24.143Z"
+      }
+    }
+  },
+  "DELETE /records/:module/:object/:id": {
+    "title": "Moves a record to the recycle bin",
+    "request": {
+      "method": "DELETE",
+      "path": "/records/hr/training/cr_051425f8-66a7-46e8-aefe-ad251bb0c559",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cr_051425f8-66a7-46e8-aefe-ad251bb0c559",
+        "module": "hr",
+        "object": "training",
+        "ownerId": "u_01",
+        "values": {
+          "title": "First aid"
+        },
+        "version": 1,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:09:24.837Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:09:24.913Z",
+        "deletedAt": "2026-11-13T11:09:24.913Z",
+        "deletedBy": "u_01"
+      }
+    }
+  },
+  "POST /records/:module/:object/:id/restore": {
+    "title": "Restores a record from the recycle bin",
+    "request": {
+      "method": "POST",
+      "path": "/records/hr/training/cr_c3c29182-1640-4289-be4d-3469b1ed5136/restore",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cr_c3c29182-1640-4289-be4d-3469b1ed5136",
+        "module": "hr",
+        "object": "training",
+        "ownerId": "u_01",
+        "values": {
+          "title": "First aid"
+        },
+        "version": 2,
+        "createdBy": "u_01",
+        "createdAt": "2026-11-13T11:09:25.605Z",
+        "updatedBy": "u_01",
+        "updatedAt": "2026-11-13T11:09:25.797Z"
+      }
+    }
+  },
+  "GET /records/:module/:object/:id/history": {
+    "title": "Reads a record's history",
+    "request": {
+      "method": "GET",
+      "path": "/records/hr/training/cr_4f14210d-d550-407a-9656-c19af952accd/history",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "entries": [
+          {
+            "id": "6af6efe6a2b2a4b7febec128",
+            "at": "2026-11-13T11:09:26.509Z",
+            "action": "created",
+            "changes": [
+              {
+                "field": "title",
+                "to": "First aid"
+              }
+            ],
+            "actorId": "u_01",
+            "actorName": "Farhana Kabir"
+          }
+        ]
+      }
+    }
+  },
+  "GET /records/:module/:object/:id/shares": {
+    "title": "Lists a record's shares",
+    "request": {
+      "method": "GET",
+      "path": "/records/hr/training/cr_6057c020-410e-4886-80b0-a6e972142177/shares",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "shares": []
+      }
+    }
+  },
+  "POST /records/:module/:object/:id/shares": {
+    "title": "Shares a record with one person",
+    "request": {
+      "method": "POST",
+      "path": "/records/hr/training/cr_52bfb0f3-0b7e-4199-bc38-0076fef369d1/shares",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "granteeType": "user",
+        "granteeId": "u_03",
+        "access": "read"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "sh_7a5a5469-4124-427a-b626-6dcf186f50c4",
+        "granteeType": "user",
+        "granteeId": "u_03",
+        "access": "read",
+        "sharedBy": "u_01",
+        "createdAt": "2026-11-13T11:09:28.029Z"
+      }
+    }
+  },
+  "DELETE /records/:module/:object/:id/shares/:shareId": {
+    "title": "Removes a share",
+    "request": {
+      "method": "DELETE",
+      "path": "/records/hr/training/cr_7c3bb6fc-1d12-4123-9d7b-47ddf41fd2d1/shares/sh_6b387fed-65dd-40a4-98c5-c01e31ddaab4",
+      "as": "farhana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "removed": true,
+        "id": "sh_6b387fed-65dd-40a4-98c5-c01e31ddaab4"
+      }
+    }
+  },
+  "GET /projects/projects": {
+    "title": "Team Lead lists their team's projects",
+    "request": {
+      "method": "GET",
+      "path": "/projects/projects",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "scope": "team",
+        "total": 0,
+        "projects": []
+      }
+    }
+  },
+  "POST /projects/projects": {
+    "title": "Team Lead creates a project",
+    "request": {
+      "method": "POST",
+      "path": "/projects/projects",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "name": "Try-page project",
+        "memberIds": [
+          "u_07"
+        ]
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "p_49f1052a-cd71-40ae-bdc8-50c547f6c0df",
+        "name": "Try-page project",
+        "status": "active",
+        "leadId": "u_04",
+        "leadName": "Rahim Uddin",
+        "members": [
+          {
+            "id": "u_07",
+            "name": "Arif Chowdhury"
+          }
+        ],
+        "version": 0,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:30.434Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:30.434Z"
+      }
+    }
+  },
+  "GET /projects/projects/:id": {
+    "title": "Team Lead reads their project",
+    "request": {
+      "method": "GET",
+      "path": "/projects/projects/p_4bdb4dfb-f1ea-4534-bfe3-c97fbf132964",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "p_4bdb4dfb-f1ea-4534-bfe3-c97fbf132964",
+        "name": "Demo project",
+        "status": "active",
+        "leadId": "u_04",
+        "leadName": "Rahim Uddin",
+        "members": [
+          {
+            "id": "u_07",
+            "name": "Arif Chowdhury"
+          },
+          {
+            "id": "u_09",
+            "name": "Mehedi Hasan"
+          }
+        ],
+        "version": 0,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:31.359Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:31.359Z"
+      }
+    }
+  },
+  "PATCH /projects/projects/:id": {
+    "title": "Team Lead puts the project on hold",
+    "request": {
+      "method": "PATCH",
+      "path": "/projects/projects/p_4b10b8d4-9cd5-47a9-93ae-94dbe783602e",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "status": "on_hold"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "p_4b10b8d4-9cd5-47a9-93ae-94dbe783602e",
+        "name": "Demo project",
+        "status": "on_hold",
+        "leadId": "u_04",
+        "leadName": "Rahim Uddin",
+        "members": [
+          {
+            "id": "u_07",
+            "name": "Arif Chowdhury"
+          },
+          {
+            "id": "u_09",
+            "name": "Mehedi Hasan"
+          }
+        ],
+        "version": 1,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:32.110Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:32.212Z"
+      }
+    }
+  },
+  "PUT /projects/projects/:id/members": {
+    "title": "Team Lead adds a member",
+    "request": {
+      "method": "PUT",
+      "path": "/projects/projects/p_46066c4b-e08d-4d40-86e6-67f80f3cc7a1/members",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "memberIds": [
+          "u_07",
+          "u_09",
+          "u_10"
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "p_46066c4b-e08d-4d40-86e6-67f80f3cc7a1",
+        "name": "Demo project",
+        "status": "active",
+        "leadId": "u_04",
+        "leadName": "Rahim Uddin",
+        "members": [
+          {
+            "id": "u_07",
+            "name": "Arif Chowdhury"
+          },
+          {
+            "id": "u_09",
+            "name": "Mehedi Hasan"
+          }
+        ],
+        "version": 1,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:32.640Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:32.737Z"
+      }
+    }
+  },
+  "GET /projects/tasks": {
+    "title": "Team Lead lists their team's tasks",
+    "request": {
+      "method": "GET",
+      "path": "/projects/tasks",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "scope": "team",
+        "total": 0,
+        "tasks": []
+      }
+    }
+  },
+  "POST /projects/tasks": {
+    "title": "Team Lead creates a task for a member",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "projectId": "p_a5d084a5-eb3c-4a76-9aec-fd9578ae943d",
+        "title": "Demo task",
+        "assignedDevId": "u_07",
+        "estimatedHours": 8
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "t_1330308f-26b7-4aea-824a-4b6a2392afb9",
+        "number": "T-00001",
+        "projectId": "p_a5d084a5-eb3c-4a76-9aec-fd9578ae943d",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "todo",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 0,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:33.807Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:33.807Z"
+      }
+    }
+  },
+  "GET /projects/tasks/:id": {
+    "title": "The assignee reads their task",
+    "request": {
+      "method": "GET",
+      "path": "/projects/tasks/t_281b8dbe-8bc1-41f3-b2da-c49d250732b8",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_281b8dbe-8bc1-41f3-b2da-c49d250732b8",
+        "number": "T-00001",
+        "projectId": "p_d5426360-e4f2-4439-9f78-747eed9dd969",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "todo",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 0,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:34.269Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:34.269Z",
+        "references": [],
+        "referencedBy": []
+      }
+    }
+  },
+  "PATCH /projects/tasks/:id": {
+    "title": "Team Lead changes the estimate",
+    "request": {
+      "method": "PATCH",
+      "path": "/projects/tasks/t_7f6e2c78-29a7-46a4-9fa4-78b499814b28",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "estimatedHours": 6
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_7f6e2c78-29a7-46a4-9fa4-78b499814b28",
+        "number": "T-00001",
+        "projectId": "p_855323ec-14ee-4406-8d22-b8d7f38e5064",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "todo",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 6,
+        "pointValue": 300,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 1,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:35.227Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:35.349Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/start": {
+    "title": "The assignee starts the timer",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_a66cdcb3-ea18-4145-8b20-0113aaed6f93/start",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_a66cdcb3-ea18-4145-8b20-0113aaed6f93",
+        "number": "T-00001",
+        "projectId": "p_e217e92e-7172-45ce-b47d-62b462319849",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "in_progress",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:35.950Z",
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 1,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:35.850Z",
+        "updatedBy": "u_07",
+        "updatedAt": "2026-11-13T11:09:35.951Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/pause": {
+    "title": "The assignee pauses the timer",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_67cd15a7-c456-44b5-b6b3-a97d072f992d/pause",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_67cd15a7-c456-44b5-b6b3-a97d072f992d",
+        "number": "T-00001",
+        "projectId": "p_30426e52-7655-4d4f-9293-12de989700ad",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "in_progress",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": true,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:36.935Z",
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 2,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:36.845Z",
+        "updatedBy": "u_07",
+        "updatedAt": "2026-11-13T11:09:37.042Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/complete": {
+    "title": "The assignee completes the task",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_3fd398e9-1031-4e74-a15e-64638a83cec6/complete",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_3fd398e9-1031-4e74-a15e-64638a83cec6",
+        "number": "T-00001",
+        "projectId": "p_eddc9597-e637-4fc8-af70-17cab8b9073b",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "pending_approval",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:37.614Z",
+        "completedAt": "2026-11-13T11:09:37.700Z",
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 2,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:37.508Z",
+        "updatedBy": "u_07",
+        "updatedAt": "2026-11-13T11:09:37.701Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/qa-start": {
+    "title": "The QA person starts testing",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_39e702d4-4170-4b18-87c8-880c12373dfd/qa-start",
+      "as": "mehedi@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_39e702d4-4170-4b18-87c8-880c12373dfd",
+        "number": "T-00001",
+        "projectId": "p_6189f45e-c4fc-4f45-9b9a-3028ad7c7af9",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "qa_in_progress",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:38.347Z",
+        "completedAt": "2026-11-13T11:09:38.458Z",
+        "revertCount": 0,
+        "qaId": "u_09",
+        "qaPaused": false,
+        "version": 4,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:38.257Z",
+        "updatedBy": "u_09",
+        "updatedAt": "2026-11-13T11:09:38.640Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/qa-pause": {
+    "title": "The QA person pauses testing",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_7c71e9ea-967a-4098-80c9-f6bc03d50207/qa-pause",
+      "as": "mehedi@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_7c71e9ea-967a-4098-80c9-f6bc03d50207",
+        "number": "T-00001",
+        "projectId": "p_4d239514-a92a-42cf-a03e-23d753a81ebe",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "qa_in_progress",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:39.870Z",
+        "completedAt": "2026-11-13T11:09:39.969Z",
+        "revertCount": 0,
+        "qaId": "u_09",
+        "qaPaused": true,
+        "version": 5,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:39.784Z",
+        "updatedBy": "u_09",
+        "updatedAt": "2026-11-13T11:09:40.227Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/qa-handover": {
+    "title": "Team Lead hands a completed task to QA",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_b2551598-2a90-466b-929b-8efea4a26254/qa-handover",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "qaId": "u_09",
+        "qaEstimatedHours": 2
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_b2551598-2a90-466b-929b-8efea4a26254",
+        "number": "T-00001",
+        "projectId": "p_313b73ac-6fe7-4ec7-9e12-e07492aecde5",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "qa_todo",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:40.696Z",
+        "completedAt": "2026-11-13T11:09:40.769Z",
+        "revertCount": 0,
+        "qaId": "u_09",
+        "qaEstimatedHours": 2,
+        "qaPointValue": 100,
+        "qaPaused": false,
+        "version": 3,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:40.624Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:40.873Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/qa-complete": {
+    "title": "The QA person passes the task",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_84e48d41-7260-40f1-b915-2536f73136a4/qa-complete",
+      "as": "mehedi@twintrack.test",
+      "body": {
+        "result": "pass"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_84e48d41-7260-40f1-b915-2536f73136a4",
+        "number": "T-00001",
+        "projectId": "p_1ce230e8-1249-42d4-aeb9-c49b87b0d8f0",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "pending_approval",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:41.346Z",
+        "completedAt": "2026-11-13T11:09:41.429Z",
+        "revertCount": 0,
+        "qaId": "u_09",
+        "qaPaused": false,
+        "qaCompletedAt": "2026-11-13T11:09:41.657Z",
+        "qaResult": "pass",
+        "version": 5,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:41.274Z",
+        "updatedBy": "u_09",
+        "updatedAt": "2026-11-13T11:09:41.657Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/approve": {
+    "title": "Team Lead approves the hours after QA",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_8a3b04b6-e3c0-4f31-8885-376d2c7bd277/approve",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "hours": {
+          "basis": "estimated"
+        },
+        "qaHours": {
+          "basis": "actual"
+        }
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_8a3b04b6-e3c0-4f31-8885-376d2c7bd277",
+        "number": "T-00001",
+        "projectId": "p_36cab25c-73c6-4bbf-a422-d37a61ac0176",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "done",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "approvedHours": 8,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:42.289Z",
+        "completedAt": "2026-11-13T11:09:42.370Z",
+        "approvedBy": "u_04",
+        "approvedAt": "2026-11-13T11:09:43.400Z",
+        "revertCount": 0,
+        "qaId": "u_09",
+        "qaEstimatedHours": 2,
+        "qaActualHours": 0,
+        "qaApprovedHours": 0,
+        "qaPointValue": 0,
+        "qaPaused": false,
+        "qaCompletedAt": "2026-11-13T11:09:42.677Z",
+        "qaResult": "pass",
+        "version": 6,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:42.209Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:43.400Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/revert": {
+    "title": "Team Lead sends the task back with a reason",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_ebd80291-7812-4086-94f8-c668fcac38b0/revert",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "comment": "The export drops the last row."
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_ebd80291-7812-4086-94f8-c668fcac38b0",
+        "number": "T-00001",
+        "projectId": "p_e079f876-ba6b-4c43-9e05-4050aa726512",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "reverted",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:44.797Z",
+        "revertCount": 1,
+        "qaPaused": false,
+        "version": 3,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:44.690Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:44.986Z"
+      }
+    }
+  },
+  "POST /projects/tasks/:id/cancel": {
+    "title": "Team Lead cancels an open task",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_16eaa533-4946-4c8b-88ea-ad8a4d186c16/cancel",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_16eaa533-4946-4c8b-88ea-ad8a4d186c16",
+        "number": "T-00001",
+        "projectId": "p_d2b5239e-043b-4a85-975d-91239da663ea",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "cancelled",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "revertCount": 0,
+        "qaPaused": false,
+        "cancelledBy": "u_04",
+        "cancelledAt": "2026-11-13T11:09:45.563Z",
+        "version": 1,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:45.484Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:45.564Z"
+      }
+    }
+  },
+  "GET /projects/tasks/:id/history": {
+    "title": "Team Lead reads what changed",
+    "request": {
+      "method": "GET",
+      "path": "/projects/tasks/t_ccdc15f0-e3ea-40c7-bedc-3bf7ce6edb6b/history",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 2,
+        "entries": [
+          {
+            "id": "6af6effaa2b2a4b7febec250",
+            "at": "2026-11-13T11:09:46.207Z",
+            "action": "updated",
+            "changes": [
+              {
+                "field": "status",
+                "from": "todo",
+                "to": "in_progress"
+              }
+            ],
+            "actorId": "u_07",
+            "actorName": "Arif Chowdhury"
+          },
+          {
+            "id": "6af6effaa2b2a4b7febec24d",
+            "at": "2026-11-13T11:09:46.118Z",
+            "action": "created",
+            "changes": [
+              {
+                "field": "title",
+                "to": "Demo task"
+              },
+              {
+                "field": "status",
+                "to": "todo"
+              }
+            ],
+            "actorId": "u_04",
+            "actorName": "Rahim Uddin"
+          }
+        ]
+      }
+    }
+  },
+  "GET /projects/tasks/:id/comments": {
+    "title": "The assignee reads the comments",
+    "request": {
+      "method": "GET",
+      "path": "/projects/tasks/t_e0cd1a81-569e-46d1-976d-32da80925261/comments",
+      "as": "arif@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 0,
+        "comments": []
+      }
+    }
+  },
+  "POST /projects/tasks/:id/comments": {
+    "title": "The assignee comments",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_42f24098-63b0-4f3b-82a6-a9d0718536a5/comments",
+      "as": "arif@twintrack.test",
+      "body": {
+        "body": "Started on the CSV part."
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "tc_bd66bd74-8bb7-4c08-818e-5a737a6358eb",
+        "authorId": "u_07",
+        "authorName": "Arif Chowdhury",
+        "body": "Started on the CSV part.",
+        "createdAt": "2026-11-13T11:09:47.528Z"
+      }
+    }
+  },
+  "PUT /projects/tasks/:id/references": {
+    "title": "Team Lead links two tasks",
+    "request": {
+      "method": "PUT",
+      "path": "/projects/tasks/t_ba2ea0de-5544-46ef-b8ee-444386b266a9/references",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "taskIds": [
+          "t_27752c6d-4d19-4949-ae69-39bf4c59405c"
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_ba2ea0de-5544-46ef-b8ee-444386b266a9",
+        "number": "T-00001",
+        "projectId": "p_33ef8930-2966-46f1-a03a-ff20f29b8a30",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "todo",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 1,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:47.974Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:48.190Z"
+      }
+    }
+  },
+  "GET /projects/tasks/summary": {
+    "title": "Totals for a project",
+    "request": {
+      "method": "GET",
+      "path": "/projects/tasks/summary?projectId=p_233c63f9-4976-441f-82df-19c330a21fd4",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "scope": "team",
+        "taskCount": 1,
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "pointValue": 400,
+        "varianceHours": 0
+      }
+    }
+  },
+  "GET /projects/tasks/export": {
+    "title": "Export a project",
+    "request": {
+      "method": "GET",
+      "path": "/projects/tasks/export?projectId=p_21113126-38c7-43cc-9110-779e93c86d86",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {}
+    }
+  },
+  "GET /projects/tasks/search": {
+    "title": "Find by title",
+    "request": {
+      "method": "GET",
+      "path": "/projects/tasks/search?search=demo",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "tasks": [
+          {
+            "id": "t_e5a5f405-66f6-4fa4-b051-e27795dcbdf2",
+            "number": "T-00001",
+            "status": "todo",
+            "title": "Demo task",
+            "projectName": "Demo project"
+          }
+        ]
+      }
+    }
+  },
+  "PATCH /projects/tasks/:id/qa-estimate": {
+    "title": "Set the estimate",
+    "request": {
+      "method": "PATCH",
+      "path": "/projects/tasks/t_0db23962-f37b-4dab-9553-8fa114245e2c/qa-estimate",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "qaEstimatedHours": 2
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_0db23962-f37b-4dab-9553-8fa114245e2c",
+        "number": "T-00001",
+        "projectId": "p_2e7a13b2-1dac-4e6e-b856-10ae13d40c94",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "qa_todo",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 0,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:50.238Z",
+        "completedAt": "2026-11-13T11:09:50.349Z",
+        "revertCount": 0,
+        "qaId": "u_09",
+        "qaEstimatedHours": 2,
+        "qaPointValue": 100,
+        "qaPaused": false,
+        "version": 4,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:50.164Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:50.529Z"
+      }
+    }
+  },
+  "PATCH /projects/tasks/:id/flag": {
+    "title": "Flag for follow-up",
+    "request": {
+      "method": "PATCH",
+      "path": "/projects/tasks/t_58764e25-1d49-424b-bc9c-e662c12f3614/flag",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "flagged": true,
+        "flagNote": "Check the hours"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_58764e25-1d49-424b-bc9c-e662c12f3614",
+        "number": "T-00001",
+        "projectId": "p_0da99194-19b6-43b9-9d5d-3b60d182594d",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "todo",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": true,
+        "flagNote": "Check the hours",
+        "paused": false,
+        "workedSeconds": 0,
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 1,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:51.206Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:51.297Z"
+      }
+    }
+  },
+  "PATCH /projects/tasks/:id/billable": {
+    "title": "Not billable",
+    "request": {
+      "method": "PATCH",
+      "path": "/projects/tasks/t_b390793b-9b0f-4a2f-95f2-e1b5eeb62d86/billable",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "billable": false
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_b390793b-9b0f-4a2f-95f2-e1b5eeb62d86",
+        "number": "T-00001",
+        "projectId": "p_2eae03e3-1b4c-4210-a506-419a8c21d2a7",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "todo",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "pointValue": 400,
+        "billable": false,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 1,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:51.726Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:51.807Z"
+      }
+    }
+  },
+  "PATCH /projects/tasks/:id/actual-hours": {
+    "title": "Correct the hours",
+    "request": {
+      "method": "PATCH",
+      "path": "/projects/tasks/t_f630ea65-7837-455b-b001-84327f66655b/actual-hours",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "actualHours": 7.5
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "t_f630ea65-7837-455b-b001-84327f66655b",
+        "number": "T-00001",
+        "projectId": "p_9fc670b3-58d0-43a3-bb9d-d3ae796fa7b5",
+        "projectName": "Demo project",
+        "kind": "development",
+        "title": "Demo task",
+        "status": "pending_approval",
+        "assignedDevId": "u_07",
+        "tlId": "u_04",
+        "estimatedHours": 8,
+        "actualHours": 7.5,
+        "pointValue": 400,
+        "billable": true,
+        "flagged": false,
+        "paused": false,
+        "workedSeconds": 0,
+        "startedAt": "2026-11-13T11:09:52.302Z",
+        "completedAt": "2026-11-13T11:09:52.384Z",
+        "revertCount": 0,
+        "qaPaused": false,
+        "version": 3,
+        "createdBy": "u_04",
+        "createdAt": "2026-11-13T11:09:52.231Z",
+        "updatedBy": "u_04",
+        "updatedAt": "2026-11-13T11:09:52.479Z"
+      }
+    }
+  },
+  "GET /projects/tasks/:id/attachments": {
+    "title": "A task's files",
+    "request": {
+      "method": "GET",
+      "path": "/projects/tasks/t_ec676d0e-dc6d-4980-9ff2-e97580df2650/attachments",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "attachments": [],
+        "usedBytes": 0,
+        "limitBytes": 5368709120
+      }
+    }
+  },
+  "POST /projects/tasks/:id/attachments": {
+    "title": "Start an upload",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_52523854-1302-4328-97fb-da75aa333841/attachments",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "fileName": "notes.txt",
+        "mimeType": "text/plain",
+        "sizeBytes": 12
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "attachment": {
+          "id": "ta_cf896985-bf2a-4989-89c8-22554c0fdbd4",
+          "fileName": "notes.txt",
+          "mimeType": "text/plain",
+          "sizeBytes": 12,
+          "status": "uploading",
+          "uploadedBy": "u_04",
+          "uploadedByName": "Rahim Uddin",
+          "createdAt": "2026-11-13T11:09:53.702Z"
+        },
+        "partSize": 67108864,
+        "partCount": 1
+      }
+    }
+  },
+  "POST /projects/tasks/:id/attachments/:attachmentId/part-urls": {
+    "title": "Address for part 1",
+    "request": {
+      "method": "POST",
+      "path": "/projects/tasks/t_398f2b4b-0794-4f6b-a75f-69af1d901a3d/attachments/ta_94e1f56d-281c-477c-8d5e-ab9261e33124/part-urls",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "partNumbers": [
+          1
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "parts": [
+          {
+            "partNumber": 1,
+            "url": "http://localhost:4100/files/parts?token=eyJraW5kIjoicGFydCIsImtleSI6InRhc2tzL3RfMzk4ZjJiNGItMDc5NC00ZjZiLWE3NWYtNjlhZjFkOTAxYTNkL3RhXzk0ZTFmNTZkLTI4MWMtNDc3Yy04ZDVlLWFiOTI2MWUzMzEyNCIsInVwbG9hZElkIjoiNWMzOTVlYWMwNGY4NTJlOWI2NzE3M2Q3IiwicGFydE51bWJlciI6MSwiZXhwaXJlc0F0IjoxNzk0NTcxNzk0NDc1fQ.SHC1mgf3K1Zk3lvuLCTCTyTsNDs2KbOogoqQkR4jFVc"
+          }
+        ]
+      }
+    }
+  },
+  "DELETE /projects/tasks/:id/attachments/:attachmentId": {
+    "title": "Cancel your own upload",
+    "request": {
+      "method": "DELETE",
+      "path": "/projects/tasks/t_8e6c42f7-5cd6-486b-9be2-92675fda1b64/attachments/ta_efe31f7f-cfc3-461a-a9d5-90051387e0f9",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "deleted": true
+      }
+    }
+  },
+  "GET /projects/projects/health": {
+    "title": "Your projects",
+    "request": {
+      "method": "GET",
+      "path": "/projects/projects/health",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "projects": [
+          {
+            "id": "p_0bba4514-723d-40be-9efd-79a8d18770a6",
+            "name": "Demo project",
+            "status": "active",
+            "leadId": "u_04",
+            "leadName": "Rahim Uddin",
+            "completedHours": 0,
+            "openTaskCount": 1,
+            "thisMonth": [],
+            "thisMonthIncentive": 0
+          }
+        ]
+      }
+    }
+  },
+  "GET /projects/projects/roster": {
+    "title": "Your team",
+    "request": {
+      "method": "GET",
+      "path": "/projects/projects/roster",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "teamLeads": [
+          {
+            "id": "u_04",
+            "name": "Rahim Uddin",
+            "projectCount": 1,
+            "tasksCompletedThisMonth": 0
+          }
+        ],
+        "developers": [
+          {
+            "id": "u_07",
+            "name": "Arif Chowdhury",
+            "openTasks": 1,
+            "completedTasks": 0,
+            "totalPoints": 0
+          }
+        ]
+      }
+    }
+  },
+  "GET /projects/projects/:id/credentials": {
+    "title": "The logins",
+    "request": {
+      "method": "GET",
+      "path": "/projects/projects/p_63234ac0-3661-4c58-ba2c-a9e17b7ca770/credentials",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "credentials": [
+          {
+            "id": "pc_6d9fd5d8-34e4-4be1-bb23-ae62cf3d5f83",
+            "projectId": "p_63234ac0-3661-4c58-ba2c-a9e17b7ca770",
+            "label": "Salesforce sandbox",
+            "loginUrl": "https://test.salesforce.com",
+            "username": "dev@acme.test",
+            "password": "Sup3r secret",
+            "hasOtp": false,
+            "version": 0,
+            "createdBy": "u_04",
+            "createdByName": "Rahim Uddin",
+            "createdAt": "2026-11-13T11:09:59.630Z",
+            "updatedBy": "u_04",
+            "updatedByName": "Rahim Uddin",
+            "updatedAt": "2026-11-13T11:09:59.630Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /projects/projects/:id/credentials": {
+    "title": "Add a login",
+    "request": {
+      "method": "POST",
+      "path": "/projects/projects/p_8d3f0d16-cab7-447c-a862-d058b830bc5d/credentials",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "label": "Sandbox",
+        "loginUrl": "https://test.salesforce.com",
+        "username": "dev@acme.test",
+        "password": "Sup3r secret",
+        "otpSecret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "pc_7bd9e766-d640-46ce-a36a-0b21d8b217a3",
+        "projectId": "p_8d3f0d16-cab7-447c-a862-d058b830bc5d",
+        "label": "Sandbox",
+        "loginUrl": "https://test.salesforce.com",
+        "username": "dev@acme.test",
+        "password": "Sup3r secret",
+        "hasOtp": true,
+        "otpCode": "951109",
+        "otpSecondsRemaining": 30,
+        "version": 0,
+        "createdBy": "u_04",
+        "createdByName": "Rahim Uddin",
+        "createdAt": "2026-11-13T11:10:00.300Z",
+        "updatedBy": "u_04",
+        "updatedByName": "Rahim Uddin",
+        "updatedAt": "2026-11-13T11:10:00.300Z"
+      }
+    }
+  },
+  "PATCH /projects/projects/:id/credentials/:credentialId": {
+    "title": "New password",
+    "request": {
+      "method": "PATCH",
+      "path": "/projects/projects/p_c332d854-6e86-42ae-a3c0-b7ce9c0ee2c6/credentials/pc_d74860a8-8b7b-48d4-9033-9c0650abd00c",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "password": "Changed"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "pc_d74860a8-8b7b-48d4-9033-9c0650abd00c",
+        "projectId": "p_c332d854-6e86-42ae-a3c0-b7ce9c0ee2c6",
+        "label": "Salesforce sandbox",
+        "loginUrl": "https://test.salesforce.com",
+        "username": "dev@acme.test",
+        "password": "Changed",
+        "hasOtp": false,
+        "version": 1,
+        "createdBy": "u_04",
+        "createdByName": "Rahim Uddin",
+        "createdAt": "2026-11-13T11:10:00.879Z",
+        "updatedBy": "u_04",
+        "updatedByName": "Rahim Uddin",
+        "updatedAt": "2026-11-13T11:10:00.968Z"
+      }
+    }
+  },
+  "DELETE /projects/projects/:id/credentials/:credentialId": {
+    "title": "Remove a login",
+    "request": {
+      "method": "DELETE",
+      "path": "/projects/projects/p_e2f6faec-513a-4369-b163-f2f2209bee9d/credentials/pc_8311e462-24f1-43b4-90b3-617dfb739b61",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "deleted": true
+      }
+    }
+  },
+  "GET /projects/points": {
+    "title": "Your team",
+    "request": {
+      "method": "GET",
+      "path": "/projects/points",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "scope": "team",
+        "total": 0,
+        "people": []
+      }
+    }
+  },
+  "GET /projects/points/:userId": {
+    "title": "A developer's points",
+    "request": {
+      "method": "GET",
+      "path": "/projects/points/u_09",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "userId": "u_09",
+        "name": "Mehedi Hasan",
+        "totalPoints": 0,
+        "total": 0,
+        "entries": []
+      }
+    }
+  },
+  "GET /projects/incentives": {
+    "title": "This month",
+    "request": {
+      "method": "GET",
+      "path": "/projects/incentives",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "month": 11,
+        "year": 2026,
+        "scope": "team",
+        "people": [
+          {
+            "userId": "u_04",
+            "name": "Rahim Uddin",
+            "completedHours": 0,
+            "hourlyRate": 500,
+            "totalPayout": 0,
+            "disbursed": false
+          }
+        ],
+        "totalPayout": 0
+      }
+    }
+  },
+  "POST /projects/incentives/generate": {
+    "title": "Generate January",
+    "request": {
+      "method": "POST",
+      "path": "/projects/incentives/generate",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "month": 1,
+        "year": 2026
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "month": 1,
+        "year": 2026,
+        "generated": 1,
+        "skippedAsPaid": 0
+      }
+    }
+  },
+  "POST /projects/incentives/disburse": {
+    "title": "The super admin pays Rahim for January",
+    "request": {
+      "method": "POST",
+      "path": "/projects/incentives/disburse",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "userId": "u_04",
+        "month": 1,
+        "year": 2026
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "userId": "u_04",
+        "name": "Rahim Uddin",
+        "id": "il_c2795c2c-eeb0-40c3-b93c-849a2e3f520b",
+        "month": 1,
+        "year": 2026,
+        "completedHours": 0,
+        "hourlyRate": 500,
+        "totalPayout": 0,
+        "disbursed": true,
+        "disbursedAt": "2026-11-13T11:10:03.873Z",
+        "disbursedBy": "u_01"
+      }
+    }
+  },
+  "GET /projects/incentives/ledger": {
+    "title": "Rahim's ledger",
+    "request": {
+      "method": "GET",
+      "path": "/projects/incentives/ledger?userId=u_04",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "entries": [
+          {
+            "userId": "u_04",
+            "name": "Rahim Uddin",
+            "id": "il_32c38902-8842-441c-99fe-81a1684437af",
+            "month": 1,
+            "year": 2026,
+            "completedHours": 0,
+            "hourlyRate": 500,
+            "totalPayout": 0,
+            "disbursed": false
+          }
+        ]
+      }
+    }
+  },
+  "GET /projects/incentives/settings": {
+    "title": "The settings",
+    "request": {
+      "method": "GET",
+      "path": "/projects/incentives/settings",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "defaultHourlyRate": 0,
+        "settings": [
+          {
+            "userId": "u_04",
+            "name": "Rahim Uddin",
+            "earnsMonthlyIncentive": true,
+            "hourlyRate": 500,
+            "effectiveHourlyRate": 500,
+            "eligibleForProjectIncentives": true,
+            "updatedAt": "2026-11-13T11:10:04.676Z"
+          }
+        ]
+      }
+    }
+  },
+  "PUT /projects/incentives/settings/:userId": {
+    "title": "The super admin has Rahim earn 500 an hour",
+    "request": {
+      "method": "PUT",
+      "path": "/projects/incentives/settings/u_04",
+      "as": "farhana@twintrack.test",
+      "body": {
+        "earnsMonthlyIncentive": true,
+        "hourlyRate": 500,
+        "eligibleForProjectIncentives": true
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "userId": "u_04",
+        "name": "Rahim Uddin",
+        "earnsMonthlyIncentive": true,
+        "hourlyRate": 500,
+        "effectiveHourlyRate": 500,
+        "eligibleForProjectIncentives": true,
+        "updatedAt": "2026-11-13T11:10:05.049Z"
+      }
+    }
+  },
+  "GET /projects/projects/:id/incentives": {
+    "title": "The members",
+    "request": {
+      "method": "GET",
+      "path": "/projects/projects/p_28097335-cc1a-43f4-9800-38a97611aa7c/incentives",
+      "as": "rahim@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "members": [
+          {
+            "userId": "u_04",
+            "name": "Rahim Uddin",
+            "eligible": false
+          },
+          {
+            "userId": "u_07",
+            "name": "Arif Chowdhury",
+            "eligible": false
+          }
+        ]
+      }
+    }
+  },
+  "PUT /projects/projects/:id/incentives/:userId": {
+    "title": "Mehedi gets 5000",
+    "request": {
+      "method": "PUT",
+      "path": "/projects/projects/p_fe7d2fb2-2275-43f9-a5f7-91e9683a9d07/incentives/u_09",
+      "as": "rahim@twintrack.test",
+      "body": {
+        "enabled": true,
+        "amount": 5000,
+        "notes": "Shipped early"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "userId": "u_09",
+        "name": "Mehedi Hasan",
+        "enabled": true,
+        "amount": 5000,
+        "notes": "Shipped early",
+        "updatedAt": "2026-11-13T11:10:06.047Z"
+      }
+    }
+  },
+  "GET /accounts/categories": {
+    "title": "The accountant lists categories",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/categories",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "categories": [
+          {
+            "id": "cat_2b51a531-eec3-4cee-87d2-14b5229afbdb",
+            "name": "Office rent",
+            "code": "RENT",
+            "status": "active",
+            "version": 0,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:06.474Z",
+            "updatedBy": "u_06",
+            "updatedAt": "2026-11-13T11:10:06.474Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /accounts/categories": {
+    "title": "The accountant adds a category",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/categories",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "name": "Office rent",
+        "code": "office-rent"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "cat_d4a22eb9-cf55-42a5-bb0b-7fb81fed9ad4",
+        "name": "Office rent",
+        "code": "OFFICE-RENT",
+        "status": "active",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:07.766Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:07.766Z"
+      }
+    }
+  },
+  "GET /accounts/categories/:id": {
+    "title": "The finance lead reads a category",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/categories/cat_a5e06345-f9d4-4496-b870-2454b77a1bf0",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cat_a5e06345-f9d4-4496-b870-2454b77a1bf0",
+        "name": "Office rent",
+        "code": "RENT",
+        "status": "active",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:08.312Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:08.312Z"
+      }
+    }
+  },
+  "PATCH /accounts/categories/:id": {
+    "title": "The accountant makes a category inactive",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/categories/cat_a5d0511d-292a-4923-be45-85dc2feffaa0",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "status": "inactive"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "cat_a5d0511d-292a-4923-be45-85dc2feffaa0",
+        "name": "Office rent",
+        "code": "RENT",
+        "status": "inactive",
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:08.820Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:08.908Z"
+      }
+    }
+  },
+  "GET /accounts/categories/:id/history": {
+    "title": "The accountant reads the history",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/categories/cat_378f2b99-f94b-44bc-a82c-d0826df72cde/history",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "entries": [
+          {
+            "id": "6af6f011a2b2a4b7febec39d",
+            "at": "2026-11-13T11:10:09.446Z",
+            "action": "created",
+            "changes": [
+              {
+                "field": "name",
+                "to": "Office rent"
+              },
+              {
+                "field": "code",
+                "to": "RENT"
+              }
+            ],
+            "actorId": "u_06",
+            "actorName": "Kamrul Islam"
+          }
+        ]
+      }
+    }
+  },
+  "GET /accounts/vendors": {
+    "title": "The accountant lists vendors",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/vendors",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "vendors": [
+          {
+            "id": "ven_2fecddc3-6e4b-4299-9f1a-72c24b4df7ee",
+            "name": "Dhaka Office Supplies",
+            "bankAccountNumber": "0011223344",
+            "status": "active",
+            "version": 0,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:10.048Z",
+            "updatedBy": "u_06",
+            "updatedAt": "2026-11-13T11:10:10.048Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /accounts/vendors": {
+    "title": "The accountant adds a vendor",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/vendors",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "name": "Dhaka Office Supplies",
+        "contactEmail": "sales@dos.test",
+        "bankName": "City Bank",
+        "bankAccountNumber": "0011223344"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "ven_d2bec825-069b-498b-a413-74915fdc3cb8",
+        "name": "Dhaka Office Supplies",
+        "contactEmail": "sales@dos.test",
+        "bankName": "City Bank",
+        "bankAccountNumber": "0011223344",
+        "status": "active",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:10.489Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:10.489Z"
+      }
+    }
+  },
+  "GET /accounts/vendors/:id": {
+    "title": "The finance lead reads a vendor, with the bank number",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/vendors/ven_0b83cc59-ebfd-4c5f-8aa9-2adf9e594a92",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "ven_0b83cc59-ebfd-4c5f-8aa9-2adf9e594a92",
+        "name": "Dhaka Office Supplies",
+        "bankAccountNumber": "0011223344",
+        "status": "active",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:10.877Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:10.877Z"
+      }
+    }
+  },
+  "PATCH /accounts/vendors/:id": {
+    "title": "The accountant updates the contact",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/vendors/ven_e421f576-7f56-4b6c-997f-c803e41bea7b",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "contactName": "Shafiq"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "ven_e421f576-7f56-4b6c-997f-c803e41bea7b",
+        "name": "Dhaka Office Supplies",
+        "contactName": "Shafiq",
+        "bankAccountNumber": "0011223344",
+        "status": "active",
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:11.309Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:11.410Z"
+      }
+    }
+  },
+  "GET /accounts/vendors/:id/history": {
+    "title": "The accountant reads the history",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/vendors/ven_d65c84bf-7564-49ec-88ae-69ae705b2521/history",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "entries": [
+          {
+            "id": "6af6f013a2b2a4b7febec3bd",
+            "at": "2026-11-13T11:10:11.869Z",
+            "action": "created",
+            "changes": [
+              {
+                "field": "name",
+                "to": "Dhaka Office Supplies"
+              },
+              {
+                "field": "status",
+                "to": "active"
+              }
+            ],
+            "actorId": "u_06",
+            "actorName": "Kamrul Islam"
+          }
+        ]
+      }
+    }
+  },
+  "GET /accounts/bank-accounts": {
+    "title": "The accountant lists accounts",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/bank-accounts",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "bankAccounts": [
+          {
+            "id": "ba_6fa83290-7c06-41ed-920d-04ab105fe33f",
+            "name": "Operating",
+            "currency": "BDT",
+            "openingBalance": 100000,
+            "openingDate": "2026-01-01T00:00:00.000Z",
+            "currentBalance": 100000,
+            "status": "active",
+            "version": 0,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:12.316Z",
+            "updatedBy": "u_06",
+            "updatedAt": "2026-11-13T11:10:12.316Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /accounts/bank-accounts": {
+    "title": "The accountant adds an account",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/bank-accounts",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "name": "Operating",
+        "bankName": "City Bank",
+        "accountNumber": "1234567890",
+        "currency": "BDT",
+        "openingBalance": 100000,
+        "openingDate": "2026-01-01"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "ba_37e09abf-98e0-4c86-bb2e-f7abd5f7b24c",
+        "name": "Operating",
+        "bankName": "City Bank",
+        "accountNumber": "1234567890",
+        "currency": "BDT",
+        "openingBalance": 100000,
+        "openingDate": "2026-01-01T00:00:00.000Z",
+        "currentBalance": 100000,
+        "status": "active",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:12.747Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:12.747Z"
+      }
+    }
+  },
+  "GET /accounts/bank-accounts/:id": {
+    "title": "The finance lead reads an account",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/bank-accounts/ba_051633b7-fe73-4a81-afe0-ebee9493f3d0",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "ba_051633b7-fe73-4a81-afe0-ebee9493f3d0",
+        "name": "Operating",
+        "currency": "BDT",
+        "openingBalance": 100000,
+        "openingDate": "2026-01-01T00:00:00.000Z",
+        "currentBalance": 100000,
+        "status": "active",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:13.113Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:13.113Z"
+      }
+    }
+  },
+  "PATCH /accounts/bank-accounts/:id": {
+    "title": "The accountant renames an account",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/bank-accounts/ba_42c157e6-3e57-45b7-83da-435c1977b39b",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "name": "Main operating"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "ba_42c157e6-3e57-45b7-83da-435c1977b39b",
+        "name": "Main operating",
+        "currency": "BDT",
+        "openingBalance": 100000,
+        "openingDate": "2026-01-01T00:00:00.000Z",
+        "currentBalance": 100000,
+        "status": "active",
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:13.546Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:13.641Z"
+      }
+    }
+  },
+  "GET /accounts/bank-accounts/:id/statement": {
+    "title": "The accountant reads a statement",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/bank-accounts/ba_8ab3bf2e-3565-4bd2-8f10-14236321608c/statement?from=2026-06-01&to=2026-06-30",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "bankAccountId": "ba_8ab3bf2e-3565-4bd2-8f10-14236321608c",
+        "currency": "BDT",
+        "from": "2026-06-01T00:00:00.000Z",
+        "to": "2026-06-30T00:00:00.000Z",
+        "openingBalance": 100000,
+        "closingBalance": 90000,
+        "entries": [
+          {
+            "date": "2026-06-05T00:00:00.000Z",
+            "kind": "payment",
+            "recordId": "pay_50e2ef65-0917-4862-86c5-cb0a83e0b3f0",
+            "amount": -10000,
+            "reference": "TRX-1001",
+            "balance": 90000
+          }
+        ]
+      }
+    }
+  },
+  "GET /accounts/bank-accounts/:id/history": {
+    "title": "The accountant reads the history",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/bank-accounts/ba_a18da8cd-c702-49a2-a7c0-949a462f67fb/history",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "entries": [
+          {
+            "id": "6af6f017a2b2a4b7febec3f3",
+            "at": "2026-11-13T11:10:15.280Z",
+            "action": "created",
+            "changes": [
+              {
+                "field": "name",
+                "to": "Operating"
+              },
+              {
+                "field": "openingBalance",
+                "to": 100000
+              }
+            ],
+            "actorId": "u_06",
+            "actorName": "Kamrul Islam"
+          }
+        ]
+      }
+    }
+  },
+  "GET /accounts/company-bank-details": {
+    "title": "The accountant reads the details",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/company-bank-details",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "version": 0
+      }
+    }
+  },
+  "PATCH /accounts/company-bank-details": {
+    "title": "The accountant saves the details",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/company-bank-details",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "bankName": "City Bank",
+        "accountName": "TwinForce Solutions Ltd",
+        "accountNumber": "1234567890",
+        "swiftCode": "CIBLBDDH"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "bankName": "City Bank",
+        "accountName": "TwinForce Solutions Ltd",
+        "accountNumber": "1234567890",
+        "swiftCode": "CIBLBDDH",
+        "version": 0,
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:16.204Z"
+      }
+    }
+  },
+  "GET /accounts/bills": {
+    "title": "The finance lead lists bills waiting for approval",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/bills?status=pending_approval",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "bills": [
+          {
+            "id": "bill_f59ffd39-5c71-41f4-b578-04a34945e249",
+            "vendorId": "ven_e821c99c-cbf5-4797-9e74-a24cde5e5e8e",
+            "vendorName": "Dhaka Office Supplies",
+            "businessDate": "2026-06-01T00:00:00.000Z",
+            "dueDate": "2026-06-30T00:00:00.000Z",
+            "currency": "BDT",
+            "amount": 30000,
+            "paidAmount": 0,
+            "outstandingAmount": 0,
+            "status": "pending_approval",
+            "version": 1,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:16.625Z",
+            "updatedBy": "u_06",
+            "updatedAt": "2026-11-13T11:10:16.710Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /accounts/bills": {
+    "title": "The accountant records a bill",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/bills",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "vendorId": "ven_e3cf5e76-1364-4449-a1ee-d01cfa2b6eb7",
+        "billNumber": "DOS-0042",
+        "businessDate": "2026-06-01",
+        "dueDate": "2026-06-30",
+        "currency": "BDT",
+        "amount": 30000
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "bill_12b879aa-57d5-4e33-9910-eea6810d6788",
+        "billNumber": "DOS-0042",
+        "vendorId": "ven_e3cf5e76-1364-4449-a1ee-d01cfa2b6eb7",
+        "vendorName": "Dhaka Office Supplies",
+        "businessDate": "2026-06-01T00:00:00.000Z",
+        "dueDate": "2026-06-30T00:00:00.000Z",
+        "currency": "BDT",
+        "amount": 30000,
+        "paidAmount": 0,
+        "outstandingAmount": 0,
+        "status": "draft",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:17.219Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:17.219Z"
+      }
+    }
+  },
+  "GET /accounts/bills/:id": {
+    "title": "The accountant reads a bill",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/bills/bill_49c278dc-9757-4a4c-b66e-7ea9e07fa6a2",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "bill_49c278dc-9757-4a4c-b66e-7ea9e07fa6a2",
+        "vendorId": "ven_a2704026-31ea-4bee-b464-870aa59b3518",
+        "vendorName": "Dhaka Office Supplies",
+        "businessDate": "2026-06-01T00:00:00.000Z",
+        "dueDate": "2026-06-30T00:00:00.000Z",
+        "currency": "BDT",
+        "amount": 30000,
+        "paidAmount": 0,
+        "outstandingAmount": 0,
+        "status": "draft",
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:17.590Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:17.590Z"
+      }
+    }
+  },
+  "PATCH /accounts/bills/:id": {
+    "title": "The accountant corrects a draft",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/bills/bill_9e56606b-9b0b-47ea-bd89-f656d3379fd5",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "amount": 32000
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "bill_9e56606b-9b0b-47ea-bd89-f656d3379fd5",
+        "vendorId": "ven_8a0a5806-acbd-4a09-aa7e-543bdb09428d",
+        "vendorName": "Dhaka Office Supplies",
+        "businessDate": "2026-06-01T00:00:00.000Z",
+        "dueDate": "2026-06-30T00:00:00.000Z",
+        "currency": "BDT",
+        "amount": 32000,
+        "paidAmount": 0,
+        "outstandingAmount": 0,
+        "status": "draft",
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:18.628Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:18.785Z"
+      }
+    }
+  },
+  "DELETE /accounts/bills/:id": {
+    "title": "The accountant deletes a draft",
+    "request": {
+      "method": "DELETE",
+      "path": "/accounts/bills/bill_48c69000-a5ed-49aa-8ce7-5d094b1286e7",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 204,
+      "body": {}
+    }
+  },
+  "POST /accounts/bills/:id/submit": {
+    "title": "The accountant submits a bill",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/bills/bill_61b3b7d0-6792-4800-95a2-1e03e4a0cf70/submit",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "bill_61b3b7d0-6792-4800-95a2-1e03e4a0cf70",
+        "vendorId": "ven_1cc5cd8e-cd01-4b3e-996b-0686b4f21901",
+        "vendorName": "Dhaka Office Supplies",
+        "businessDate": "2026-06-01T00:00:00.000Z",
+        "dueDate": "2026-06-30T00:00:00.000Z",
+        "currency": "BDT",
+        "amount": 30000,
+        "paidAmount": 0,
+        "outstandingAmount": 0,
+        "status": "pending_approval",
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:21.414Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:21.536Z"
+      }
+    }
+  },
+  "POST /accounts/bills/:id/approve": {
+    "title": "The finance lead approves",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/bills/bill_a59196a3-fcdf-4a21-8df2-7a63efb717b1/approve",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "bill_a59196a3-fcdf-4a21-8df2-7a63efb717b1",
+        "vendorId": "ven_bfe969ef-5b21-4ebe-985b-8dc1f34ede74",
+        "vendorName": "Dhaka Office Supplies",
+        "businessDate": "2026-06-01T00:00:00.000Z",
+        "dueDate": "2026-06-30T00:00:00.000Z",
+        "currency": "BDT",
+        "amount": 30000,
+        "paidAmount": 0,
+        "outstandingAmount": 30000,
+        "status": "approved",
+        "decidedBy": "u_05",
+        "decidedAt": "2026-11-13T11:10:22.560Z",
+        "version": 2,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:22.367Z",
+        "updatedBy": "u_05",
+        "updatedAt": "2026-11-13T11:10:22.562Z"
+      }
+    }
+  },
+  "POST /accounts/bills/:id/reject": {
+    "title": "The finance lead rejects",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/bills/bill_100dfe3a-9cee-4535-8aa1-9f83698659b8/reject",
+      "as": "rumana@twintrack.test",
+      "body": {
+        "reason": "Wrong vendor"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "bill_100dfe3a-9cee-4535-8aa1-9f83698659b8",
+        "vendorId": "ven_eb33ade2-60ab-4431-808f-f8fcf9eb87f8",
+        "vendorName": "Dhaka Office Supplies",
+        "businessDate": "2026-06-01T00:00:00.000Z",
+        "dueDate": "2026-06-30T00:00:00.000Z",
+        "currency": "BDT",
+        "amount": 30000,
+        "paidAmount": 0,
+        "outstandingAmount": 0,
+        "status": "rejected",
+        "decidedBy": "u_05",
+        "decidedAt": "2026-11-13T11:10:23.625Z",
+        "rejectionReason": "Wrong vendor",
+        "version": 2,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:23.367Z",
+        "updatedBy": "u_05",
+        "updatedAt": "2026-11-13T11:10:23.629Z"
+      }
+    }
+  },
+  "POST /accounts/bills/:id/reverse": {
+    "title": "The accountant reverses an unpaid approved bill",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/bills/bill_35738f17-296c-4bed-848c-ad465d59117d/reverse",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "reason": "Duplicate bill"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "bill_35738f17-296c-4bed-848c-ad465d59117d",
+        "vendorId": "ven_e5bce2c5-e366-4ee8-9ac2-b7754b67fdae",
+        "vendorName": "Dhaka Office Supplies",
+        "businessDate": "2026-06-01T00:00:00.000Z",
+        "dueDate": "2026-06-30T00:00:00.000Z",
+        "currency": "BDT",
+        "amount": 30000,
+        "paidAmount": 0,
+        "outstandingAmount": 0,
+        "status": "reversed",
+        "decidedBy": "u_05",
+        "decidedAt": "2026-11-13T11:10:24.682Z",
+        "reversedBy": "u_06",
+        "reversedAt": "2026-11-13T11:10:24.765Z",
+        "reversalReason": "Duplicate bill",
+        "version": 3,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:24.481Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:24.766Z"
+      }
+    }
+  },
+  "GET /accounts/bills/:id/history": {
+    "title": "The finance lead reads the history",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/bills/bill_ddbf2392-9f74-4fa7-bfa9-85284cfbb005/history",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 3,
+        "entries": [
+          {
+            "id": "6af6f022a2b2a4b7febec4b9",
+            "at": "2026-11-13T11:10:26.064Z",
+            "action": "updated",
+            "changes": [
+              {
+                "field": "status",
+                "from": "pending_approval",
+                "to": "approved"
+              }
+            ],
+            "actorId": "u_05",
+            "actorName": "Rumana Akter"
+          },
+          {
+            "id": "6af6f021a2b2a4b7febec4b6",
+            "at": "2026-11-13T11:10:25.978Z",
+            "action": "updated",
+            "changes": [
+              {
+                "field": "status",
+                "from": "draft",
+                "to": "pending_approval"
+              }
+            ],
+            "actorId": "u_06",
+            "actorName": "Kamrul Islam"
+          }
+        ]
+      }
+    }
+  },
+  "GET /accounts/payments": {
+    "title": "The accountant lists a bill's payments",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/payments?billId=bill_9c09e0b0-1014-40c1-b2ce-2bf625464099",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "payments": [
+          {
+            "id": "pay_74234426-2cac-424a-a92a-317f3ea2160c",
+            "bankAccountId": "ba_73c69cbe-da39-4944-8d15-1427e8796d9e",
+            "billId": "bill_9c09e0b0-1014-40c1-b2ce-2bf625464099",
+            "payeeType": "vendor",
+            "payeeVendorId": "ven_9e370a44-7186-44a3-95ac-7a0dfe046f42",
+            "payeeName": "Dhaka Office Supplies",
+            "amount": 10000,
+            "currency": "BDT",
+            "paymentDate": "2026-06-05T00:00:00.000Z",
+            "method": "bank_transfer",
+            "reference": "TRX-1001",
+            "inEffect": true,
+            "version": 0,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:27.034Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /accounts/payments": {
+    "title": "The accountant pays part of a bill",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/payments",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "bankAccountId": "ba_cc8422ab-f812-4615-8694-e7186d51632b",
+        "billId": "bill_16c7d1ba-0c19-4c2b-8e52-c1b5bcec3a7b",
+        "payeeType": "vendor",
+        "amount": 10000,
+        "paymentDate": "2026-06-05",
+        "method": "bank_transfer",
+        "reference": "TRX-1001"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "pay_dbc972bf-4015-4f78-94d9-61be173778e2",
+        "bankAccountId": "ba_cc8422ab-f812-4615-8694-e7186d51632b",
+        "billId": "bill_16c7d1ba-0c19-4c2b-8e52-c1b5bcec3a7b",
+        "payeeType": "vendor",
+        "payeeVendorId": "ven_ebe91b97-708a-4d14-981c-439446354054",
+        "payeeName": "Dhaka Office Supplies",
+        "amount": 10000,
+        "currency": "BDT",
+        "paymentDate": "2026-06-05T00:00:00.000Z",
+        "method": "bank_transfer",
+        "reference": "TRX-1001",
+        "inEffect": true,
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:29.621Z"
+      }
+    }
+  },
+  "GET /accounts/payments/:id": {
+    "title": "The finance lead reads a payment",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/payments/pay_2843730b-e841-432a-9ab9-84fb59368bda",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "pay_2843730b-e841-432a-9ab9-84fb59368bda",
+        "bankAccountId": "ba_4ecc2289-703c-45f2-8c79-b1d77151027d",
+        "billId": "bill_75d1fe36-9234-4aaf-81eb-89655aa78837",
+        "payeeType": "vendor",
+        "payeeVendorId": "ven_a0fd0f3b-0c67-42fa-99b2-8db0b07ea4a7",
+        "payeeName": "Dhaka Office Supplies",
+        "amount": 10000,
+        "currency": "BDT",
+        "paymentDate": "2026-06-05T00:00:00.000Z",
+        "method": "bank_transfer",
+        "reference": "TRX-1001",
+        "inEffect": true,
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:31.174Z"
+      }
+    }
+  },
+  "POST /accounts/payments/:id/reverse": {
+    "title": "The accountant reverses a returned transfer",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/payments/pay_2f0d324f-ffeb-42de-82b2-09753e297734/reverse",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "reason": "Bank returned it"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "pay_c1890424-a2f3-4087-8a0b-8ac83e777811",
+        "bankAccountId": "ba_9645596e-9d43-4789-a651-f40591cfddff",
+        "billId": "bill_80476907-b80a-45fd-b28e-4caf819c7b8f",
+        "payeeType": "vendor",
+        "payeeVendorId": "ven_71b68c4e-c6df-41a2-9c54-c034474b03be",
+        "payeeName": "Dhaka Office Supplies",
+        "amount": 10000,
+        "currency": "BDT",
+        "paymentDate": "2026-11-13T11:10:32.431Z",
+        "method": "bank_transfer",
+        "reference": "TRX-1001",
+        "notes": "Reversal of TRX-1001: Bank returned it",
+        "reversesId": "pay_2f0d324f-ffeb-42de-82b2-09753e297734",
+        "inEffect": false,
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:32.432Z"
+      }
+    }
+  },
+  "GET /accounts/receipts": {
+    "title": "The accountant lists a client's receipts",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/receipts?clientId=cl_9b7d48a1-3c45-4de1-a0cd-8854277f44d1",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "receipts": [
+          {
+            "id": "rec_12795d5d-0f10-4086-9665-ea623ca264c2",
+            "bankAccountId": "ba_672b0ba1-6f17-4581-a1b5-b2048eda8e28",
+            "clientId": "cl_9b7d48a1-3c45-4de1-a0cd-8854277f44d1",
+            "amount": 100,
+            "bankFee": 2,
+            "netAmount": 98,
+            "currency": "USD",
+            "receivedDate": "2026-02-10T00:00:00.000Z",
+            "method": "bank_transfer",
+            "allocations": [],
+            "allocatedAmount": 0,
+            "unallocatedAmount": 100,
+            "inEffect": true,
+            "version": 0,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:33.775Z",
+            "updatedAt": "2026-11-13T11:10:33.775Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /accounts/receipts": {
+    "title": "The accountant records a client payment",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/receipts",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "bankAccountId": "ba_47d86026-df35-4df4-94b6-4094f3f52d9d",
+        "clientId": "cl_0cba971e-1b1e-438d-8c4a-aad32483aff7",
+        "amount": 100,
+        "bankFee": 2,
+        "receivedDate": "2026-02-10",
+        "method": "bank_transfer"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "rec_1f20c7be-75f5-452d-a949-69e1c3355ead",
+        "bankAccountId": "ba_47d86026-df35-4df4-94b6-4094f3f52d9d",
+        "clientId": "cl_0cba971e-1b1e-438d-8c4a-aad32483aff7",
+        "amount": 100,
+        "bankFee": 2,
+        "netAmount": 98,
+        "currency": "USD",
+        "receivedDate": "2026-02-10T00:00:00.000Z",
+        "method": "bank_transfer",
+        "allocations": [],
+        "allocatedAmount": 0,
+        "unallocatedAmount": 100,
+        "inEffect": true,
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:34.382Z",
+        "updatedAt": "2026-11-13T11:10:34.382Z"
+      }
+    }
+  },
+  "GET /accounts/receipts/:id": {
+    "title": "The finance lead reads a receipt",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/receipts/rec_b94a5653-f074-4782-bdb2-7c6251a3885f",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "rec_b94a5653-f074-4782-bdb2-7c6251a3885f",
+        "bankAccountId": "ba_1613e5ce-5f1f-4172-8dd1-d197a3f43e13",
+        "clientId": "cl_7275a88c-8a9b-43f1-b4cd-9173436a5140",
+        "amount": 100,
+        "bankFee": 2,
+        "netAmount": 98,
+        "currency": "USD",
+        "receivedDate": "2026-02-10T00:00:00.000Z",
+        "method": "bank_transfer",
+        "allocations": [],
+        "allocatedAmount": 0,
+        "unallocatedAmount": 100,
+        "inEffect": true,
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:35.044Z",
+        "updatedAt": "2026-11-13T11:10:35.044Z"
+      }
+    }
+  },
+  "POST /accounts/receipts/:id/allocations": {
+    "title": "The accountant counts a receipt against an invoice",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/receipts/rec_0e4d56d8-fe65-46fc-bfd2-3c2f67ee6d63/allocations",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "invoiceId": "inv_554dbd6f-8ca3-471c-b96a-d441a2d7fa4e",
+        "amount": 100
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "rec_0e4d56d8-fe65-46fc-bfd2-3c2f67ee6d63",
+        "bankAccountId": "ba_506b8d9a-aa0f-4717-aa61-0af198f4e6e4",
+        "clientId": "cl_1130ee8d-0f18-4e6a-95e3-98973d148aec",
+        "amount": 100,
+        "bankFee": 2,
+        "netAmount": 98,
+        "currency": "USD",
+        "receivedDate": "2026-02-10T00:00:00.000Z",
+        "method": "bank_transfer",
+        "allocations": [
+          {
+            "id": "al_c1e2c056-706c-4afa-9bbf-b9063675c88a",
+            "invoiceId": "inv_554dbd6f-8ca3-471c-b96a-d441a2d7fa4e",
+            "invoiceNumber": "INV-AL-13-11-26",
+            "amount": 100,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:35.911Z"
+          }
+        ],
+        "allocatedAmount": 100,
+        "unallocatedAmount": 0,
+        "inEffect": true,
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:35.826Z",
+        "updatedAt": "2026-11-13T11:10:35.911Z"
+      }
+    }
+  },
+  "DELETE /accounts/receipts/:id/allocations/:allocationId": {
+    "title": "The accountant removes an allocation",
+    "request": {
+      "method": "DELETE",
+      "path": "/accounts/receipts/rec_d2df6a34-313e-4f6d-aea6-bc1f35cfff48/allocations/al_c66d2d55-a2f8-48e1-b72d-0b28bb11dc28",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "rec_d2df6a34-313e-4f6d-aea6-bc1f35cfff48",
+        "bankAccountId": "ba_66a23b19-cb03-4bf6-b8b2-e6df6ef578bf",
+        "clientId": "cl_fbfe92e2-c0bd-40e3-8029-dea6ac1ebe72",
+        "amount": 100,
+        "bankFee": 2,
+        "netAmount": 98,
+        "currency": "USD",
+        "receivedDate": "2026-02-10T00:00:00.000Z",
+        "method": "bank_transfer",
+        "allocations": [],
+        "allocatedAmount": 0,
+        "unallocatedAmount": 100,
+        "inEffect": true,
+        "version": 2,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:38.013Z",
+        "updatedAt": "2026-11-13T11:10:38.267Z"
+      }
+    }
+  },
+  "POST /accounts/receipts/:id/reverse": {
+    "title": "The accountant reverses a bounced payment",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/receipts/rec_41a43965-a74d-43e3-91f4-d3dc25a79301/reverse",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "reason": "Cheque bounced"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "rec_a0fe6776-12f9-45ec-b1c8-276cae634a3c",
+        "bankAccountId": "ba_02db01c2-0beb-4bc1-97a7-b6f86020a244",
+        "clientId": "cl_9342fc67-5e97-409c-b810-6b7454df7ac0",
+        "amount": 100,
+        "bankFee": 2,
+        "netAmount": 98,
+        "currency": "USD",
+        "receivedDate": "2026-11-13T11:10:39.321Z",
+        "method": "bank_transfer",
+        "notes": "Reversal of rec_41a43965-a74d-43e3-91f4-d3dc25a79301: Cheque bounced",
+        "allocations": [],
+        "allocatedAmount": 0,
+        "unallocatedAmount": 0,
+        "reversesId": "rec_41a43965-a74d-43e3-91f4-d3dc25a79301",
+        "inEffect": false,
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:39.323Z",
+        "updatedAt": "2026-11-13T11:10:39.323Z"
+      }
+    }
+  },
+  "GET /accounts/invoices": {
+    "title": "The finance lead lists a client's invoices",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/invoices?clientId=cl_22e17c7d-59de-45c9-b422-7e7c8c44edff",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "invoices": [
+          {
+            "id": "inv_421c1525-e12c-4da5-b1c9-6c295db66b21",
+            "invoiceNumber": "INV-AL-13-11-26",
+            "clientId": "cl_22e17c7d-59de-45c9-b422-7e7c8c44edff",
+            "clientName": "Acme Logistics",
+            "periodStart": "2026-01-01T00:00:00.000Z",
+            "periodEnd": "2026-01-31T00:00:00.000Z",
+            "basis": "logged",
+            "currency": "USD",
+            "hourlyRate": 25,
+            "totalHours": 6,
+            "billableHours": 6,
+            "amount": 150,
+            "paidAmount": 0,
+            "outstandingAmount": 150,
+            "status": "draft",
+            "projects": [
+              {
+                "projectId": "p_ffc2d50d-ea5f-4d92-b92f-ba11874233f9",
+                "projectName": "Payroll revamp",
+                "totalHours": 6,
+                "billableHours": 6,
+                "amount": 150
+              }
+            ],
+            "hasDocument": true,
+            "documentVersion": 1,
+            "version": 1,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:40.688Z",
+            "updatedBy": "u_06",
+            "updatedAt": "2026-11-13T11:10:40.729Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /accounts/invoices": {
+    "title": "The accountant bills a project with a custom line",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/invoices",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "projectIds": [
+          "p_eadc907b-738e-4c70-ae17-a623864fa88e"
+        ],
+        "from": "2026-01-01",
+        "to": "2026-01-31",
+        "hourlyRate": 25,
+        "customLines": [
+          {
+            "projectId": "p_eadc907b-738e-4c70-ae17-a623864fa88e",
+            "description": "Server setup",
+            "hours": 6
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "inv_9587c743-e236-4542-b8f8-3214070bf5f6",
+        "invoiceNumber": "INV-AL-13-11-26",
+        "clientId": "cl_c4a6a22c-73f7-413f-8718-cc5298383bd7",
+        "clientName": "Acme Logistics",
+        "periodStart": "2026-01-01T00:00:00.000Z",
+        "periodEnd": "2026-01-31T00:00:00.000Z",
+        "basis": "logged",
+        "currency": "USD",
+        "hourlyRate": 25,
+        "totalHours": 6,
+        "billableHours": 6,
+        "amount": 150,
+        "paidAmount": 0,
+        "outstandingAmount": 150,
+        "status": "draft",
+        "projects": [
+          {
+            "projectId": "p_eadc907b-738e-4c70-ae17-a623864fa88e",
+            "projectName": "Payroll revamp",
+            "totalHours": 6,
+            "billableHours": 6,
+            "amount": 150
+          }
+        ],
+        "lines": [
+          {
+            "id": "il_137945d1-f388-4aff-a9fb-34a68c0d8b49",
+            "projectId": "p_eadc907b-738e-4c70-ae17-a623864fa88e",
+            "description": "Server setup",
+            "date": "2026-11-13T11:10:41.649Z",
+            "hours": 6,
+            "billable": true,
+            "amount": 150,
+            "custom": true
+          }
+        ],
+        "hasDocument": true,
+        "documentVersion": 1,
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:41.656Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:41.702Z"
+      }
+    }
+  },
+  "GET /accounts/invoices/unbilled": {
+    "title": "The accountant checks unbilled work",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/invoices/unbilled",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "totalHours": 0,
+        "projects": []
+      }
+    }
+  },
+  "GET /accounts/invoices/preview": {
+    "title": "The accountant previews a client's month",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/invoices/preview?clientId=cl_acc0cc1c-86b9-49db-9488-ce9f94f0f0af&from=2026-01-01&to=2026-01-31&hourlyRate=25",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "clientId": "cl_acc0cc1c-86b9-49db-9488-ce9f94f0f0af",
+        "basis": "completed",
+        "hourlyRate": 25,
+        "projects": [],
+        "totalHours": 0,
+        "billableHours": 0,
+        "amount": 0,
+        "lines": []
+      }
+    }
+  },
+  "GET /accounts/invoices/:id": {
+    "title": "The finance lead reads an invoice",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/invoices/inv_07f5b965-cf4e-46e4-b9ba-71f74a5a78f8",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "inv_07f5b965-cf4e-46e4-b9ba-71f74a5a78f8",
+        "invoiceNumber": "INV-AL-13-11-26",
+        "clientId": "cl_bcef0279-8f04-48b8-a2b6-8f92e698d065",
+        "clientName": "Acme Logistics",
+        "periodStart": "2026-01-01T00:00:00.000Z",
+        "periodEnd": "2026-01-31T00:00:00.000Z",
+        "basis": "logged",
+        "currency": "USD",
+        "hourlyRate": 25,
+        "totalHours": 6,
+        "billableHours": 6,
+        "amount": 150,
+        "paidAmount": 0,
+        "outstandingAmount": 150,
+        "status": "draft",
+        "projects": [
+          {
+            "projectId": "p_b4f4f0f8-0999-4590-91b1-b4141f12ff53",
+            "projectName": "Payroll revamp",
+            "totalHours": 6,
+            "billableHours": 6,
+            "amount": 150
+          }
+        ],
+        "lines": [
+          {
+            "id": "il_f3f59cdf-d1b1-4018-89f1-448183551379",
+            "projectId": "p_b4f4f0f8-0999-4590-91b1-b4141f12ff53",
+            "description": "Server setup",
+            "date": "2026-11-13T11:10:43.082Z",
+            "hours": 6,
+            "billable": true,
+            "amount": 150,
+            "custom": true
+          }
+        ],
+        "hasDocument": true,
+        "documentVersion": 1,
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:43.089Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:43.117Z"
+      }
+    }
+  },
+  "PATCH /accounts/invoices/:id": {
+    "title": "The accountant adds payment terms",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/invoices/inv_4a314d59-98f7-4fa9-b859-d40a223f80ec",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "additionalNotes": "Payment due within 30 days."
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "inv_4a314d59-98f7-4fa9-b859-d40a223f80ec",
+        "invoiceNumber": "INV-AL-13-11-26",
+        "clientId": "cl_3af73cd3-ac3a-45c9-95ce-f6b420c5f4ca",
+        "clientName": "Acme Logistics",
+        "periodStart": "2026-01-01T00:00:00.000Z",
+        "periodEnd": "2026-01-31T00:00:00.000Z",
+        "basis": "logged",
+        "currency": "USD",
+        "hourlyRate": 25,
+        "totalHours": 6,
+        "billableHours": 6,
+        "amount": 150,
+        "paidAmount": 0,
+        "outstandingAmount": 150,
+        "status": "draft",
+        "projects": [
+          {
+            "projectId": "p_eb5dd2e7-1767-4835-903f-3b1502ffadcb",
+            "projectName": "Payroll revamp",
+            "totalHours": 6,
+            "billableHours": 6,
+            "amount": 150
+          }
+        ],
+        "lines": [
+          {
+            "id": "il_7c3167d3-7098-4435-aa48-4fa71335d2de",
+            "projectId": "p_eb5dd2e7-1767-4835-903f-3b1502ffadcb",
+            "description": "Server setup",
+            "date": "2026-11-13T11:10:43.687Z",
+            "hours": 6,
+            "billable": true,
+            "amount": 150,
+            "custom": true
+          }
+        ],
+        "additionalNotes": "Payment due within 30 days.",
+        "hasDocument": true,
+        "documentVersion": 2,
+        "version": 3,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:43.692Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:43.836Z"
+      }
+    }
+  },
+  "DELETE /accounts/invoices/:id": {
+    "title": "The accountant deletes a draft",
+    "request": {
+      "method": "DELETE",
+      "path": "/accounts/invoices/inv_9af2cca3-744e-4a33-bd66-05e5365612ba",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 204,
+      "body": {}
+    }
+  },
+  "PATCH /accounts/invoices/:id/lines": {
+    "title": "The accountant corrects a line",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/invoices/inv_50e9d6a7-d1bf-4ede-991c-a7fc70d247ef/lines",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "lines": [
+          {
+            "id": "il_985ac65f-8425-44c9-acb3-0766d054f3ee",
+            "hours": 5,
+            "description": "Server setup and hardening"
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "inv_50e9d6a7-d1bf-4ede-991c-a7fc70d247ef",
+        "invoiceNumber": "INV-AL-13-11-26",
+        "clientId": "cl_ca10114f-6e5b-4125-964c-f14fbfccef66",
+        "clientName": "Acme Logistics",
+        "periodStart": "2026-01-01T00:00:00.000Z",
+        "periodEnd": "2026-01-31T00:00:00.000Z",
+        "basis": "logged",
+        "currency": "USD",
+        "hourlyRate": 25,
+        "totalHours": 5,
+        "billableHours": 5,
+        "amount": 125,
+        "paidAmount": 0,
+        "outstandingAmount": 125,
+        "status": "draft",
+        "projects": [
+          {
+            "projectId": "p_4cb172a6-c017-46e6-a284-2a2af505cb9b",
+            "projectName": "Payroll revamp",
+            "totalHours": 5,
+            "billableHours": 5,
+            "amount": 125
+          }
+        ],
+        "lines": [
+          {
+            "id": "il_985ac65f-8425-44c9-acb3-0766d054f3ee",
+            "projectId": "p_4cb172a6-c017-46e6-a284-2a2af505cb9b",
+            "description": "Server setup and hardening",
+            "date": "2026-11-13T11:10:46.847Z",
+            "hours": 5,
+            "billable": true,
+            "amount": 125,
+            "custom": true
+          }
+        ],
+        "hasDocument": true,
+        "documentVersion": 2,
+        "version": 3,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:46.852Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:47.094Z"
+      }
+    }
+  },
+  "GET /accounts/invoices/:id/document": {
+    "title": "The finance lead downloads the document",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/invoices/inv_ef0cc7b0-93c5-49f0-9333-f21cdd1482cd/document",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "url": "http://localhost:4100/files/content?token=eyJraW5kIjoiY29udGVudCIsImtleSI6Imludm9pY2VzL2ludl9lZjBjYzdiMC05M2M1LTQ5ZjAtOTMzMy1mMjFjZGQxNDgyY2QuZG9jeCIsImZpbGVOYW1lIjoiSU5WLUFMLTEzLTExLTI2LmRvY3giLCJjb250ZW50VHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5vcGVueG1sZm9ybWF0cy1vZmZpY2Vkb2N1bWVudC53b3JkcHJvY2Vzc2luZ21sLmRvY3VtZW50IiwiZGlzcG9zaXRpb24iOiJhdHRhY2htZW50IiwiZXhwaXJlc0F0IjoxNzk0NTY5MTQ4MTc0fQ.fsQ0W0UVcJ1GG61gaIqVCAQAyqqxpmqjZw9C212RY2c"
+      }
+    }
+  },
+  "POST /accounts/invoices/:id/send": {
+    "title": "The accountant emails the invoice",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/invoices/inv_c5cef2af-f65a-47e3-9c22-6b50c2ca7522/send",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "message": "Please find this month's invoice attached."
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "inv_c5cef2af-f65a-47e3-9c22-6b50c2ca7522",
+        "invoiceNumber": "INV-AL-13-11-26",
+        "clientId": "cl_bea7f31e-f12b-49a3-bb85-6595236b728b",
+        "clientName": "Acme Logistics",
+        "periodStart": "2026-01-01T00:00:00.000Z",
+        "periodEnd": "2026-01-31T00:00:00.000Z",
+        "basis": "logged",
+        "currency": "USD",
+        "hourlyRate": 25,
+        "totalHours": 6,
+        "billableHours": 6,
+        "amount": 150,
+        "paidAmount": 0,
+        "outstandingAmount": 150,
+        "status": "sent",
+        "projects": [
+          {
+            "projectId": "p_827820cc-f492-4b29-9c25-70d52a5d3231",
+            "projectName": "Payroll revamp",
+            "totalHours": 6,
+            "billableHours": 6,
+            "amount": 150
+          }
+        ],
+        "lines": [
+          {
+            "id": "il_db09f627-a007-45b6-ba1b-e94eeefdef07",
+            "projectId": "p_827820cc-f492-4b29-9c25-70d52a5d3231",
+            "description": "Server setup",
+            "date": "2026-11-13T11:10:48.697Z",
+            "hours": 6,
+            "billable": true,
+            "amount": 150,
+            "custom": true
+          }
+        ],
+        "hasDocument": true,
+        "documentVersion": 1,
+        "emailedAt": "2026-11-13T11:10:48.819Z",
+        "emailedTo": "ap@acme.test",
+        "version": 2,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:48.701Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:48.819Z"
+      }
+    }
+  },
+  "GET /accounts/invoices/:id/history": {
+    "title": "The accountant reads the history",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/invoices/inv_75ad30ec-4f19-47be-8117-2d66127e573c/history",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "entries": [
+          {
+            "id": "6af6f039a2b2a4b7febec67a",
+            "at": "2026-11-13T11:10:49.751Z",
+            "action": "created",
+            "changes": [
+              {
+                "field": "status",
+                "to": "draft"
+              },
+              {
+                "field": "hourlyRate",
+                "to": 25
+              }
+            ],
+            "actorId": "u_06",
+            "actorName": "Kamrul Islam"
+          }
+        ]
+      }
+    }
+  },
+  "GET /accounts/payroll-runs": {
+    "title": "The finance lead lists runs",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/payroll-runs?year=2031",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "payrollRuns": [
+          {
+            "id": "pr_d9ef1505-dbb4-4260-bdd1-ddc91426b7e9",
+            "month": 1,
+            "year": 2031,
+            "status": "draft",
+            "employeeCount": 2,
+            "paidCount": 0,
+            "totals": [
+              {
+                "currency": "BDT",
+                "netAmount": 330000
+              }
+            ],
+            "version": 0,
+            "createdBy": "u_06",
+            "createdAt": "2026-11-13T11:10:50.521Z",
+            "updatedBy": "u_06",
+            "updatedAt": "2026-11-13T11:10:50.521Z"
+          }
+        ]
+      }
+    }
+  },
+  "POST /accounts/payroll-runs": {
+    "title": "The accountant makes a run",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/payroll-runs",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "month": 2,
+        "year": 2031,
+        "userIds": [
+          "u_04",
+          "u_05"
+        ],
+        "notes": "February"
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "id": "pr_cc825153-592b-4089-94df-78062e7cb96b",
+        "month": 2,
+        "year": 2031,
+        "status": "draft",
+        "notes": "February",
+        "employeeCount": 2,
+        "paidCount": 0,
+        "totals": [
+          {
+            "currency": "BDT",
+            "netAmount": 330000
+          }
+        ],
+        "items": [
+          {
+            "id": "pi_225e6c46-5944-411e-8671-733f5c1869b7",
+            "userId": "u_04",
+            "salaryId": "s_04",
+            "currency": "BDT",
+            "salaryAmount": 180000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 180000,
+            "netAmount": 180000,
+            "settlementStatus": "unpaid",
+            "name": "Rahim Uddin"
+          },
+          {
+            "id": "pi_ac4ec398-2615-43c6-9e93-98e78d7eec94",
+            "userId": "u_05",
+            "salaryId": "s_05",
+            "currency": "BDT",
+            "salaryAmount": 150000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 150000,
+            "netAmount": 150000,
+            "settlementStatus": "unpaid",
+            "name": "Rumana Akter"
+          }
+        ],
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:50.923Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:50.923Z"
+      }
+    }
+  },
+  "GET /accounts/payroll-runs/:id": {
+    "title": "The finance lead reads a run",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/payroll-runs/pr_96dd020e-35d9-478e-b90a-4bfb601ee142",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "pr_96dd020e-35d9-478e-b90a-4bfb601ee142",
+        "month": 4,
+        "year": 2031,
+        "status": "draft",
+        "employeeCount": 2,
+        "paidCount": 0,
+        "totals": [
+          {
+            "currency": "BDT",
+            "netAmount": 330000
+          }
+        ],
+        "items": [
+          {
+            "id": "pi_913595b7-7b5c-4370-ad0a-75fb15856b88",
+            "userId": "u_04",
+            "salaryId": "s_04",
+            "currency": "BDT",
+            "salaryAmount": 180000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 180000,
+            "netAmount": 180000,
+            "settlementStatus": "unpaid",
+            "name": "Rahim Uddin"
+          },
+          {
+            "id": "pi_849d0755-d2ab-4382-a2c9-c13a93ed6e72",
+            "userId": "u_05",
+            "salaryId": "s_05",
+            "currency": "BDT",
+            "salaryAmount": 150000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 150000,
+            "netAmount": 150000,
+            "settlementStatus": "unpaid",
+            "name": "Rumana Akter"
+          }
+        ],
+        "version": 0,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:51.267Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:51.267Z"
+      }
+    }
+  },
+  "PATCH /accounts/payroll-runs/:id": {
+    "title": "The accountant deducts an advance",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/payroll-runs/pr_7cfac572-2dcf-468f-88b4-56bcd976544b",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "deductions": [
+          {
+            "itemId": "pi_6b15e32e-6117-4b2a-954d-017ccd41af27",
+            "amount": 5000
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "pr_7cfac572-2dcf-468f-88b4-56bcd976544b",
+        "month": 5,
+        "year": 2031,
+        "status": "draft",
+        "employeeCount": 2,
+        "paidCount": 0,
+        "totals": [
+          {
+            "currency": "BDT",
+            "netAmount": 325000
+          }
+        ],
+        "items": [
+          {
+            "id": "pi_6b15e32e-6117-4b2a-954d-017ccd41af27",
+            "userId": "u_04",
+            "salaryId": "s_04",
+            "currency": "BDT",
+            "salaryAmount": 180000,
+            "incentiveAmount": 0,
+            "deductions": 5000,
+            "grossAmount": 180000,
+            "netAmount": 175000,
+            "settlementStatus": "unpaid",
+            "name": "Rahim Uddin"
+          },
+          {
+            "id": "pi_fbba4053-2203-4ed4-928e-33a1eebce206",
+            "userId": "u_05",
+            "salaryId": "s_05",
+            "currency": "BDT",
+            "salaryAmount": 150000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 150000,
+            "netAmount": 150000,
+            "settlementStatus": "unpaid",
+            "name": "Rumana Akter"
+          }
+        ],
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:51.666Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:51.743Z"
+      }
+    }
+  },
+  "DELETE /accounts/payroll-runs/:id": {
+    "title": "The accountant deletes a draft run",
+    "request": {
+      "method": "DELETE",
+      "path": "/accounts/payroll-runs/pr_fe20de71-e574-4f74-8d33-a2b5bf933085",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 204,
+      "body": {}
+    }
+  },
+  "POST /accounts/payroll-runs/:id/submit": {
+    "title": "The accountant submits a run",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/payroll-runs/pr_f3816bb9-9be1-4a25-92e8-5708202f1df6/submit",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "pr_f3816bb9-9be1-4a25-92e8-5708202f1df6",
+        "month": 9,
+        "year": 2031,
+        "status": "pending_approval",
+        "employeeCount": 2,
+        "paidCount": 0,
+        "totals": [
+          {
+            "currency": "BDT",
+            "netAmount": 330000
+          }
+        ],
+        "items": [
+          {
+            "id": "pi_2cf817f6-e5e9-40f0-a763-448da660880b",
+            "userId": "u_04",
+            "salaryId": "s_04",
+            "currency": "BDT",
+            "salaryAmount": 180000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 180000,
+            "netAmount": 180000,
+            "settlementStatus": "unpaid",
+            "name": "Rahim Uddin"
+          },
+          {
+            "id": "pi_05c082db-e953-441e-ae0c-9f854b2e1561",
+            "userId": "u_05",
+            "salaryId": "s_05",
+            "currency": "BDT",
+            "salaryAmount": 150000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 150000,
+            "netAmount": 150000,
+            "settlementStatus": "unpaid",
+            "name": "Rumana Akter"
+          }
+        ],
+        "version": 1,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:53.394Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:53.512Z"
+      }
+    }
+  },
+  "POST /accounts/payroll-runs/:id/approve": {
+    "title": "The finance lead approves",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/payroll-runs/pr_3d9bbc1a-ea5d-4c8d-af4e-b6e0533c3249/approve",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "pr_3d9bbc1a-ea5d-4c8d-af4e-b6e0533c3249",
+        "month": 11,
+        "year": 2031,
+        "status": "approved",
+        "decidedBy": "u_05",
+        "decidedAt": "2026-11-13T11:10:54.696Z",
+        "employeeCount": 2,
+        "paidCount": 0,
+        "totals": [
+          {
+            "currency": "BDT",
+            "netAmount": 330000
+          }
+        ],
+        "items": [
+          {
+            "id": "pi_bf5b64c8-80d3-484b-b532-f615972592e7",
+            "userId": "u_04",
+            "salaryId": "s_04",
+            "currency": "BDT",
+            "salaryAmount": 180000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 180000,
+            "netAmount": 180000,
+            "settlementStatus": "unpaid",
+            "name": "Rahim Uddin"
+          },
+          {
+            "id": "pi_4a05e04a-5560-4e36-b301-c84a9ce338ab",
+            "userId": "u_05",
+            "salaryId": "s_05",
+            "currency": "BDT",
+            "salaryAmount": 150000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 150000,
+            "netAmount": 150000,
+            "settlementStatus": "unpaid",
+            "name": "Rumana Akter"
+          }
+        ],
+        "version": 2,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:54.484Z",
+        "updatedBy": "u_05",
+        "updatedAt": "2026-11-13T11:10:54.698Z"
+      }
+    }
+  },
+  "POST /accounts/payroll-runs/:id/return": {
+    "title": "The finance lead sends it back",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/payroll-runs/pr_7fbbe81b-54e7-4296-ab9b-3f6c9d20a148/return",
+      "as": "rumana@twintrack.test",
+      "body": {
+        "reason": "Missing two people"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "pr_7fbbe81b-54e7-4296-ab9b-3f6c9d20a148",
+        "month": 1,
+        "year": 2032,
+        "status": "draft",
+        "decidedBy": "u_05",
+        "decidedAt": "2026-11-13T11:10:55.509Z",
+        "returnReason": "Missing two people",
+        "employeeCount": 1,
+        "paidCount": 0,
+        "totals": [
+          {
+            "currency": "BDT",
+            "netAmount": 180000
+          }
+        ],
+        "items": [
+          {
+            "id": "pi_68e2193a-ee9c-449e-924e-8ab9356035e4",
+            "userId": "u_04",
+            "salaryId": "s_04",
+            "currency": "BDT",
+            "salaryAmount": 180000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 180000,
+            "netAmount": 180000,
+            "settlementStatus": "unpaid",
+            "name": "Rahim Uddin"
+          }
+        ],
+        "version": 2,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:55.308Z",
+        "updatedBy": "u_05",
+        "updatedAt": "2026-11-13T11:10:55.511Z"
+      }
+    }
+  },
+  "PATCH /accounts/payroll-runs/:id/items/:itemId": {
+    "title": "The accountant marks someone's pay sent",
+    "request": {
+      "method": "PATCH",
+      "path": "/accounts/payroll-runs/pr_8498da42-bbfe-400e-9aa4-7c0ab32d1222/items/pi_fbb68810-9db1-4bd7-8bd8-7b3a112ca5bd",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "settlementStatus": "paid",
+        "reference": "TRX-2001"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "pr_8498da42-bbfe-400e-9aa4-7c0ab32d1222",
+        "month": 3,
+        "year": 2032,
+        "status": "approved",
+        "decidedBy": "u_05",
+        "decidedAt": "2026-11-13T11:10:56.231Z",
+        "employeeCount": 2,
+        "paidCount": 1,
+        "totals": [
+          {
+            "currency": "BDT",
+            "netAmount": 330000
+          }
+        ],
+        "items": [
+          {
+            "id": "pi_fbb68810-9db1-4bd7-8bd8-7b3a112ca5bd",
+            "userId": "u_04",
+            "salaryId": "s_04",
+            "currency": "BDT",
+            "salaryAmount": 180000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 180000,
+            "netAmount": 180000,
+            "settlementStatus": "paid",
+            "settledAt": "2026-11-13T11:10:56.333Z",
+            "reference": "TRX-2001",
+            "name": "Rahim Uddin"
+          },
+          {
+            "id": "pi_711b2125-15aa-4191-ab56-d06f3090d268",
+            "userId": "u_05",
+            "salaryId": "s_05",
+            "currency": "BDT",
+            "salaryAmount": 150000,
+            "incentiveAmount": 0,
+            "deductions": 0,
+            "grossAmount": 150000,
+            "netAmount": 150000,
+            "settlementStatus": "unpaid",
+            "name": "Rumana Akter"
+          }
+        ],
+        "version": 3,
+        "createdBy": "u_06",
+        "createdAt": "2026-11-13T11:10:55.991Z",
+        "updatedBy": "u_06",
+        "updatedAt": "2026-11-13T11:10:56.334Z"
+      }
+    }
+  },
+  "GET /accounts/payroll-runs/:id/history": {
+    "title": "The finance lead reads the history",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/payroll-runs/pr_1a900574-d1a8-4495-83f6-0ac46cbf4f5d/history",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "total": 1,
+        "entries": [
+          {
+            "id": "6af6f040a2b2a4b7febec6e4",
+            "at": "2026-11-13T11:10:56.858Z",
+            "action": "created",
+            "changes": [
+              {
+                "field": "status",
+                "to": "draft"
+              },
+              {
+                "field": "items",
+                "to": [
+                  {
+                    "_id": "pi_f1285649-456d-4515-95a1-778d75b14764",
+                    "userId": "u_04",
+                    "salaryId": "s_04",
+                    "currency": "BDT",
+                    "salaryAmount": 180000,
+                    "incentiveAmount": 0,
+                    "deductions": 0,
+                    "grossAmount": 180000,
+                    "netAmount": 180000,
+                    "settlementStatus": "unpaid"
+                  }
+                ]
+              }
+            ],
+            "actorId": "u_06",
+            "actorName": "Kamrul Islam"
+          }
+        ]
+      }
+    }
+  },
+  "GET /accounts/documents": {
+    "title": "The finance lead lists a bill's evidence",
+    "request": {
+      "method": "GET",
+      "path": "/accounts/documents?ownerType=bill&ownerId=bill_7e8ca95d-ced2-480e-98a7-188836feb304",
+      "as": "rumana@twintrack.test"
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "documents": []
+      }
+    }
+  },
+  "POST /accounts/documents": {
+    "title": "The accountant starts uploading a scan",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/documents",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "ownerType": "bill",
+        "ownerId": "bill_a590cda0-af67-4484-9749-98b53508d62f",
+        "fileName": "scan.pdf",
+        "mimeType": "application/pdf",
+        "sizeBytes": 12
+      }
+    },
+    "response": {
+      "status": 201,
+      "body": {
+        "document": {
+          "id": "doc_7a4f6e1b-9a67-4c5f-b689-1dda172d405f",
+          "ownerType": "bill",
+          "ownerId": "bill_a590cda0-af67-4484-9749-98b53508d62f",
+          "fileName": "scan.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 12,
+          "status": "uploading",
+          "uploadedBy": "u_06",
+          "uploadedByName": "Kamrul Islam",
+          "createdAt": "2026-11-13T11:10:58.057Z"
+        },
+        "partSize": 67108864,
+        "partCount": 1
+      }
+    }
+  },
+  "POST /accounts/documents/:id/part-urls": {
+    "title": "The accountant gets the part address",
+    "request": {
+      "method": "POST",
+      "path": "/accounts/documents/doc_7942353a-ac71-4ce3-b8db-1cbbd3423f2d/part-urls",
+      "as": "kamrul@twintrack.test",
+      "body": {
+        "partNumbers": [
+          1
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "parts": [
+          {
+            "partNumber": 1,
+            "url": "http://localhost:4100/files/parts?token=eyJraW5kIjoicGFydCIsImtleSI6ImFjY291bnRzL2JpbGwvYmlsbF82YjczMjIzMi0xN2Y4LTQzNWItOGU5MS1hYTEyYzRlYzc1YzIvZG9jXzc5NDIzNTNhLWFjNzEtNGNlMy1iOGRiLTFjYmJkMzQyM2YyZCIsInVwbG9hZElkIjoiZTAxMTU2NTZiOWVmNTY1NjdiODhmNWNlIiwicGFydE51bWJlciI6MSwiZXhwaXJlc0F0IjoxNzk0NTcxODU5MTMyfQ.HqAIkmtuguXbpxpdCUzPCZP5s7MTPZntBQJQpLfwXc4"
+          }
+        ]
+      }
+    }
+  },
+  "DELETE /accounts/documents/:id": {
+    "title": "The accountant cancels an upload",
+    "request": {
+      "method": "DELETE",
+      "path": "/accounts/documents/doc_d2231ac6-752d-4120-a538-6412360cc21d",
+      "as": "kamrul@twintrack.test"
+    },
+    "response": {
+      "status": 204,
+      "body": {}
+    }
+  }
+}

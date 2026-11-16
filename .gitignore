@@ -6,7 +6,6 @@ next-env.d.ts
 coverage/
 playwright-report/
 test-results/
-postman/
 .env
 .env.local
 *.log

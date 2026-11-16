@@ -1,0 +1,3341 @@
+{
+  "info": {
+    "name": "TwinTrack Project management API",
+    "description": "Every route of the Master API, with tests. Run it in Postman against a running API, or with `npm run test:postman`, which starts its own copy. Update this file in the same change as any route.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "webOrigin",
+      "value": "http://twintrack.localhost:3100"
+    },
+    {
+      "key": "email",
+      "value": "rahim@twintrack.test"
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "moduleKey",
+      "value": "projects"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "currentName",
+      "value": ""
+    },
+    {
+      "key": "adminEmail",
+      "value": "farhana@twintrack.test"
+    },
+    {
+      "key": "hrManagerEmail",
+      "value": "sabbir@twintrack.test"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "hrManagerToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": "u_04"
+    },
+    {
+      "key": "createdUserId",
+      "value": ""
+    },
+    {
+      "key": "createdUserEmail",
+      "value": ""
+    },
+    {
+      "key": "importedModuleKey",
+      "value": "postman-test"
+    },
+    {
+      "key": "newPassword",
+      "value": ""
+    },
+    {
+      "key": "superAdminId",
+      "value": "u_01"
+    },
+    {
+      "key": "inactiveEmail",
+      "value": "jahid@twintrack.test"
+    },
+    {
+      "key": "accessAdminToken",
+      "value": ""
+    },
+    {
+      "key": "noRoleToken",
+      "value": ""
+    },
+    {
+      "key": "importedRoleKey",
+      "value": "reader"
+    },
+    {
+      "key": "importedResourceKey",
+      "value": "thing"
+    },
+    {
+      "key": "moduleRoleKey",
+      "value": "manager"
+    },
+    {
+      "key": "moduleResourceKey",
+      "value": "salary"
+    },
+    {
+      "key": "newRoleKey",
+      "value": "postman-role"
+    },
+    {
+      "key": "newResourceKey",
+      "value": "extras"
+    },
+    {
+      "key": "hrAdminEmail",
+      "value": "kamrul@twintrack.test"
+    },
+    {
+      "key": "hrAdminToken",
+      "value": ""
+    },
+    {
+      "key": "hrTeamMemberId",
+      "value": "u_08"
+    },
+    {
+      "key": "hrStaffId",
+      "value": "u_03"
+    },
+    {
+      "key": "noAccessId",
+      "value": "u_09"
+    },
+    {
+      "key": "salaryId",
+      "value": "s_07"
+    },
+    {
+      "key": "jasminToken",
+      "value": ""
+    },
+    {
+      "key": "jackToken",
+      "value": ""
+    },
+    {
+      "key": "jackId",
+      "value": "u_13"
+    },
+    {
+      "key": "addableModuleKey",
+      "value": "hr"
+    },
+    {
+      "key": "orgRoleId",
+      "value": ""
+    },
+    {
+      "key": "accessProfileId",
+      "value": ""
+    },
+    {
+      "key": "shareId",
+      "value": ""
+    },
+    {
+      "key": "customRecordId",
+      "value": ""
+    },
+    {
+      "key": "customShareId",
+      "value": ""
+    },
+    {
+      "key": "customModuleKey",
+      "value": "hr"
+    },
+    {
+      "key": "customObjectKey",
+      "value": "postmanTask"
+    },
+    {
+      "key": "tasksLeadToken",
+      "value": ""
+    },
+    {
+      "key": "tasksDevToken",
+      "value": ""
+    },
+    {
+      "key": "tasksQaToken",
+      "value": ""
+    },
+    {
+      "key": "taskProjectId",
+      "value": ""
+    },
+    {
+      "key": "taskId",
+      "value": ""
+    },
+    {
+      "key": "otherTaskId",
+      "value": ""
+    },
+    {
+      "key": "accessAdminId",
+      "value": "u_10"
+    },
+    {
+      "key": "accessAdminEmail",
+      "value": "sumaiya@twintrack.test"
+    },
+    {
+      "key": "deletableUserId",
+      "value": ""
+    },
+    {
+      "key": "clientId",
+      "value": ""
+    },
+    {
+      "key": "impersonationToken",
+      "value": ""
+    },
+    {
+      "key": "apiToken",
+      "value": ""
+    },
+    {
+      "key": "apiTokenId",
+      "value": ""
+    },
+    {
+      "key": "oauthClientId",
+      "value": ""
+    },
+    {
+      "key": "oauthClientSecret",
+      "value": ""
+    },
+    {
+      "key": "oauthRequestId",
+      "value": ""
+    },
+    {
+      "key": "oauthCode",
+      "value": ""
+    },
+    {
+      "key": "oauthAccessToken",
+      "value": ""
+    },
+    {
+      "key": "connectedAppId",
+      "value": ""
+    },
+    {
+      "key": "pkceVerifier",
+      "value": ""
+    },
+    {
+      "key": "pkceChallenge",
+      "value": ""
+    },
+    {
+      "key": "oauthRedirectUri",
+      "value": "https://claude.ai/api/mcp/auth_callback"
+    },
+    {
+      "key": "qaTaskId",
+      "value": ""
+    },
+    {
+      "key": "credentialId",
+      "value": ""
+    },
+    {
+      "key": "attachmentId",
+      "value": ""
+    },
+    {
+      "key": "partToken",
+      "value": ""
+    },
+    {
+      "key": "partEtag",
+      "value": ""
+    },
+    {
+      "key": "contentToken",
+      "value": ""
+    },
+    {
+      "key": "tasksLeadId",
+      "value": "u_04"
+    },
+    {
+      "key": "tasksDevId",
+      "value": "u_07"
+    },
+    {
+      "key": "tasksQaId",
+      "value": "u_09"
+    },
+    {
+      "key": "accountsToken",
+      "value": ""
+    },
+    {
+      "key": "financeToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "vendorId",
+      "value": ""
+    },
+    {
+      "key": "bankAccountId",
+      "value": ""
+    },
+    {
+      "key": "usdBankId",
+      "value": ""
+    },
+    {
+      "key": "billId",
+      "value": ""
+    },
+    {
+      "key": "draftBillId",
+      "value": ""
+    },
+    {
+      "key": "deleteBillId",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "documentId",
+      "value": ""
+    },
+    {
+      "key": "accountsPartToken",
+      "value": ""
+    },
+    {
+      "key": "accountsPartEtag",
+      "value": ""
+    },
+    {
+      "key": "accountsClientId",
+      "value": ""
+    },
+    {
+      "key": "accountsProjectId",
+      "value": ""
+    },
+    {
+      "key": "invoiceId",
+      "value": ""
+    },
+    {
+      "key": "invoiceLineId",
+      "value": ""
+    },
+    {
+      "key": "receiptId",
+      "value": ""
+    },
+    {
+      "key": "allocationId",
+      "value": ""
+    },
+    {
+      "key": "draftInvoiceId",
+      "value": ""
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "runItemId",
+      "value": ""
+    },
+    {
+      "key": "draftRunId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Project management",
+      "item": [
+        {
+          "name": "Sign in as a Team Lead",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"rahim@twintrack.test\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tasksLeadToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as a Developer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"arif@twintrack.test\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tasksDevToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as a QA developer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"mehedi@twintrack.test\",\"password\":\"{{password}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tasksQaToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead creates a project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Postman project\",\"memberIds\":[\"u_07\",\"u_09\"],\"totalAllocatedHours\":40}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('taskProjectId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead lists their team's projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads the project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead changes the project",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"deadline\":\"2027-03-31\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead sets the project's members",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"memberIds\":[\"u_07\",\"u_09\",\"u_10\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead creates a task for the developer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"projectId\":\"{{taskProjectId}}\",\"title\":\"Build the export\",\"assignedDevId\":\"u_07\",\"estimatedHours\":8}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('taskId', pm.response.json().id);",
+                  "pm.test('is todo', () => pm.expect(pm.response.json().status).to.eql('todo'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead creates a second task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"projectId\":\"{{taskProjectId}}\",\"title\":\"Fix the import\",\"assignedDevId\":\"u_09\",\"estimatedHours\":3}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('otherTaskId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead lists to-do tasks in the project",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks?projectId={{taskProjectId}}&status=todo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{taskProjectId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "todo"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead changes the estimate",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estimatedHours\":6}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead links the task to the second one",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/references",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "references"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"taskIds\":[\"{{otherTaskId}}\"]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer reads the task",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('shows the link', () => pm.expect(pm.response.json().references).to.have.length(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead can't start someone else's task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "start"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('says not_assignee', () => pm.expect(pm.response.json().error.code).to.eql('not_assignee'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer starts the task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "start"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is in_progress', () => pm.expect(pm.response.json().status).to.eql('in_progress'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer pauses the task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/pause",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "pause"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer resumes the task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "start"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer completes the task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "complete"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is pending_approval', () => pm.expect(pm.response.json().status).to.eql('pending_approval'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer can't approve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hours\":{\"basis\":\"estimated\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('says forbidden', () => pm.expect(pm.response.json().error.code).to.eql('forbidden'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead hands the task to QA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/qa-handover",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "qa-handover"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"qaId\":\"u_09\",\"qaEstimatedHours\":2}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is qa_todo', () => pm.expect(pm.response.json().status).to.eql('qa_todo'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA starts testing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksQaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/qa-start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "qa-start"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is qa_in_progress', () => pm.expect(pm.response.json().status).to.eql('qa_in_progress'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA pauses testing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksQaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/qa-pause",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "qa-pause"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA resumes testing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksQaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/qa-start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "qa-start"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA passes the task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksQaToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/qa-complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "qa-complete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"result\":\"pass\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is pending_approval', () => pm.expect(pm.response.json().status).to.eql('pending_approval'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead approves the hours",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hours\":{\"basis\":\"estimated\"},\"qaHours\":{\"basis\":\"actual\"}}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is done', () => pm.expect(pm.response.json().status).to.eql('done'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reverts it with a reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/revert",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "revert"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"comment\":\"Found a bug after release.\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is reverted', () => pm.expect(pm.response.json().status).to.eql('reverted'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer comments on the task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "comments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"body\":\"Looking into it.\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer reads the comments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/comments?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "comments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has the revert reason', () => pm.expect(pm.response.json().total).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads the task history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/history?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead cancels the second task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{otherTaskId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{otherTaskId}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is cancelled', () => pm.expect(pm.response.json().status).to.eql('cancelled'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead sums the project's tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/summary?projectId={{taskProjectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{taskProjectId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('counts the tasks', () => pm.expect(pm.response.json().taskCount).to.be.at.least(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead exports the project's tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/export?projectId={{taskProjectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "export"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{taskProjectId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is CSV', () => pm.response.to.have.header('Content-Type', 'text/csv; charset=utf-8'));",
+                  "pm.test('has the header row', () => pm.expect(pm.response.text()).to.include('number,title,projectName'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead searches tasks by title",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/search?search=export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "export"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('finds the task', () => pm.expect(pm.response.json().tasks.map((task) => task.id)).to.include(pm.collectionVariables.get('taskId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead lists tasks sorted by estimate",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks?projectId={{taskProjectId}}&sortBy=estimatedHours&sortDirection=asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{taskProjectId}}"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "estimatedHours"
+                },
+                {
+                  "key": "sortDirection",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead flags the task",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/flag",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "flag"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"flagged\":true,\"flagNote\":\"Check the hours\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('saves the flag', () => pm.expect(pm.response.json().flagged).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead marks the task not billable",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/billable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "billable"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"billable\":false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('saves it', () => pm.expect(pm.response.json().billable).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead corrects the actual hours",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/actual-hours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "actual-hours"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"actualHours\":7.5}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('saves them', () => pm.expect(pm.response.json().actualHours).to.eql(7.5));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer can't flag",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/flag",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "flag"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"flagged\":false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead creates a task for the QA estimate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"projectId\":\"{{taskProjectId}}\",\"title\":\"Needs a QA estimate\",\"assignedDevId\":\"u_07\",\"estimatedHours\":2}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('qaTaskId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer starts it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{qaTaskId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{qaTaskId}}",
+                "start"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer completes it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{qaTaskId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{qaTaskId}}",
+                "complete"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead hands it to QA without an estimate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{qaTaskId}}/qa-handover",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{qaTaskId}}",
+                "qa-handover"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"qaId\":\"u_09\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QA can't start without an estimate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksQaToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{qaTaskId}}/qa-start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{qaTaskId}}",
+                "qa-start"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 409', () => pm.response.to.have.status(409));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error.code).to.eql('qa_estimate_missing'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead sets the QA estimate",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{qaTaskId}}/qa-estimate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{qaTaskId}}",
+                "qa-estimate"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"qaEstimatedHours\":1.5}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('sets it', () => pm.expect(pm.response.json().qaEstimatedHours).to.eql(1.5));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads project health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('includes the project', () => pm.expect(pm.response.json().projects.map((project) => project.id)).to.include(pm.collectionVariables.get('taskProjectId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads the roster",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/roster",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "roster"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists developers', () => pm.expect(pm.response.json().developers).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads the team's points",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/points",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "points"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads a developer's points",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/points/{{tasksDevId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "points",
+                "{{tasksDevId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('shows the revert penalty', () => pm.expect(pm.response.json().entries.map((entry) => entry.reason)).to.include('revert_penalty'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead adds a project login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}/credentials",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}",
+                "credentials"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"label\":\"Salesforce sandbox\",\"loginUrl\":\"https://test.salesforce.com\",\"username\":\"dev@acme.test\",\"password\":\"Sup3r secret\",\"otpSecret\":\"GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.test('shows a code, not the secret', () => { pm.expect(pm.response.json().otpCode).to.match(/^\\d{6}$/); pm.expect(pm.response.json()).to.not.have.property('otpSecret'); });",
+                  "pm.collectionVariables.set('credentialId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer lists the project logins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}/credentials",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}",
+                "credentials"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('sees the password', () => pm.expect(pm.response.json().credentials[0].password).to.eql('Sup3r secret'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead changes the login",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}/credentials/{{credentialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}",
+                "credentials",
+                "{{credentialId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"password\":\"Changed\",\"otpSecret\":null}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead removes the login",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}/credentials/{{credentialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}",
+                "credentials",
+                "{{credentialId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead starts uploading a file",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "attachments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"fileName\":\"notes.txt\",\"mimeType\":\"text/plain\",\"sizeBytes\":12}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('attachmentId', pm.response.json().attachment.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead gets the part address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/attachments/{{attachmentId}}/part-urls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "attachments",
+                "{{attachmentId}}",
+                "part-urls"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"partNumbers\":[1]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "// Postman keeps the token and sends it to {{baseUrl}}, whatever host the address names.",
+                  "const param = (address, name) => (address.match(new RegExp('[?&]' + name + '=([^&]*)')) || [])[1];",
+                  "pm.collectionVariables.set('partToken', param(pm.response.json().parts[0].url, 'token'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Browser sends the part (development storage)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/files/parts?token={{partToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "parts"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{partToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "hello, world"
+            },
+            "description": "With R2, this goes to R2 instead. Here the local disk stands in for it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "// Without its quotes, so it fits inside the JSON body. R2 takes it either way.\n pm.collectionVariables.set('partEtag', pm.response.headers.get('ETag').replace(/\"/g, ''));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead finishes the upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/attachments/{{attachmentId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "attachments",
+                "{{attachmentId}}",
+                "complete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"parts\":[{\"partNumber\":1,\"etag\":\"{{partEtag}}\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is ready', () => pm.expect(pm.response.json().status).to.eql(\"ready\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer lists the files",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "attachments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('counts the bytes', () => pm.expect(pm.response.json().usedBytes).to.eql(12));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Developer gets a link to view the file",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksDevToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/attachments/{{attachmentId}}/url?mode=view",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "attachments",
+                "{{attachmentId}}",
+                "url"
+              ],
+              "query": [
+                {
+                  "key": "mode",
+                  "value": "view"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "const param = (address, name) => (address.match(new RegExp('[?&]' + name + '=([^&]*)')) || [])[1];",
+                  "pm.collectionVariables.set('contentToken', param(pm.response.json().url, 'token'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Browser opens the file (development storage)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/content?token={{contentToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{contentToken}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is the file', () => pm.expect(pm.response.text()).to.eql('hello, world'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A forged file link is refused",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/content?token=forged.token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "content"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "forged.token"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error.code).to.eql('invalid_file_link'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead removes the file",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/tasks/{{taskId}}/attachments/{{attachmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "tasks",
+                "{{taskId}}",
+                "attachments",
+                "{{attachmentId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead can't change their own incentive",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives/settings/{{tasksLeadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives",
+                "settings",
+                "{{tasksLeadId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error.code).to.eql('own_incentive'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Super admin makes the lead earn the monthly incentive",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives/settings/{{tasksLeadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives",
+                "settings",
+                "{{tasksLeadId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"earnsMonthlyIncentive\":true,\"hourlyRate\":500,\"eligibleForProjectIncentives\":false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('earns it', () => pm.expect(pm.response.json().earnsMonthlyIncentive).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead makes the QA developer eligible for project incentives",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives/settings/{{tasksQaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives",
+                "settings",
+                "{{tasksQaId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"earnsMonthlyIncentive\":false,\"hourlyRate\":null,\"eligibleForProjectIncentives\":true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads the incentive settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives",
+                "settings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads this month's incentives",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists the lead', () => pm.expect(pm.response.json().people.map((person) => person.userId)).to.include('u_04'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead generates January",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives",
+                "generate"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"month\":1,\"year\":2026}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Super admin pays the lead for January",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives/disburse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives",
+                "disburse"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"userId\":\"u_04\",\"month\":1,\"year\":2026}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is paid', () => pm.expect(pm.response.json().disbursed).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paying it twice is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives/disburse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives",
+                "disburse"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"userId\":\"u_04\",\"month\":1,\"year\":2026}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 409', () => pm.response.to.have.status(409));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error.code).to.eql('already_paid'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads the ledger",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/incentives/ledger?userId={{tasksLeadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "incentives",
+                "ledger"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{tasksLeadId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead reads the project incentives",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}/incentives",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}",
+                "incentives"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lead gives the QA developer a project incentive",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tasksLeadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects/projects/{{taskProjectId}}/incentives/{{tasksQaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projects",
+                "projects",
+                "{{taskProjectId}}",
+                "incentives",
+                "{{tasksQaId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"enabled\":true,\"amount\":5000,\"notes\":\"Shipped early\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('saves the amount', () => pm.expect(pm.response.json().amount).to.eql(5000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

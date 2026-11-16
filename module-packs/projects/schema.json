@@ -1,0 +1,393 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "twintrack/projects/schema.json",
+  "title": "Project management data model",
+  "description": "Records as the Project management API returns them. Fields not listed in `required` can be missing, because they aren't set or because field security hides them from the caller. Explained in DATA_MODEL.md.",
+  "$defs": {
+    "Scope": { "type": "string", "enum": ["own", "team", "all"] },
+    "Id": { "type": "string", "minLength": 1 },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "CalendarDay": { "type": "string", "format": "date-time", "description": "A calendar day, returned as midnight UTC. Sent as YYYY-MM-DD. Display it in UTC." },
+    "Hours": { "type": "number", "minimum": 0 },
+
+    "PersonRef": {
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/Id" }, "name": { "type": "string" } }
+    },
+    "RecordFields": {
+      "type": "object",
+      "required": ["version", "createdAt", "updatedAt"],
+      "properties": {
+        "version": { "type": "integer", "minimum": 0, "description": "Send back with an edit. 409 version_conflict means someone changed the record since." },
+        "createdBy": { "$ref": "#/$defs/Id" },
+        "createdAt": { "$ref": "#/$defs/DateTime" },
+        "updatedBy": { "$ref": "#/$defs/Id" },
+        "updatedAt": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+
+    "ProjectStatus": { "type": "string", "enum": ["active", "on_hold", "completed"] },
+    "Project": {
+      "allOf": [{ "$ref": "#/$defs/RecordFields" }],
+      "type": "object",
+      "required": ["id", "leadId", "members"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "name": { "type": "string", "x-fieldAccess": "controlled" },
+        "description": { "type": "string", "x-fieldAccess": "controlled" },
+        "status": { "$ref": "#/$defs/ProjectStatus", "x-fieldAccess": "controlled" },
+        "totalAllocatedHours": { "$ref": "#/$defs/Hours", "x-fieldAccess": "controlled" },
+        "deadline": { "$ref": "#/$defs/CalendarDay", "x-fieldAccess": "controlled" },
+        "leadId": { "$ref": "#/$defs/Id", "description": "Always counts as a member, and isn't listed in members." },
+        "leadName": { "type": "string" },
+        "members": { "type": "array", "items": { "$ref": "#/$defs/PersonRef" } },
+        "clientId": { "$ref": "#/$defs/Id", "x-fieldAccess": "controlled" },
+        "clientName": { "type": "string" }
+      }
+    },
+    "ProjectPage": {
+      "type": "object",
+      "required": ["scope", "total", "projects"],
+      "properties": { "scope": { "$ref": "#/$defs/Scope" }, "total": { "type": "integer" }, "projects": { "type": "array", "items": { "$ref": "#/$defs/Project" } } }
+    },
+    "ProjectHealth": {
+      "type": "object",
+      "required": ["id", "name", "status", "leadId", "completedHours", "openTaskCount", "thisMonth", "thisMonthIncentive"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "name": { "type": "string" },
+        "status": { "$ref": "#/$defs/ProjectStatus" },
+        "leadId": { "$ref": "#/$defs/Id" },
+        "leadName": { "type": "string" },
+        "totalAllocatedHours": { "$ref": "#/$defs/Hours" },
+        "completedHours": { "$ref": "#/$defs/Hours" },
+        "usedShare": { "type": "number", "minimum": 0, "description": "completedHours / totalAllocatedHours. Missing when no hours were allocated or they're hidden." },
+        "openTaskCount": { "type": "integer" },
+        "thisMonth": {
+          "type": "array",
+          "items": { "type": "object", "required": ["tlId", "hours"], "properties": { "tlId": { "$ref": "#/$defs/Id" }, "tlName": { "type": "string" }, "hours": { "$ref": "#/$defs/Hours" } } }
+        },
+        "thisMonthIncentive": { "type": "number", "description": "BDT" }
+      }
+    },
+    "Roster": {
+      "type": "object",
+      "required": ["teamLeads", "developers"],
+      "properties": {
+        "teamLeads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "projectCount", "tasksCompletedThisMonth"],
+            "properties": { "id": { "$ref": "#/$defs/Id" }, "name": { "type": "string" }, "projectCount": { "type": "integer" }, "tasksCompletedThisMonth": { "type": "integer" }, "averageVarianceHours": { "type": "number" } }
+          }
+        },
+        "developers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "openTasks", "completedTasks", "totalPoints"],
+            "properties": { "id": { "$ref": "#/$defs/Id" }, "name": { "type": "string" }, "openTasks": { "type": "integer" }, "completedTasks": { "type": "integer" }, "totalPoints": { "type": "number" } }
+          }
+        }
+      }
+    },
+
+    "TaskStatus": { "type": "string", "enum": ["todo", "in_progress", "pending_approval", "qa_todo", "qa_in_progress", "done", "reverted", "cancelled"] },
+    "TaskKind": { "type": "string", "enum": ["development", "qa"] },
+    "QaResult": { "type": "string", "enum": ["pass", "fail"] },
+    "TaskLink": {
+      "type": "object",
+      "required": ["id", "number", "status"],
+      "properties": { "id": { "$ref": "#/$defs/Id" }, "number": { "type": "string" }, "status": { "$ref": "#/$defs/TaskStatus" } }
+    },
+    "Task": {
+      "allOf": [{ "$ref": "#/$defs/RecordFields" }],
+      "type": "object",
+      "required": ["id", "number", "projectId", "kind", "status", "assignedDevId", "tlId", "paused", "workedSeconds", "revertCount", "qaPaused"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "number": { "type": "string", "pattern": "^T-\\d+$" },
+        "projectId": { "$ref": "#/$defs/Id" },
+        "projectName": { "type": "string" },
+        "kind": { "$ref": "#/$defs/TaskKind", "x-fieldAccess": "controlled" },
+        "title": { "type": "string", "x-fieldAccess": "controlled" },
+        "description": { "type": "string", "x-fieldAccess": "controlled" },
+        "status": { "$ref": "#/$defs/TaskStatus" },
+        "assignedDevId": { "$ref": "#/$defs/Id" },
+        "tlId": { "$ref": "#/$defs/Id" },
+        "dueDate": { "$ref": "#/$defs/CalendarDay", "x-fieldAccess": "controlled" },
+        "estimatedHours": { "$ref": "#/$defs/Hours", "x-fieldAccess": "controlled" },
+        "actualHours": { "$ref": "#/$defs/Hours", "x-fieldAccess": "controlled" },
+        "approvedHours": { "$ref": "#/$defs/Hours", "x-fieldAccess": "controlled" },
+        "pointValue": { "type": "number", "x-fieldAccess": "controlled" },
+        "billable": { "type": "boolean", "x-fieldAccess": "controlled", "description": "Missing on old tasks means true." },
+        "flagged": { "type": "boolean", "x-fieldAccess": "controlled", "description": "Missing on old tasks means false." },
+        "flagNote": { "type": "string", "x-fieldAccess": "controlled" },
+        "paused": { "type": "boolean" },
+        "workedSeconds": { "type": "integer", "minimum": 0, "description": "Including a running timer, at the moment the API answered." },
+        "startedAt": { "$ref": "#/$defs/DateTime" },
+        "completedAt": { "$ref": "#/$defs/DateTime" },
+        "approvedBy": { "$ref": "#/$defs/Id" },
+        "approvedAt": { "$ref": "#/$defs/DateTime" },
+        "revertCount": { "type": "integer", "minimum": 0 },
+        "qaId": { "$ref": "#/$defs/Id" },
+        "qaEstimatedHours": { "$ref": "#/$defs/Hours", "x-fieldAccess": "protected" },
+        "qaActualHours": { "$ref": "#/$defs/Hours", "x-fieldAccess": "protected" },
+        "qaApprovedHours": { "$ref": "#/$defs/Hours", "x-fieldAccess": "protected" },
+        "qaPointValue": { "type": "number", "x-fieldAccess": "protected" },
+        "qaPaused": { "type": "boolean" },
+        "qaCompletedAt": { "$ref": "#/$defs/DateTime" },
+        "qaResult": { "$ref": "#/$defs/QaResult", "x-fieldAccess": "controlled" },
+        "cancelledBy": { "$ref": "#/$defs/Id" },
+        "cancelledAt": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "TaskDetail": {
+      "allOf": [{ "$ref": "#/$defs/Task" }],
+      "type": "object",
+      "required": ["references", "referencedBy"],
+      "properties": {
+        "references": { "type": "array", "items": { "$ref": "#/$defs/TaskLink" } },
+        "referencedBy": { "type": "array", "items": { "$ref": "#/$defs/TaskLink" } }
+      }
+    },
+    "TaskPage": {
+      "type": "object",
+      "required": ["scope", "total", "tasks"],
+      "properties": { "scope": { "$ref": "#/$defs/Scope" }, "total": { "type": "integer" }, "tasks": { "type": "array", "items": { "$ref": "#/$defs/Task" } } }
+    },
+    "TaskTotals": {
+      "type": "object",
+      "required": ["scope", "taskCount"],
+      "properties": {
+        "scope": { "$ref": "#/$defs/Scope" },
+        "taskCount": { "type": "integer" },
+        "estimatedHours": { "type": "number" },
+        "actualHours": { "type": "number" },
+        "varianceHours": { "type": "number" },
+        "pointValue": { "type": "number" }
+      }
+    },
+    "TaskSearchResult": {
+      "allOf": [{ "$ref": "#/$defs/TaskLink" }],
+      "type": "object",
+      "properties": { "title": { "type": "string" }, "projectName": { "type": "string" } }
+    },
+    "HoursChoice": {
+      "type": "object",
+      "required": ["basis"],
+      "properties": {
+        "basis": { "type": "string", "enum": ["estimated", "actual", "custom"] },
+        "customHours": { "type": "number", "exclusiveMinimum": 0, "description": "Only with basis custom. At most the larger of estimated and actual hours." }
+      }
+    },
+
+    "Comment": {
+      "type": "object",
+      "required": ["id", "authorId", "body", "createdAt"],
+      "properties": { "id": { "$ref": "#/$defs/Id" }, "authorId": { "$ref": "#/$defs/Id" }, "authorName": { "type": "string" }, "body": { "type": "string" }, "createdAt": { "$ref": "#/$defs/DateTime" } }
+    },
+    "HistoryEntry": {
+      "type": "object",
+      "required": ["id", "at", "action", "changes", "actorName"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "at": { "$ref": "#/$defs/DateTime" },
+        "action": { "type": "string", "enum": ["created", "updated", "deleted", "restored"] },
+        "changes": {
+          "type": "array",
+          "items": { "type": "object", "required": ["field"], "properties": { "field": { "type": "string" }, "from": {}, "to": {} } }
+        },
+        "actorName": { "type": "string" }
+      }
+    },
+
+    "Attachment": {
+      "type": "object",
+      "required": ["id", "fileName", "mimeType", "sizeBytes", "status", "uploadedBy", "createdAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "fileName": { "type": "string" },
+        "mimeType": { "type": "string" },
+        "sizeBytes": { "type": "integer", "minimum": 1 },
+        "status": { "type": "string", "enum": ["uploading", "ready"] },
+        "uploadedBy": { "$ref": "#/$defs/Id" },
+        "uploadedByName": { "type": "string" },
+        "createdAt": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "AttachmentList": {
+      "type": "object",
+      "required": ["attachments", "usedBytes", "limitBytes"],
+      "properties": { "attachments": { "type": "array", "items": { "$ref": "#/$defs/Attachment" } }, "usedBytes": { "type": "integer" }, "limitBytes": { "type": "integer" } }
+    },
+
+    "ProjectCredential": {
+      "type": "object",
+      "required": ["id", "projectId", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "projectId": { "$ref": "#/$defs/Id" },
+        "label": { "type": "string", "x-fieldAccess": "controlled" },
+        "loginUrl": { "type": "string", "format": "uri", "x-fieldAccess": "controlled", "description": "http or https only." },
+        "username": { "type": "string", "x-fieldAccess": "controlled" },
+        "password": { "type": "string", "x-fieldAccess": "controlled" },
+        "passcode": { "type": "string", "x-fieldAccess": "controlled" },
+        "hasOtp": { "type": "boolean" },
+        "otpCode": { "type": "string", "x-fieldAccess": "controlled", "description": "The current one-time code. The secret is never returned." },
+        "otpSecondsRemaining": { "type": "integer", "minimum": 0 },
+        "notes": { "type": "string", "x-fieldAccess": "controlled" },
+        "version": { "type": "integer" },
+        "createdByName": { "type": "string" },
+        "createdAt": { "$ref": "#/$defs/DateTime" },
+        "updatedByName": { "type": "string" },
+        "updatedAt": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+
+    "PointsReason": { "type": "string", "enum": ["task_approved", "qa_approved", "approval_reversed", "revert_penalty"] },
+    "PointsEntry": {
+      "type": "object",
+      "required": ["id", "points", "reason", "taskId", "createdAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "points": { "type": "number", "description": "Negative for penalties and reversals." },
+        "reason": { "$ref": "#/$defs/PointsReason" },
+        "taskId": { "$ref": "#/$defs/Id" },
+        "taskNumber": { "type": "string" },
+        "taskTitle": { "type": "string" },
+        "createdAt": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "PointsTotals": {
+      "type": "object",
+      "required": ["scope", "total", "people"],
+      "properties": {
+        "scope": { "$ref": "#/$defs/Scope" },
+        "total": { "type": "integer" },
+        "people": { "type": "array", "items": { "type": "object", "required": ["userId", "totalPoints"], "properties": { "userId": { "$ref": "#/$defs/Id" }, "name": { "type": "string" }, "totalPoints": { "type": "number" } } } }
+      }
+    },
+    "PersonPoints": {
+      "type": "object",
+      "required": ["userId", "totalPoints", "total", "entries"],
+      "properties": {
+        "userId": { "$ref": "#/$defs/Id" },
+        "name": { "type": "string" },
+        "totalPoints": { "type": "number" },
+        "total": { "type": "integer" },
+        "entries": { "type": "array", "items": { "$ref": "#/$defs/PointsEntry" } }
+      }
+    },
+
+    "Month": {
+      "type": "object",
+      "required": ["month", "year"],
+      "properties": { "month": { "type": "integer", "minimum": 1, "maximum": 12 }, "year": { "type": "integer" } }
+    },
+    "IncentiveMonth": {
+      "allOf": [{ "$ref": "#/$defs/Month" }],
+      "type": "object",
+      "required": ["scope", "totalPayout", "people"],
+      "properties": {
+        "scope": { "$ref": "#/$defs/Scope" },
+        "totalPayout": { "type": "number", "description": "BDT" },
+        "people": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["userId", "completedHours", "hourlyRate", "totalPayout", "disbursed"],
+            "properties": {
+              "userId": { "$ref": "#/$defs/Id" },
+              "name": { "type": "string" },
+              "completedHours": { "$ref": "#/$defs/Hours" },
+              "hourlyRate": { "type": "number" },
+              "totalPayout": { "type": "number" },
+              "ledgerId": { "$ref": "#/$defs/Id" },
+              "disbursed": { "type": "boolean" },
+              "disbursedAt": { "$ref": "#/$defs/DateTime" }
+            }
+          }
+        }
+      }
+    },
+    "IncentiveLedgerEntry": {
+      "allOf": [{ "$ref": "#/$defs/Month" }],
+      "type": "object",
+      "required": ["id", "userId", "completedHours", "hourlyRate", "totalPayout", "disbursed"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "userId": { "$ref": "#/$defs/Id" },
+        "name": { "type": "string" },
+        "completedHours": { "$ref": "#/$defs/Hours" },
+        "hourlyRate": { "type": "number" },
+        "totalPayout": { "type": "number" },
+        "disbursed": { "type": "boolean" },
+        "disbursedAt": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "IncentiveSetting": {
+      "type": "object",
+      "required": ["userId", "earnsMonthlyIncentive", "effectiveHourlyRate", "eligibleForProjectIncentives", "updatedAt"],
+      "properties": {
+        "userId": { "$ref": "#/$defs/Id" },
+        "name": { "type": "string" },
+        "earnsMonthlyIncentive": { "type": "boolean" },
+        "hourlyRate": { "type": "number", "description": "Missing means the default rate applies." },
+        "effectiveHourlyRate": { "type": "number" },
+        "eligibleForProjectIncentives": { "type": "boolean" },
+        "updatedAt": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "ProjectIncentiveMember": {
+      "type": "object",
+      "required": ["userId", "eligible"],
+      "properties": {
+        "userId": { "$ref": "#/$defs/Id" },
+        "name": { "type": "string" },
+        "eligible": { "type": "boolean" },
+        "grant": {
+          "type": "object",
+          "required": ["enabled", "updatedAt"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "amount": { "type": ["number", "null"] },
+            "notes": { "type": ["string", "null"] },
+            "grantedByName": { "type": "string" },
+            "updatedAt": { "$ref": "#/$defs/DateTime" }
+          }
+        }
+      }
+    },
+
+    "ModuleAccess": {
+      "description": "GET /me/permissions/projects: what the signed-in person may do here.",
+      "type": "object",
+      "required": ["module", "hasAccess", "permissions", "fieldAccess"],
+      "properties": {
+        "module": { "const": "projects" },
+        "hasAccess": { "type": "boolean" },
+        "profileName": { "type": ["string", "null"] },
+        "permissions": { "type": "object", "additionalProperties": { "$ref": "#/$defs/Scope" }, "description": "Such as { \"task.read\": \"team\" }. A missing key means no permission." },
+        "fieldAccess": { "type": "object", "additionalProperties": { "type": "string", "enum": ["hidden", "read", "create", "edit"] }, "description": "Keyed resource.field, such as \"task.estimatedHours\"." }
+      }
+    },
+    "ApiError": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string", "description": "Written for people; show it as is." },
+            "fields": { "type": "array", "items": { "type": "object", "required": ["path", "message"], "properties": { "path": { "type": "string" }, "message": { "type": "string" } } } }
+          }
+        }
+      }
+    }
+  }
+}

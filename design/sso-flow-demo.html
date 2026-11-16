@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TwinTrack Login and Modules Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a working app in a browser frame on the left, what the browser and Master API are doing on the right, then the reference material underneath. Same tokens as the PeopleHub HR Portal and Module Architecture pages. Blue = Master, green = HR. */
+:root{
+  --bg:#F7F7F5; --surface:#FFFFFF; --fg:#1B1B1A; --muted:#6B6B66; --faint:#8A8A84; --line:#E7E7E2; --line-2:#F0F0EC; --hover:#F4F4F1; --code-bg:#F3F3F0;
+  --accent:#3452CC; --accent-ink:#FFFFFF; --accent-soft:#EEF1FB; --accent-line:#C9D2F3;
+  --hr:#1F8A6A; --hr-ink:#FFFFFF; --hr-soft:#E4F3EE; --hr-line:#BFE0D5;
+  --good:#23845F; --good-soft:#E3F3EC; --warn:#A8670E; --warn-soft:#FBF0DD; --danger:#B4382F; --danger-soft:#FBEDEB;
+  --jwt-h:#B5487A; --jwt-p:#6A55C9; --jwt-s:#1F8A6A;
+  --font:"Onest","Segoe UI",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111111; --surface:#191919; --fg:#ECECEA; --muted:#A3A39D; --faint:#85857F; --line:#2A2A28; --line-2:#222221; --hover:#212120; --code-bg:#151515;
+  --accent:#8199F5; --accent-ink:#0F1220; --accent-soft:#1C2139; --accent-line:#34407A;
+  --hr:#4FC29E; --hr-ink:#0B1F19; --hr-soft:#15302A; --hr-line:#24564A;
+  --good:#4FC29E; --good-soft:#15302A; --warn:#E8A44C; --warn-soft:#33260F; --danger:#EF7A70; --danger-soft:#3A1C19;
+  --jwt-h:#E07AAA; --jwt-p:#A693F0; --jwt-s:#4FC29E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111111; --surface:#191919; --fg:#ECECEA; --muted:#A3A39D; --faint:#85857F; --line:#2A2A28; --line-2:#222221; --hover:#212120; --code-bg:#151515;
+  --accent:#8199F5; --accent-ink:#0F1220; --accent-soft:#1C2139; --accent-line:#34407A;
+  --hr:#4FC29E; --hr-ink:#0B1F19; --hr-soft:#15302A; --hr-line:#24564A;
+  --good:#4FC29E; --good-soft:#15302A; --warn:#E8A44C; --warn-soft:#33260F; --danger:#EF7A70; --danger-soft:#3A1C19;
+  --jwt-h:#E07AAA; --jwt-p:#A693F0; --jwt-s:#4FC29E; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--font)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.012em}
+h1{font-size:28px;line-height:1.2;font-weight:700}
+h2{font-size:20px;font-weight:600}
+h3{font-size:15px;font-weight:600}
+p{margin:0}
+code,.mono{font-family:var(--mono);font-size:.86em}
+code{background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+main{max-width:1380px;margin:0 auto;padding:32px 20px 72px;display:grid;gap:28px;min-width:0}
+.head{display:grid;gap:8px}
+.lede{color:var(--muted);max-width:78ch}
+.eyebrow{font:500 12px var(--mono);color:var(--accent);letter-spacing:.04em}
+
+/* flow steps */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.steps li{display:grid;gap:2px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:13px;align-content:start;min-width:0}
+.steps b{font-weight:600;font-size:13px}
+.steps small{font-size:11.5px;color:var(--muted);line-height:1.35}
+.steps .n{font:500 11px var(--mono);color:var(--faint)}
+.steps li.done{background:var(--line-2)}
+.steps li.done .n{color:var(--good)}
+.steps li.on{border-color:var(--accent);background:var(--accent-soft)}
+.steps li.on .n{color:var(--accent)}
+@media (max-width:1040px){.steps{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}}
+
+/* demo layout */
+.demo{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:16px}
+.demo-l{display:grid;gap:16px;min-width:0;align-content:start}
+.demo-r{position:relative;min-width:0}
+.demo-r-in{position:absolute;inset:0;display:flex;flex-direction:column;gap:16px;min-height:0}
+@media (max-width:1120px){.demo{grid-template-columns:minmax(0,1fr)}.demo-r-in{position:static}.logbox{max-height:520px}}
+
+.browser{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
+.chrome{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 12px;background:var(--line-2);border-bottom:1px solid var(--line)}
+.addr{flex:1 1 240px;min-width:0;display:flex;gap:7px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:4px 12px;font:13px var(--mono);overflow-wrap:anywhere}
+.addr svg{flex:none;color:var(--good)}
+.addr b{font-weight:500}.addr.hr b{color:var(--hr)}.addr.portal b{color:var(--accent)}
+.addr span{color:var(--muted)}
+.go{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.screen{height:600px;overflow:auto;background:var(--bg);display:flex;flex-direction:column}
+@media (max-width:1120px){.screen{height:auto;min-height:520px}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 13px;font-size:13.5px;font-weight:500;cursor:pointer}
+.btn:hover:not(:disabled){background:var(--hover)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:3px 9px;font-size:12.5px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){background:var(--accent);filter:brightness(1.08)}
+.btn.hrb{background:var(--hr);border-color:var(--hr);color:var(--hr-ink)}
+.btn.hrb:hover:not(:disabled){background:var(--hr);filter:brightness(1.08)}
+.btn.link{border-color:transparent;background:none;padding:3px 8px;color:var(--muted)}
+.btn.link:hover:not(:disabled){color:var(--fg)}
+.btn.link.on{color:var(--fg);background:var(--hover)}
+
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.logo{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none;background:var(--accent);color:var(--accent-ink)}
+.logo.hr{background:var(--hr);color:var(--hr-ink)}
+.brand{font-weight:600;margin-right:8px}
+.spacer{flex:1}
+.who{font-size:12.5px;color:var(--muted);text-align:right;line-height:1.3}
+.who b{color:var(--fg);font-weight:500;display:block}
+.body{padding:20px;display:grid;gap:16px;align-content:start;min-width:0}
+.banner{padding:9px 13px;border-radius:8px;font-size:13.5px;background:var(--hover)}
+.banner.bad{background:var(--danger-soft)}.banner.good{background:var(--good-soft)}.banner.warn{background:var(--warn-soft)}
+
+/* login */
+.login{margin:auto;width:100%;max-width:760px;padding:24px 20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;align-items:start}
+@media (max-width:680px){.login{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:12px;min-width:0}
+.field{display:grid;gap:4px;font-size:13px;font-weight:500}
+.field input{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:7px 10px;font-weight:400;font-size:14px;width:100%}
+.acct{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;align-items:center;text-align:left;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer}
+.acct:hover{background:var(--hover)}
+.acct.on{border-color:var(--accent);background:var(--accent-soft)}
+.acct b{font-weight:500;font-size:13.5px}
+.acct small{font-size:12px;color:var(--muted);grid-column:1/-1}
+.acct-list{display:grid;gap:6px}
+.muted{color:var(--muted)}.small{font-size:12.5px}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.tile{display:grid;gap:8px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;cursor:pointer}
+.tile:hover{border-color:var(--c)}
+.tile-h{display:flex;gap:10px;align-items:center}
+.tile b{font-size:15.5px;font-weight:600}
+.tile .mono{color:var(--c)}
+.tile .open{font-size:13px;font-weight:500;color:var(--c)}
+.empty{border:1.5px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);display:grid;gap:6px;font-size:14px}
+.empty b{color:var(--fg)}
+
+/* tables and chips */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line)}
+th{font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td small{display:block;color:var(--muted);font-size:12px}
+td.num,.tnum{font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-block;font:12px var(--mono);padding:1px 7px;border-radius:5px;background:var(--line-2);color:var(--fg);white-space:nowrap}
+.chip.hr{background:var(--hr-soft);color:var(--hr)}
+.chip.ma{background:var(--accent-soft);color:var(--accent)}
+.chip.sp{background:var(--warn-soft);color:var(--warn)}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:99px;white-space:nowrap;background:var(--line-2);color:var(--muted)}
+.pill.good{background:var(--good-soft);color:var(--good)}.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.bad{background:var(--danger-soft);color:var(--danger)}
+select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:3px 6px;font-size:13px;max-width:170px}
+.check{display:flex;gap:6px;align-items:center;font:12px var(--mono);white-space:nowrap;margin-bottom:2px}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.tab{border:0;background:none;padding:8px 12px;font-size:13.5px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--fg)}
+.tab.on{color:var(--fg);border-bottom-color:var(--c)}
+.perm-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)}
+.loading{margin:auto;text-align:center;padding:40px 20px;display:grid;gap:8px;justify-items:center}
+.dl{display:grid;grid-template-columns:130px minmax(0,1fr);gap:6px 14px;font-size:14px;margin:0}
+.dl dt{color:var(--muted)}.dl dd{margin:0}
+
+/* scenarios */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.scen{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.sc{display:grid;gap:2px;text-align:left;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;min-width:0}
+.sc:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}
+.sc:disabled{opacity:.5;cursor:not-allowed}
+.sc b{font-size:13.5px;font-weight:600}
+.sc small{font-size:12px;color:var(--muted);line-height:1.4}
+
+/* token */
+.token{flex:none;max-height:380px;overflow:auto;grid-auto-rows:max-content}
+.jwt{font:11.5px/1.45 var(--mono);overflow-wrap:anywhere;background:var(--code-bg);border-radius:7px;padding:8px 10px}
+.jh{color:var(--jwt-h)}.jp{color:var(--jwt-p)}.js{color:var(--jwt-s)}
+.claims{font:12px/1.5 var(--mono);background:var(--code-bg);border-radius:7px;padding:8px 10px;margin:0;overflow-x:auto;white-space:pre}
+.ttl{display:grid;gap:4px;font-size:12.5px}
+.ttl-t{display:flex;justify-content:space-between;gap:8px}
+.meter{height:5px;border-radius:99px;background:var(--line-2);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--good);width:0}
+.meter.low i{background:var(--warn)}
+.cookie{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;display:grid;gap:3px}
+
+/* log */
+.logp{flex:1;min-height:0;grid-template-rows:auto minmax(0,1fr)}
+.logbox{overflow:auto;display:grid;gap:5px;align-content:start;min-height:0}
+.lg{border:1px solid var(--line);border-radius:7px;font-size:12px;min-width:0}
+.lg summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px;align-items:baseline;padding:5px 8px;cursor:pointer;list-style:none}
+.lg summary::-webkit-details-marker{display:none}
+.lg summary:hover{background:var(--hover)}
+.lg .m{font:500 11px var(--mono);color:var(--muted)}
+.lg .p{font:12px var(--mono);overflow-wrap:anywhere}
+.lg .st{font:500 11.5px var(--mono);padding:0 6px;border-radius:4px}
+.st.s2{background:var(--good-soft);color:var(--good)}.st.s4{background:var(--danger-soft);color:var(--danger)}
+.lg-b{padding:3px 8px 8px;display:grid;gap:3px;border-top:1px solid var(--line)}
+.lg-b .meta{color:var(--muted);font-size:11.5px;overflow-wrap:anywhere}
+.ck{display:grid;grid-template-columns:14px minmax(0,1fr);gap:4px;font-size:12px}
+.ck i{font-style:normal;font-weight:700}
+.ck.y i{color:var(--good)}.ck.n i{color:var(--danger)}
+.ck span small{color:var(--muted);font-size:11.5px}
+
+/* reference sections */
+.ref{display:grid;gap:12px;margin-top:20px}
+.ref>p{max-width:78ch}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:10px;min-width:0}
+figure .scroll{overflow-x:auto}
+figure svg{width:100%;min-width:760px;height:auto;display:block;color:var(--fg)}
+figcaption{color:var(--muted);font-size:13.5px;max-width:90ch}
+.d-box{fill:var(--surface);stroke:currentColor;stroke-opacity:.45}
+.d-ma{fill:var(--accent-soft);stroke:var(--accent)}
+.d-hr{fill:var(--hr-soft);stroke:var(--hr)}
+.d-later{fill:none;stroke:currentColor;stroke-opacity:.4;stroke-dasharray:5 4}
+.d-t{font:500 13px var(--font);fill:currentColor}
+.d-s{font:12px var(--font);fill:currentColor;fill-opacity:.68}
+.d-m{font:12px var(--mono);fill:currentColor;fill-opacity:.8}
+.d-ln{stroke:currentColor;stroke-opacity:.55;fill:none}
+.d-hi{stroke:var(--warn);fill:none;stroke-width:1.6}
+.d-hit{font:12px var(--font);fill:var(--warn)}
+.ref td{min-width:140px}
+.ref table{min-width:720px}
+.ref th:first-child,.ref td:first-child{min-width:150px}
+</style>
+</head>
+<body>
+<main>
+
+<header class="head">
+  <span class="eyebrow">DEMO DATA · RUNS ENTIRELY IN THIS PAGE</span>
+  <h1>TwinTrack login and modules</h1>
+  <p class="lede">Sign in at twintrack.com, pick a module, and land on hr.twintrack.com with a working token. The right side shows the token and every call to the Master API as it happens. Master's backend is simulated here, so no data leaves the page and a reload starts over.</p>
+</header>
+
+<section aria-label="Current step in the login flow">
+  <ol class="steps" id="steps"></ol>
+</section>
+
+<section class="demo" aria-label="Working demo">
+  <div class="demo-l">
+    <div class="browser">
+      <div class="chrome">
+        <div class="addr" id="addr" aria-label="Current address"></div>
+        <div class="go"><span>Go to address:</span>
+          <button class="btn sm" type="button" id="go-portal" data-act="goPortal">twintrack.com</button>
+          <button class="btn sm" type="button" id="go-hr" data-act="goHR">hr.twintrack.com</button>
+        </div>
+      </div>
+      <div class="screen" id="screen"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Try these once you are signed in</h3><button class="btn sm" type="button" id="reset" data-act="reset">Reset demo</button></div>
+      <div class="scen" id="scen"></div>
+    </div>
+  </div>
+  <aside class="demo-r" aria-label="Behind the scenes">
+    <div class="demo-r-in">
+      <div class="panel token" id="token"></div>
+      <div class="panel logp">
+        <div class="panel-h"><h3>Calls to api.twintrack.com</h3><span class="small muted">Newest first. Open one to see the checks.</span></div>
+        <div class="logbox" id="log" aria-live="polite"></div>
+      </div>
+    </div>
+  </aside>
+</section>
+
+<section class="ref" aria-labelledby="h-shape">
+  <h2 id="h-shape">How the pieces connect</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 960 390" role="img" aria-label="The browser loads a frontend from twintrack.com or hr.twintrack.com, with employee.twintrack.com to follow later. Every frontend sends its API calls with a bearer token to one Master backend at api.twintrack.com, which checks the token and permission and is the only part that touches the database. The refresh cookie travels only between the browser and the API.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" fill-opacity=".6"/></marker>
+        <marker id="arh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--warn)"/></marker>
+      </defs>
+      <rect class="d-box" x="20" y="150" width="110" height="80" rx="8"/>
+      <text class="d-t" x="75" y="186" text-anchor="middle">Browser</text>
+      <text class="d-s" x="75" y="205" text-anchor="middle">the user</text>
+
+      <rect class="d-ma" x="220" y="30" width="220" height="86" rx="8"/>
+      <text class="d-m" x="330" y="56" text-anchor="middle">twintrack.com</text>
+      <text class="d-t" x="330" y="78" text-anchor="middle">Master frontend</text>
+      <text class="d-s" x="330" y="98" text-anchor="middle">login, profile, module list</text>
+      <rect class="d-hr" x="220" y="147" width="220" height="86" rx="8"/>
+      <text class="d-m" x="330" y="173" text-anchor="middle">hr.twintrack.com</text>
+      <text class="d-t" x="330" y="195" text-anchor="middle">HR frontend</text>
+      <text class="d-s" x="330" y="215" text-anchor="middle">screens only, no database</text>
+      <rect class="d-later" x="220" y="264" width="220" height="70" rx="8"/>
+      <text class="d-m" x="330" y="290" text-anchor="middle">employee.twintrack.com</text>
+      <text class="d-s" x="330" y="312" text-anchor="middle">later, same pattern</text>
+
+      <path class="d-ln" d="M130,175 L218,73" marker-end="url(#ar)"/>
+      <line class="d-ln" x1="130" y1="190" x2="218" y2="190" marker-end="url(#ar)"/>
+      <path class="d-ln" d="M130,205 L218,299" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+      <text class="d-s" x="174" y="182" text-anchor="middle">loads page</text>
+
+      <line class="d-ln" x1="440" y1="73" x2="538" y2="73" marker-end="url(#ar)"/>
+      <line class="d-ln" x1="440" y1="190" x2="538" y2="190" marker-end="url(#ar)"/>
+      <line class="d-ln" x1="440" y1="299" x2="538" y2="299" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+      <text class="d-s" x="489" y="64" text-anchor="middle">API + token</text>
+      <text class="d-s" x="489" y="181" text-anchor="middle">API + token</text>
+
+      <rect class="d-ma" x="540" y="30" width="210" height="304" rx="8"/>
+      <text class="d-m" x="645" y="56" text-anchor="middle">api.twintrack.com</text>
+      <text class="d-t" x="645" y="78" text-anchor="middle">Master backend</text>
+      <rect class="d-box" x="556" y="94" width="178" height="42" rx="6"/><text class="d-s" x="645" y="120" text-anchor="middle">1. Verify token</text>
+      <rect class="d-box" x="556" y="146" width="178" height="42" rx="6"/><text class="d-s" x="645" y="172" text-anchor="middle">2. Check permission</text>
+      <rect class="d-box" x="556" y="198" width="178" height="42" rx="6"/><text class="d-s" x="645" y="224" text-anchor="middle">Login and refresh routes</text>
+      <rect class="d-box" x="556" y="250" width="178" height="66" rx="6"/><text class="d-s" x="645" y="278" text-anchor="middle">Master routes</text><text class="d-s" x="645" y="298" text-anchor="middle">HR routes, Employee later</text>
+
+      <line class="d-ln" x1="750" y1="182" x2="838" y2="182" marker-end="url(#ar)"/>
+      <text class="d-s" x="794" y="173" text-anchor="middle">only access</text>
+      <rect class="d-box" x="840" y="90" width="100" height="184" rx="8"/>
+      <text class="d-t" x="890" y="116" text-anchor="middle">Database</text>
+      <text class="d-s" x="890" y="146" text-anchor="middle">users</text>
+      <text class="d-s" x="890" y="170" text-anchor="middle">sessions</text>
+      <text class="d-s" x="890" y="194" text-anchor="middle">permissions</text>
+      <text class="d-s" x="890" y="218" text-anchor="middle">module data</text>
+
+      <path class="d-hi" d="M75,230 V364 H645 V336" marker-end="url(#arh)"/>
+      <text class="d-hit" x="360" y="356" text-anchor="middle">HttpOnly refresh cookie: sent to the API only, never to a frontend</text>
+    </svg>
+    </div>
+    <figcaption>Frontends hold screens and a short-lived token in memory. Everything that decides or stores anything sits behind the two checks in the Master backend.</figcaption>
+  </figure>
+</section>
+
+<section class="ref" aria-labelledby="h-diff">
+  <h2 id="h-diff">Three places the demo adjusts your description</h2>
+  <p>The flow you described is unchanged for the user. These three details change underneath, each for a security or reliability reason. Each one has a button above so you can see it happen.</p>
+  <div class="tw"><table>
+    <thead><tr><th>You described</th><th>The demo does</th><th>Why</th><th>See it</th></tr></thead>
+    <tbody>
+      <tr><td>Redirect to the module with the access token</td><td>The redirect URL carries no token. As HR loads, it calls <code>POST /auth/refresh</code>, the browser adds the refresh cookie, and Master returns an access token.</td><td>URLs end up in browser history, server logs and Referer headers. The same call also covers a page reload and someone typing hr.twintrack.com directly.</td><td>Open HR and watch the address bar and the first log entry.</td></tr>
+      <tr><td>Each module validates the token</td><td>The Master API validates the token on every call. HR's frontend only uses the answers to decide which tabs and buttons to show.</td><td>Modules have frontends only, and anything running in the browser can be edited by the user. A check there can't protect data.</td><td><b>Edit my token</b></td></tr>
+      <tr><td>Master keeps each user's permissions</td><td>Exactly that, and the token doesn't copy them. It holds identity only, and Master reads permissions from the database on each call.</td><td>Master answers every call anyway, so a role change applies on the next call. The earlier PeopleHub design put permissions in the token, where they stayed stale until the next refresh.</td><td><b>Remove my HR role</b></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="ref" aria-labelledby="h-tokens">
+  <h2 id="h-tokens">The two tokens</h2>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>Access token</th><th>Refresh token</th></tr></thead>
+    <tbody>
+      <tr><td><b>Job</b></td><td>Proves who is calling, on every API call</td><td>Gets a new access token without another login</td></tr>
+      <tr><td><b>Lifetime</b></td><td>15 minutes</td><td>7 days without use and 30 days at most, replaced on each use</td></tr>
+      <tr><td><b>Kept in</b></td><td>The frontend's memory, separately for each app. Gone on reload.</td><td>HttpOnly, Secure, SameSite cookie set by api.twintrack.com, shared across a browser's tabs</td></tr>
+      <tr><td><b>Sent to</b></td><td><code>Authorization: Bearer</code> header on API calls</td><td>api.twintrack.com only, added by the browser</td></tr>
+      <tr><td><b>Readable by JavaScript</b></td><td>Yes</td><td>No, so a script injected into a frontend can't steal it</td></tr>
+      <tr><td><b>If stolen</b></td><td>Works until it expires or the session is ended</td><td>Detected on reuse: Master ends the whole session. Not simulated in this demo. A 10-second grace period stops two open tabs refreshing together from triggering it.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="ref" aria-labelledby="h-people">
+  <h2 id="h-people">Demo people and their access</h2>
+  <p>People, roles and permissions come from <code>twintrack-master/seed/users.json</code> and the HR and Master manifests, leaving out Account roles because that module isn't in this demo. Leave, attendance, salary and job figures are invented. The password for everyone is <code>demo1234</code>. This table updates as you change access in the demo.</p>
+  <div class="tw" id="people"></div>
+</section>
+
+<section class="ref" aria-labelledby="h-routes">
+  <h2 id="h-routes">API routes in this demo</h2>
+  <p>All of them run on Master, at api.twintrack.com. <b>Signed</b> routes need a valid token; <b>Private</b> routes also need the named permission.</p>
+  <div class="tw" id="routes"></div>
+</section>
+
+<section class="ref" aria-labelledby="h-open">
+  <h2 id="h-open">Decisions</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Question</th><th>Decision</th><th>What it affects</th></tr></thead>
+    <tbody>
+      <tr><td>Where does the API live?</td><td><code>api.twintrack.com</code>, as shown here.</td><td>The refresh cookie stays with that one host, away from every frontend. Each frontend's address must be on the API's CORS allow-list.</td></tr>
+      <tr><td>Who can change a person's HR role?</td><td>HR staff with the Master role <code>hr-access</code>, as well as Master admins and super admins.</td><td>In the demo that means Sabbir and Farhana. <code>hr-access</code> covers HR roles only, and nobody can change their own access.</td></tr>
+      <tr><td>How long do tokens and sessions last?</td><td>15-minute access tokens. Sessions end after 7 days without use, and after 30 days regardless.</td><td>How often people must log in again, and how long a stolen cookie could be useful.</td></tr>
+      <tr><td>How do you keep Master available?</td><td>Recommended, not yet decided: run at least two API instances behind a load balancer from day one.</td><td>All login, permission and module traffic goes through one backend. If it's down, every module is down.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+</main>
+
+<!-- The simulated Master backend. Touches no DOM. The frontends below reach it only through Master.handle(). -->
+<script>
+const Master = (() => {
+  const MIN = 60, DAY = 86400;
+  const ACCESS_TTL = 15 * MIN, REFRESH_TTL = 7 * DAY, SESSION_MAX = 30 * DAY;
+  const PASSWORD = 'demo1234';
+  const ORIGINS = ['twintrack.com', 'hr.twintrack.com'];
+  const SECRET = 'demo-only-signing-key';
+  const CLOCK_START = Date.UTC(2026, 10, 5, 3, 0, 0) / 1000; /* 09:00 in Dhaka */
+  const SPEED = 30;
+
+  const MODULES = [
+    {key: 'hr', name: 'HR', host: 'hr.twintrack.com', version: '1.3.0', repo: 'twintrack-hr', desc: 'Employee records, leave, attendance and hiring.'},
+    {key: 'master', name: 'Master console', host: 'twintrack.com/master', version: '1.4.0', repo: 'twintrack-master', desc: 'Users, roles, modules and the activity log.'},
+  ];
+  const RESOURCES = {
+    hr: {employee: ['read', 'create', 'update', 'delete'], salary: ['read', 'update'], leave: ['read', 'create', 'delete', 'approve'], attendance: ['read', 'update'], recruitment: ['read', 'create', 'update']},
+    master: {user: ['read', 'create', 'update', 'delete'], role: ['read', 'update'], module: ['read', 'create', 'delete'], audit: ['read'], hrAccess: ['read', 'update'], employeeAccess: ['read', 'update'], fieldAccess: ['read', 'update']},
+  };
+  /* Role templates, copied from the module manifests. Fixed by Master. */
+  const ROLES = {
+    hr: {
+      admin: {name: 'HR Admin', desc: 'Full control of HR.', grants: '*'},
+      manager: {name: 'Manager', desc: 'Sees their team and approves their leave.', grants: {employee: [['read'], 'team'], leave: [['read', 'approve'], 'team'], attendance: [['read'], 'team']}},
+      staff: {name: 'HR Staff', desc: 'Keeps records and attendance up to date.', grants: {employee: [['read', 'create', 'update'], 'all'], leave: [['read', 'create'], 'all'], attendance: [['read', 'update'], 'all'], recruitment: [['read', 'create', 'update'], 'all']}},
+      viewer: {name: 'Viewer', desc: 'Read-only view of employee records.', grants: {employee: [['read'], 'all']}},
+    },
+    master: {
+      admin: {name: 'Access Admin', desc: 'Manages people, roles and modules.', grants: '*'},
+      'hr-access': {name: 'HR access manager', desc: 'Sets each person\'s HR role and special privileges. Reads the user list.', grants: {hrAccess: [['read', 'update'], 'all'], employeeAccess: [['read', 'update'], 'all'], fieldAccess: [['read', 'update'], 'all'], user: [['read'], 'all']}},
+      'employee-access': {name: 'Employee access manager', desc: 'Sets who has which Employee app role. Reads the user list.', grants: {employeeAccess: [['read', 'update'], 'all'], fieldAccess: [['read', 'update'], 'all'], user: [['read'], 'all']}},
+      auditor: {name: 'Auditor', desc: 'Reads the activity log and who has access.', grants: {audit: [['read'], 'all'], user: [['read'], 'all'], hrAccess: [['read'], 'all'], employeeAccess: [['read'], 'all'], fieldAccess: [['read'], 'all']}},
+    },
+  };
+  /* Permissions HR may grant one person without changing their role. */
+  const GRANTABLE = {hr: [{perm: 'salary.read', scope: 'all'}, {perm: 'leave.read', scope: 'team'}, {perm: 'leave.approve', scope: 'team'}, {perm: 'recruitment.read', scope: 'all'}]};
+
+  const ROUTES = [
+    {method: 'POST', path: '/auth/login', access: 'public', does: 'Checks credentials, returns an access token, sets the refresh cookie'},
+    {method: 'POST', path: '/auth/refresh', access: 'public', does: 'Reads the refresh cookie, returns a new access token, replaces the cookie'},
+    {method: 'POST', path: '/auth/logout', access: 'public', does: 'Reads the refresh cookie, ends that session, clears the cookie'},
+    {method: 'GET', path: '/auth/me', access: 'signed', does: 'Profile of the signed-in user'},
+    {method: 'GET', path: '/me/modules', access: 'signed', does: 'Modules this user can open'},
+    {method: 'GET', path: '/me/permissions/:module', access: 'signed', does: 'What this user can do in one module, for showing tabs and buttons'},
+    {method: 'GET', path: '/users', access: 'private', module: 'master', perm: 'user.read', does: 'Users and their access'},
+    {method: 'PATCH', path: '/users/:id/roles', access: 'private', module: 'master', anyPerm: ['user.update', 'hrAccess.update'], does: 'Sets a role in one module'},
+    {method: 'PUT', path: '/users/:id/privileges', access: 'private', module: 'master', anyPerm: ['user.update', 'hrAccess.update'], does: 'Sets per-person special privileges'},
+    {method: 'GET', path: '/modules', access: 'private', module: 'master', perm: 'module.read', does: 'Registered modules'},
+    {method: 'GET', path: '/roles', access: 'private', module: 'master', perm: 'role.read', does: 'Fixed role templates'},
+    {method: 'GET', path: '/audit', access: 'private', module: 'master', perm: 'audit.read', does: 'Activity log'},
+    {method: 'GET', path: '/hr/employees', access: 'private', module: 'hr', perm: 'employee.read', does: 'Employee records, filtered to the caller\'s scope'},
+    {method: 'GET', path: '/hr/employees/:id/salary', access: 'private', module: 'hr', perm: 'salary.read', does: 'One employee\'s salary'},
+    {method: 'GET', path: '/hr/leave', access: 'private', module: 'hr', perm: 'leave.read', does: 'Leave requests, filtered to the caller\'s scope'},
+    {method: 'PATCH', path: '/hr/leave/:id/approve', access: 'private', module: 'hr', perm: 'leave.approve', does: 'Approves a request inside the caller\'s scope'},
+    {method: 'GET', path: '/hr/attendance', access: 'private', module: 'hr', perm: 'attendance.read', does: 'Today\'s attendance, filtered to the caller\'s scope'},
+    {method: 'GET', path: '/hr/jobs', access: 'public', module: 'hr', does: 'Open jobs. Public in the HR manifest, for the careers page.'},
+  ];
+  ROUTES.forEach(r => { r.re = new RegExp('^' + r.path.replace(/:[a-z]+/g, '([^/]+)') + '$'); });
+
+  const seed = () => ({
+    users: [
+      {id: 'u_01', name: 'Farhana Kabir', email: 'farhana@twintrack.test', title: 'Founder', department: 'Operations', team: 'Leadership', contract: 'Permanent', status: 'active', superAdmin: true, assignments: {}, privileges: {}, joined: '2019-03-01', salary: 250000},
+      {id: 'u_03', name: 'Sabbir Alam', email: 'sabbir@twintrack.test', title: 'HR Executive', department: 'People', team: 'People ops', contract: 'Permanent', status: 'active', managerId: 'u_01', assignments: {hr: 'staff', master: 'hr-access'}, privileges: {}, joined: '2022-02-14', salary: 65000},
+      {id: 'u_04', name: 'Rahim Uddin', email: 'rahim@twintrack.test', title: 'Engineering Lead', department: 'Engineering', team: 'Platform', contract: 'Permanent', status: 'active', managerId: 'u_01', assignments: {hr: 'manager'}, privileges: {}, joined: '2020-06-01', salary: 180000},
+      {id: 'u_05', name: 'Rumana Akter', email: 'rumana@twintrack.test', title: 'Finance Lead', department: 'Finance', team: 'Finance', contract: 'Permanent', status: 'active', managerId: 'u_01', assignments: {hr: 'viewer', master: 'auditor'}, privileges: {}, joined: '2020-09-15', salary: 150000},
+      {id: 'u_06', name: 'Kamrul Islam', email: 'kamrul@twintrack.test', title: 'Accountant', department: 'Finance', team: 'Finance', contract: 'Permanent', status: 'active', managerId: 'u_05', assignments: {}, privileges: {}, joined: '2023-01-10', salary: 60000},
+      {id: 'u_07', name: 'Arif Chowdhury', email: 'arif@twintrack.test', title: 'Frontend Developer', department: 'Engineering', team: 'Platform', contract: 'Permanent', status: 'active', managerId: 'u_04', assignments: {}, privileges: {}, joined: '2023-04-03', salary: 80000},
+      {id: 'u_08', name: 'Karim Ahmed', email: 'karim@twintrack.test', title: 'Backend Developer', department: 'Engineering', team: 'Platform', contract: 'Permanent', status: 'active', managerId: 'u_04', assignments: {}, privileges: {}, joined: '2022-08-21', salary: 95000},
+      {id: 'u_09', name: 'Mehedi Hasan', email: 'mehedi@twintrack.test', title: 'Engineering Intern', department: 'Engineering', team: 'Platform', contract: 'Intern', status: 'active', managerId: 'u_04', assignments: {}, privileges: {}, joined: '2026-07-01', salary: 15000},
+      {id: 'u_10', name: 'Sumaiya Islam', email: 'sumaiya@twintrack.test', title: 'UI Designer (agency)', department: 'Design', team: 'Platform', contract: 'Contractor', status: 'active', managerId: 'u_04', assignments: {}, privileges: {}, joined: '2025-11-02', salary: 70000},
+      {id: 'u_11', name: 'Jahid Rana', email: 'jahid@twintrack.test', title: 'Support Agent (left)', department: 'Operations', team: 'Support', contract: 'Permanent', status: 'inactive', managerId: 'u_01', assignments: {}, privileges: {}, joined: '2021-05-17', salary: 40000},
+    ],
+    leave: [
+      {id: 'lv_1', userId: 'u_08', type: 'Casual', dates: '12 to 13 Nov', days: 2, status: 'pending'},
+      {id: 'lv_2', userId: 'u_07', type: 'Annual', dates: '20 Nov', days: 1, status: 'pending'},
+      {id: 'lv_3', userId: 'u_09', type: 'Sick', dates: '5 Nov', days: 1, status: 'approved'},
+      {id: 'lv_4', userId: 'u_06', type: 'Annual', dates: '16 to 17 Nov', days: 2, status: 'pending'},
+      {id: 'lv_5', userId: 'u_03', type: 'Casual', dates: '24 Nov', days: 1, status: 'pending'},
+    ],
+    attendance: [
+      {userId: 'u_01', in: '09:02', status: 'present'}, {userId: 'u_03', in: '08:55', status: 'present'}, {userId: 'u_04', in: '09:10', status: 'present'},
+      {userId: 'u_05', in: '09:00', status: 'present'}, {userId: 'u_06', in: '09:48', status: 'late'}, {userId: 'u_07', in: '09:05', status: 'present'},
+      {userId: 'u_08', in: '09:31', status: 'late'}, {userId: 'u_09', in: null, status: 'on leave'}, {userId: 'u_10', in: '10:00', status: 'present'},
+    ],
+    jobs: [
+      {id: 'j_1', title: 'Senior Backend Developer', team: 'Platform', applicants: 14, status: 'open'},
+      {id: 'j_2', title: 'HR Officer', team: 'People ops', applicants: 9, status: 'open'},
+      {id: 'j_3', title: 'Support Agent', team: 'Support', applicants: 21, status: 'closed'},
+    ],
+    sessions: [],
+    audit: [
+      {at: CLOCK_START - 3 * DAY, actor: 'Farhana Kabir', action: 'Set HR role to Manager', target: 'Rahim Uddin'},
+      {at: CLOCK_START - 2 * DAY, actor: 'Farhana Kabir', action: 'Set account to deactivated', target: 'Jahid Rana'},
+    ],
+    idSeq: 1,
+  });
+
+  let db = seed();
+  let clockOffset = 0;
+  const realStart = Date.now();
+  const now = () => Math.floor(CLOCK_START + (Date.now() - realStart) / 1000 * SPEED + clockOffset);
+
+  const b64 = s => btoa(s).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const unb64 = s => atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+  /* A stand-in for HS256: changes whenever the signed text changes. Production signs with a secret only Master holds. */
+  const sign = text => {
+    let out = '';
+    for (let seedN = 1; seedN <= 5; seedN++) {
+      let h = (2166136261 ^ seedN) >>> 0;
+      for (const c of SECRET + text) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+      out += h.toString(16).padStart(8, '0');
+    }
+    return b64(out).slice(0, 43);
+  };
+  const newId = prefix => prefix + '_' + (db.idSeq++).toString(36) + sign(String(db.idSeq) + now()).slice(0, 8);
+  const decode = token => {
+    try { return JSON.parse(unb64(token.split('.')[1])); } catch (e) { return null; }
+  };
+  const issue = (user, sid) => {
+    const t = now();
+    const head = b64(JSON.stringify({alg: 'HS256', typ: 'JWT'}));
+    const body = b64(JSON.stringify({iss: 'https://api.twintrack.com', sub: user.id, name: user.name, sid, iat: t, exp: t + ACCESS_TTL}));
+    return head + '.' + body + '.' + sign(head + '.' + body);
+  };
+  const userById = id => db.users.find(u => u.id === id);
+  const firstName = u => u.name.split(' ')[0];
+  const log = (actor, action, target) => db.audit.push({at: now(), actor, action, target});
+
+  const permsFor = (user, mod) => {
+    const out = {access: false, role: null, roleName: null, perms: {}, special: [], viaSpecial: []};
+    const all = () => Object.entries(RESOURCES[mod]).forEach(([res, acts]) => acts.forEach(a => { out.perms[res + '.' + a] = 'all'; }));
+    if (user.superAdmin) { all(); out.access = true; out.role = 'super-admin'; out.roleName = 'Super admin'; return out; }
+    const key = user.assignments[mod];
+    if (key) {
+      const role = ROLES[mod][key];
+      out.access = true; out.role = key; out.roleName = role.name;
+      if (role.grants === '*') all();
+      else Object.entries(role.grants).forEach(([res, [acts, scope]]) => acts.forEach(a => { out.perms[res + '.' + a] = scope; }));
+    }
+    (user.privileges[mod] || []).forEach(p => {
+      const def = (GRANTABLE[mod] || []).find(g => g.perm === p);
+      if (!def) return;
+      out.special.push(p); out.access = true;
+      if (!out.perms[p]) { out.perms[p] = def.scope; out.viaSpecial.push(p); }
+    });
+    return out;
+  };
+  const inScope = (caller, scope, emp) => scope === 'all' || emp.id === caller.id || emp.managerId === caller.id;
+  const publicEmp = e => ({id: e.id, name: e.name, title: e.title, department: e.department, team: e.team, contract: e.contract, status: e.status, joined: e.joined});
+
+  const ok = (body, extra) => Object.assign({status: 200, body}, extra);
+  const fail = (status, code, message, extra) => Object.assign({status, body: {code, message}}, extra);
+
+  const HANDLERS = {
+    'POST /auth/login': ({body}) => {
+      const email = String(body && body.email || '').trim().toLowerCase();
+      const user = db.users.find(u => u.email === email);
+      if (!user || !body || body.password !== PASSWORD) return fail(401, 'invalid_credentials', 'That email and password do not match.');
+      if (user.status !== 'active') return fail(403, 'account_inactive', 'This account has been deactivated. Contact HR.');
+      const sid = newId('s');
+      const refresh = newId('rt');
+      db.sessions.push({sid, userId: user.id, refresh, refreshExp: now() + REFRESH_TTL, absoluteExp: now() + SESSION_MAX, active: true});
+      log(user.name, 'Signed in', 'twintrack.com');
+      return ok({accessToken: issue(user, sid), expiresIn: ACCESS_TTL}, {setCookie: refresh});
+    },
+    'POST /auth/refresh': ({cookie, checks}) => {
+      const check = (pass, label, detail) => checks.push({ok: pass, label, detail});
+      if (!cookie) { check(false, 'Refresh cookie present', 'The browser sent no cookie, so nobody is signed in.'); return fail(401, 'no_session', 'Sign in to continue.'); }
+      check(true, 'Refresh cookie present');
+      const s = db.sessions.find(x => x.refresh === cookie);
+      if (!s || !s.active) { check(false, 'Session is active', 'This session has ended.'); return fail(401, 'session_revoked', 'Your session has ended. Sign in again.', {setCookie: null}); }
+      if (s.refreshExp <= now()) { s.active = false; check(false, 'Refresh token not expired', 'It passed its time limit.'); return fail(401, 'session_expired', 'Your session has expired. Sign in again.', {setCookie: null}); }
+      check(true, 'Refresh token not expired');
+      const user = userById(s.userId);
+      if (user.status !== 'active') { s.active = false; check(false, 'Account is active', 'Deactivated, so the session ends now.'); return fail(401, 'account_inactive', 'This account has been deactivated. Contact HR.', {setCookie: null}); }
+      check(true, 'Account is active');
+      s.refresh = newId('rt');
+      s.refreshExp = Math.min(now() + REFRESH_TTL, s.absoluteExp);
+      check(true, 'New access token issued', 'The cookie is replaced with a new refresh token too.');
+      return ok({accessToken: issue(user, s.sid), expiresIn: ACCESS_TTL}, {setCookie: s.refresh});
+    },
+    'POST /auth/logout': ({cookie}) => { const session = db.sessions.find(x => x.refresh === cookie); if (session && session.active) { session.active = false; log(userById(session.userId).name, 'Signed out', 'all apps'); } return ok({signedOut: true}, {setCookie: null}); },
+    'GET /auth/me': ({user}) => ok({id: user.id, name: user.name, email: user.email, title: user.title, department: user.department, team: user.team, contract: user.contract, joined: user.joined, superAdmin: !!user.superAdmin, manager: user.managerId ? userById(user.managerId).name : null}),
+    'GET /me/modules': ({user}) => ok({modules: MODULES.map(m => ({...m, grant: permsFor(user, m.key)})).filter(m => m.grant.access).map(({grant, ...m}) => ({...m, roleName: grant.roleName || 'Special privileges only'}))}),
+    'GET /me/permissions/:module': ({user, params}) => RESOURCES[params[0]] ? ok(permsFor(user, params[0])) : fail(404, 'unknown_module', 'No such module.'),
+    'GET /users': () => ok({users: db.users.map(u => ({...publicEmp(u), email: u.email, superAdmin: !!u.superAdmin, assignments: {...u.assignments}, privileges: JSON.parse(JSON.stringify(u.privileges))})), roles: Object.fromEntries(Object.entries(ROLES).map(([m, rs]) => [m, Object.entries(rs).map(([key, r]) => ({key, name: r.name}))])), grantable: GRANTABLE}),
+    'PATCH /users/:id/roles': ({user, params, body}) => {
+      const target = userById(params[0]);
+      if (!target) return fail(404, 'unknown_user', 'No such user.');
+      if (target.superAdmin) return fail(409, 'super_admin', 'A super admin has every role already.');
+      if (target.id === user.id) return fail(403, 'own_access', 'Nobody can change their own access.');
+      const {module: mod, role} = body;
+      if (mod !== 'hr' && !permsFor(user, 'master').perms['user.update']) return fail(403, 'hr_roles_only', 'Your Master role can change HR roles only.');
+      if (!ROLES[mod] || (role && !ROLES[mod][role])) return fail(422, 'unknown_role', 'That role is not in the fixed list from Master.');
+      if (role) target.assignments[mod] = role; else delete target.assignments[mod];
+      log(user.name, `Set ${mod === 'hr' ? 'HR' : 'Master'} role to ${role ? ROLES[mod][role].name : 'none'}`, target.name);
+      return ok({assignments: target.assignments});
+    },
+    'PUT /users/:id/privileges': ({user, params, body}) => {
+      const target = userById(params[0]);
+      if (!target) return fail(404, 'unknown_user', 'No such user.');
+      if (target.id === user.id) return fail(403, 'own_access', 'Nobody can change their own access.');
+      const {module: mod, perms} = body;
+      const allowed = (GRANTABLE[mod] || []).map(g => g.perm);
+      if (!perms.every(p => allowed.includes(p))) return fail(422, 'not_grantable', 'Master does not allow that permission to be granted to one person.');
+      target.privileges[mod] = perms;
+      log(user.name, `Set HR special privileges to ${perms.join(', ') || 'none'}`, target.name);
+      return ok({privileges: target.privileges});
+    },
+    'GET /modules': () => ok({modules: MODULES.map(m => ({...m, routes: ROUTES.filter(r => (r.module || 'master') === m.key).length}))}),
+    'GET /roles': () => ok({roles: Object.entries(ROLES).flatMap(([mod, rs]) => Object.entries(rs).map(([key, r]) => {
+      const perms = r.grants === '*' ? ['* (everything in this module)'] : Object.entries(r.grants).flatMap(([res, [acts, scope]]) => acts.map(a => res + '.' + a + (scope === 'team' ? ' (team)' : '')));
+      return {module: mod, key, name: r.name, desc: r.desc, perms};
+    }))}),
+    'GET /audit': () => ok({entries: [...db.audit].reverse()}),
+    'GET /hr/employees': ({user, scope}) => ok({scope, total: db.users.length, items: db.users.filter(e => inScope(user, scope, e)).map(publicEmp)}),
+    'GET /hr/employees/:id/salary': ({params}) => {
+      const e = userById(params[0]);
+      return e ? ok({employeeId: e.id, name: e.name, monthly: e.salary, currency: 'BDT'}) : fail(404, 'unknown_employee', 'No such employee.');
+    },
+    'GET /hr/leave': ({user, scope}) => ok({scope, items: db.leave.filter(l => inScope(user, scope, userById(l.userId))).map(l => ({...l, name: userById(l.userId).name}))}),
+    'PATCH /hr/leave/:id/approve': ({user, scope, params}) => {
+      const l = db.leave.find(x => x.id === params[0]);
+      if (!l) return fail(404, 'unknown_leave', 'No such leave request.');
+      const e = userById(l.userId);
+      if (!inScope(user, scope, e)) return fail(403, 'out_of_scope', `${firstName(e)} is outside your team.`);
+      l.status = 'approved';
+      log(user.name, `Approved leave for ${l.dates}`, e.name);
+      return ok({id: l.id, status: l.status});
+    },
+    'GET /hr/attendance': ({user, scope}) => ok({scope, date: '5 Nov 2026', items: db.attendance.filter(a => inScope(user, scope, userById(a.userId))).map(a => ({...a, name: userById(a.userId).name, title: userById(a.userId).title}))}),
+    'GET /hr/jobs': () => ok({items: db.jobs}),
+  };
+
+  function handle({method, path, origin, bearer, cookie, body}) {
+    const checks = [];
+    const check = (pass, label, detail) => checks.push({ok: pass, label, detail});
+    const done = res => Object.assign(res, {checks});
+
+    const allowed = ORIGINS.includes(origin);
+    check(allowed, `Origin ${origin} is on the allow-list`);
+    if (!allowed) return done(fail(403, 'bad_origin', 'This address may not call the API.'));
+
+    let params = null;
+    const route = ROUTES.find(r => r.method === method && (params = path.match(r.re)));
+    if (!route) return done(fail(404, 'no_route', 'No such route.'));
+    const ctx = {body, cookie, checks, params: params.slice(1)};
+
+    if (route.access !== 'public') {
+      if (!bearer) { check(false, 'Token present', 'No Authorization header.'); return done(fail(401, 'no_token', 'No access token.')); }
+      check(true, 'Token present');
+      const [h, p, s] = bearer.split('.');
+      if (sign(h + '.' + p) !== s) { check(false, 'Signature valid', 'The contents do not match the signature, so Master knows it was edited.'); return done(fail(401, 'invalid_signature', 'Invalid token.')); }
+      check(true, 'Signature valid', 'Master signed this token and nobody has changed it.');
+      const claims = decode(bearer);
+      if (claims.exp <= now()) { check(false, 'Token not expired', `Expired ${Math.round((now() - claims.exp) / 60)} min ago.`); return done(fail(401, 'token_expired', 'Access token expired.')); }
+      check(true, 'Token not expired');
+      const session = db.sessions.find(x => x.sid === claims.sid);
+      if (!session || !session.active) { check(false, 'Session is active', 'Signed out or ended.'); return done(fail(401, 'session_revoked', 'Your session has ended.')); }
+      const user = userById(claims.sub);
+      if (user.status !== 'active') { check(false, 'Account is active', `${user.name} has been deactivated.`); return done(fail(401, 'account_inactive', 'This account has been deactivated.')); }
+      check(true, 'Session and account active');
+      ctx.user = user; ctx.session = session;
+      if (route.access === 'private') {
+        const grant = permsFor(user, route.module);
+        const accepted = route.anyPerm || [route.perm];
+        const held = accepted.find(p => grant.perms[p]);
+        const scope = grant.perms[held];
+        if (!scope) { check(false, `Permission ${accepted.join(' or ')}`, `${user.name} does not have it in ${route.module === 'hr' ? 'HR' : 'Master'}.`); return done(fail(403, 'forbidden', `You do not have ${accepted.join(' or ')}.`)); }
+        const source = grant.viaSpecial.includes(held) ? 'special privilege' : `role ${grant.roleName}`;
+        check(true, `Permission ${held}`, `From ${source}, read from the database just now. Scope: ${scope}.`);
+        ctx.scope = scope;
+      }
+    } else {
+      check(true, 'Public route', route.path.startsWith('/auth/') ? 'No access token needed for this one.' : 'No token needed.');
+    }
+    return done(HANDLERS[method + ' ' + route.path](ctx));
+  }
+
+  return {
+    handle, decode, now, ROUTES, MODULES, ACCESS_TTL, REFRESH_TTL, permsFor, firstName, b64, unb64,
+    jump: seconds => { clockOffset += seconds; },
+    reset: () => { db = seed(); clockOffset = 0; },
+    /* Stands in for a second person (Farhana) acting in another browser, for the demo buttons. */
+    other: {
+      user: userById,
+      users: () => db.users,
+      session: cookie => db.sessions.find(s => s.refresh === cookie),
+      removeHrRole: id => { const u = userById(id); delete u.assignments.hr; delete u.privileges.hr; log('Farhana Kabir', 'Set HR role to none', u.name); },
+      deactivate: id => { const u = userById(id); u.status = 'inactive'; log('Farhana Kabir', 'Set account to deactivated', u.name); },
+    },
+    roleName: (mod, key) => ROLES[mod][key] ? ROLES[mod][key].name : key,
+  };
+})();
+</script>
+
+<!-- The frontends: Master's at twintrack.com and HR's at hr.twintrack.com. They share nothing except what the API returns. -->
+<script>
+const PORTAL = 'twintrack.com', HR = 'hr.twintrack.com';
+const $ = id => document.getElementById(id);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+class Nav extends Error {}
+
+const initial = () => ({
+  origin: PORTAL, screen: 'login', step: 1, next: null, error: null, banner: null,
+  token: null, tampered: false, cookie: null, meId: null, me: null, modules: [],
+  form: {email: 'rahim@twintrack.test', password: 'demo1234'},
+  hr: null, con: null,
+});
+let B = initial();
+let logs = [], logSeq = 0, busy = false;
+
+const FLOW = [
+  ['twintrack.com', 'User opens the site'],
+  ['Log in', 'Enters email and password'],
+  ['Master authenticates', 'Checks the database'],
+  ['Access token', 'Master returns it'],
+  ['Module list', 'Only modules they can use'],
+  ['Redirect', 'Browser moves to hr.twintrack.com'],
+  ['API calls', 'Each one checked by Master'],
+];
+const ACCOUNTS = [
+  ['rahim@twintrack.test', 'Rahim Uddin', 'Engineering Lead', 'HR Manager. Sees only his team.'],
+  ['sabbir@twintrack.test', 'Sabbir Alam', 'HR Executive', 'HR Staff and HR access manager. Can set HR roles.'],
+  ['farhana@twintrack.test', 'Farhana Kabir', 'Founder', 'Super admin. Can change everyone\'s access.'],
+  ['rumana@twintrack.test', 'Rumana Akter', 'Finance Lead', 'HR Viewer and Master Auditor.'],
+  ['karim@twintrack.test', 'Karim Ahmed', 'Backend Developer', 'No modules until someone grants access.'],
+  ['jahid@twintrack.test', 'Jahid Rana', 'Support Agent (left)', 'Deactivated. Login is refused.'],
+];
+const HR_TABS = [
+  {key: 'employees', label: 'Employees', perm: 'employee.read', path: '/hr/employees'},
+  {key: 'leave', label: 'Leave', perm: 'leave.read', path: '/hr/leave'},
+  {key: 'attendance', label: 'Attendance', perm: 'attendance.read', path: '/hr/attendance'},
+  {key: 'jobs', label: 'Jobs', perm: 'recruitment.read', path: '/hr/jobs'},
+];
+const CON_TABS = [
+  {key: 'users', label: 'Users and access', perm: 'user.read', path: '/users'},
+  {key: 'modules', label: 'Modules', perm: 'module.read', path: '/modules'},
+  {key: 'roles', label: 'Role templates', perm: 'role.read', path: '/roles'},
+  {key: 'audit', label: 'Activity log', perm: 'audit.read', path: '/audit'},
+];
+const hms = t => new Date((t + 6 * 3600) * 1000).toISOString().slice(11, 19);
+const dhakaDate = t => new Date((t + 6 * 3600) * 1000).toISOString().replace('T', ' ').slice(0, 16);
+
+/* ---------- talking to the API ---------- */
+async function send(method, path, body) {
+  await sleep(120);
+  const res = Master.handle({method, path, body, origin: B.origin, bearer: B.token, cookie: B.cookie});
+  if ('setCookie' in res) B.cookie = res.setCookie;
+  addLog(method, path, res);
+  return res;
+}
+function addLog(method, path, res) {
+  const auth = path === '/auth/login' ? 'Credentials in the request body'
+    : path === '/auth/refresh' ? (B.cookie || res.status === 200 ? 'Refresh cookie, added by the browser' : 'No cookie to send')
+    : B.token ? 'Authorization: Bearer ' + B.token.slice(0, 14) + '…' + B.token.slice(-6) : 'No token';
+  logs.unshift({id: ++logSeq, at: Master.now(), method, path, origin: B.origin, status: res.status, code: res.body.code, msg: res.body.message, checks: res.checks, auth});
+  logs = logs.slice(0, 60);
+  renderLog();
+}
+function adoptToken(token) {
+  B.token = token; B.tampered = false;
+  const c = Master.decode(token);
+  B.meId = c ? c.sub : null;
+  renderToken(); renderScen();
+}
+let lastRefreshFail = null;
+async function refreshToken() {
+  const r = await send('POST', '/auth/refresh');
+  if (r.status === 200) { adoptToken(r.body.accessToken); return true; }
+  B.token = null; lastRefreshFail = r.body; renderToken(); renderScen();
+  return false;
+}
+/* Every frontend call goes through here. On 401: refresh once and retry. If that fails: back to login. */
+async function call(method, path, body) {
+  let r = await send(method, path, body);
+  if (r.status === 401) {
+    if (!(await refreshToken())) kick(lastRefreshFail);
+    r = await send(method, path, body);
+    if (r.status === 401) kick(r.body);
+  }
+  return r;
+}
+function kick(reason) {
+  B.next = B.origin === HR ? 'hr' : null;
+  B.origin = PORTAL; B.screen = 'login'; B.step = 1; B.token = null; B.tampered = false; B.meId = null;
+  B.error = (reason && reason.message) || 'Sign in to continue.';
+  B.banner = null;
+  throw new Nav();
+}
+
+/* ---------- portal frontend (twintrack.com) ---------- */
+async function loadMe() {
+  B.me = (await call('GET', '/auth/me')).body;
+  B.modules = (await call('GET', '/me/modules')).body.modules;
+}
+async function portalScreen(screen) {
+  await loadMe();
+  if (screen === 'console') return openConsole();
+  B.screen = screen; B.step = 4;
+}
+async function openConsole(tab) {
+  const grant = (await call('GET', '/me/permissions/master')).body;
+  const allowed = CON_TABS.filter(t => grant.perms[t.perm]);
+  if (!grant.access || !allowed.length) { B.screen = 'home'; B.step = 4; B.banner = {kind: 'bad', text: 'You have no access to the Master console.'}; return; }
+  const cur = allowed.find(t => t.key === tab) || allowed[0];
+  const r = await call('GET', cur.path);
+  B.con = {grant, tab: cur.key, allowed, data: r.status === 200 ? r.body : null};
+  B.screen = 'console'; B.step = 4;
+}
+async function goPortal() {
+  if (B.origin !== PORTAL || !B.token) {
+    B.origin = PORTAL; B.token = null; B.tampered = false; B.screen = 'loading'; render();
+    if (!(await refreshToken())) { B.screen = 'login'; B.step = 1; B.error = null; B.next = null; return; }
+  }
+  await portalScreen('home');
+}
+
+/* ---------- HR frontend (hr.twintrack.com) ---------- */
+async function loadHR(tab) {
+  B.origin = HR; B.token = null; B.tampered = false; B.screen = 'hr-loading'; B.step = 5; B.hr = null; render();
+  await sleep(450);
+  if (!(await refreshToken())) {
+    B.origin = PORTAL; B.screen = 'login'; B.step = 1; B.next = 'hr';
+    B.error = lastRefreshFail.code === 'no_session' ? 'Sign in to open HR.' : lastRefreshFail.message;
+    return;
+  }
+  B.me = (await call('GET', '/auth/me')).body;
+  await hrPerms();
+  if (B.screen === 'hr-noaccess') return;
+  await hrTab(tab);
+}
+async function hrPerms() {
+  const grant = (await call('GET', '/me/permissions/hr')).body;
+  if (!grant.access) { B.screen = 'hr-noaccess'; B.step = 5; B.hr = null; return grant; }
+  B.hr = Object.assign(B.hr || {tab: null, data: null, salary: null}, {grant, tabs: HR_TABS.filter(t => grant.perms[t.perm])});
+  B.screen = 'hr'; B.step = 6;
+  return grant;
+}
+async function hrTab(key) {
+  const tabs = B.hr.tabs;
+  const t = tabs.find(x => x.key === key) || tabs[0];
+  B.hr.salary = null;
+  if (!t) { B.hr.tab = null; B.hr.data = null; return; }
+  B.hr.tab = t.key;
+  const r = await call('GET', t.path);
+  if (r.status === 403) {
+    await hrPerms();
+    if (B.screen === 'hr') { B.banner = {kind: 'warn', text: 'Your access changed, so this tab is no longer available.'}; return hrTab(); }
+    return;
+  }
+  B.hr.data = r.body;
+}
+
+/* The current screen fetches its data again, as it would on the next click. */
+async function reloadCurrent() {
+  if (B.screen === 'hr') { await hrPerms(); if (B.screen === 'hr') await hrTab(B.hr.tab); return; }
+  if (B.screen === 'hr-noaccess') { await hrPerms(); if (B.screen === 'hr') await hrTab(); return; }
+  if (B.screen === 'console') { await loadMe(); return openConsole(B.con.tab); }
+  await portalScreen(B.screen === 'profile' ? 'profile' : 'home');
+}
+
+/* ---------- actions ---------- */
+const ACT = {
+  goPortal,
+  goHR: () => loadHR(),
+  reset: async () => { Master.reset(); B = initial(); logs = []; lastRefreshFail = null; renderLog(); await goPortal(); },
+  fill: email => { B.form = {email, password: 'demo1234'}; B.error = null; },
+  signIn: async () => {
+    B.step = 2; B.error = null; renderSteps();
+    const r = await send('POST', '/auth/login', {...B.form});
+    if (r.status !== 200) { B.step = 1; B.error = r.body.message; return; }
+    adoptToken(r.body.accessToken);
+    B.step = 3; renderSteps();
+    await sleep(450);
+    const next = B.next; B.next = null;
+    if (next === 'hr') return loadHR();
+    await portalScreen('home');
+  },
+  signOut: async () => {
+    await call('POST', '/auth/logout');
+    B.origin = PORTAL; B.token = null; B.tampered = false; B.meId = null; B.me = null; B.screen = 'login'; B.step = 1; B.next = null; B.error = null;
+  },
+  open: key => key === 'hr' ? loadHR() : portalScreen('console'),
+  nav: screen => portalScreen(screen),
+  hrTab: key => hrTab(key),
+  conTab: key => openConsole(key),
+  salary: async id => {
+    const r = await call('GET', `/hr/employees/${id}/salary`);
+    if (r.status === 200) B.hr.salary = r.body;
+    else B.banner = {kind: 'bad', text: `Master answered ${r.status}: ${r.body.message}`};
+  },
+  approve: async id => {
+    const r = await call('PATCH', `/hr/leave/${id}/approve`);
+    if (r.status === 200) { B.banner = {kind: 'good', text: 'Leave approved. Master recorded it in the activity log.'}; await hrTab('leave'); }
+    else { B.banner = {kind: 'bad', text: `Master answered ${r.status}: ${r.body.message}`}; await hrPerms(); if (B.screen === 'hr') await hrTab('leave'); }
+  },
+  /* Demo buttons */
+  sJump: async () => {
+    Master.jump(16 * 60); renderToken();
+    await sleep(500);
+    await reloadCurrent();
+    B.banner = {kind: 'good', text: 'The token had expired. Master answered 401, the app got a new token using the cookie and retried, and you never saw a login page.'};
+  },
+  sTamper: async () => {
+    const [h, p, s] = B.token.split('.');
+    const claims = JSON.parse(Master.unb64(p));
+    claims.sub = 'u_01'; claims.name = 'Farhana Kabir';
+    B.token = h + '.' + Master.b64(JSON.stringify(claims)) + '.' + s;
+    B.tampered = true; renderToken();
+    await sleep(900);
+    await reloadCurrent();
+    B.banner = {kind: 'good', text: 'The token was edited to say Farhana. Master rejected the signature, and the app got a fresh token that still says who you really are.'};
+  },
+  sBlocked: async () => {
+    const c = blockedCall();
+    const r = await call('GET', c.path);
+    B.banner = {kind: 'bad', text: `Called ${c.path} directly, skipping the screens. Master answered ${r.status}: ${r.body.message} Hiding a button is only a convenience; this check is the real protection.`};
+  },
+  sRemove: async () => {
+    Master.other.removeHrRole(B.meId);
+    await sleep(300);
+    await reloadCurrent();
+    B.banner = {kind: 'warn', text: 'Farhana removed your HR role in Master. Your token is still valid, and the next call already reflects the change.'};
+  },
+  sDeactivate: async () => { Master.other.deactivate(B.meId); await sleep(300); await reloadCurrent(); },
+  sAway: async () => { Master.jump(8 * 86400); renderToken(); await sleep(500); await reloadCurrent(); },
+};
+function blockedCall() {
+  if (!B.meId) return null;
+  const u = Master.other.user(B.meId);
+  const hr = Master.permsFor(u, 'hr').perms, ma = Master.permsFor(u, 'master').perms;
+  if (!hr['salary.read']) return {path: '/hr/employees/u_05/salary', perm: 'salary.read'};
+  if (!ma['audit.read']) return {path: '/audit', perm: 'audit.read'};
+  if (!ma['user.read']) return {path: '/users', perm: 'user.read'};
+  return null;
+}
+async function run(fn, arg) {
+  if (busy) return;
+  busy = true; B.banner = null;
+  try { await fn(arg); }
+  catch (e) { if (!(e instanceof Nav)) { console.error(e); B.banner = {kind: 'bad', text: 'The demo hit an error: ' + e.message + '. Use Reset demo.'}; } }
+  busy = false; render();
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  e.preventDefault();
+  run(ACT[b.dataset.act], b.dataset.arg);
+});
+document.addEventListener('submit', e => { e.preventDefault(); if (e.target.id === 'login-form') run(ACT.signIn); });
+document.addEventListener('input', e => {
+  if (e.target.id === 'email') B.form.email = e.target.value;
+  if (e.target.id === 'password') B.form.password = e.target.value;
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.role) run(async () => {
+    const r = await call('PATCH', `/users/${t.dataset.user}/roles`, {module: t.dataset.role, role: t.value || null});
+    B.banner = r.status === 200 ? {kind: 'good', text: 'Saved in Master. It applies on that person\'s next API call.'} : {kind: 'bad', text: r.body.message};
+    await reloadCurrent();
+  });
+  if (t.dataset.priv) run(async () => {
+    const perms = [...document.querySelectorAll(`input[data-priv][data-user="${t.dataset.user}"]`)].filter(c => c.checked).map(c => c.dataset.priv);
+    const r = await call('PUT', `/users/${t.dataset.user}/privileges`, {module: 'hr', perms});
+    B.banner = r.status === 200 ? {kind: 'good', text: 'Saved in Master. It applies on that person\'s next API call.'} : {kind: 'bad', text: r.body.message};
+    await reloadCurrent();
+  });
+});
+
+/* ---------- rendering ---------- */
+const banner = () => B.banner ? `<div class="banner ${esc(B.banner.kind)}" role="status">${esc(B.banner.text)}</div>` : '';
+const LOCK = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg>';
+
+function pathNow() {
+  switch (B.screen) {
+    case 'login': return '/login' + (B.next ? '?next=' + B.next : '');
+    case 'home': return '/modules';
+    case 'profile': return '/profile';
+    case 'console': return '/master/' + B.con.tab;
+    case 'hr': return '/' + (B.hr.tab || '');
+    default: return '/';
+  }
+}
+function renderSteps() {
+  $('steps').innerHTML = FLOW.map(([b, s], i) => `<li class="${i < B.step ? 'done' : i === B.step ? 'on' : ''}"${i === B.step ? ' aria-current="step"' : ''}><span class="n">${i + 1}${i < B.step ? ' · done' : ''}</span><b>${b}</b><small>${s}</small></li>`).join('');
+}
+function renderAddr() {
+  $('addr').className = 'addr ' + (B.origin === HR ? 'hr' : 'portal');
+  $('addr').innerHTML = `${LOCK}<div><b>${B.origin}</b><span>${esc(pathNow())}</span></div>`;
+}
+
+function portalTop(active) {
+  const m = B.me || {};
+  const hasMaster = B.modules.some(x => x.key === 'master');
+  const nav = (key, label) => `<button type="button" class="btn link${active === key ? ' on' : ''}" data-act="nav" data-arg="${key}" id="nav-${key}">${label}</button>`;
+  return `<div class="topbar" style="--c:var(--accent)"><span class="logo">T</span><span class="brand">TwinTrack</span>${nav('home', 'Modules')}${nav('profile', 'Profile')}${hasMaster ? nav('console', 'Master console') : ''}<span class="spacer"></span><span class="who"><b>${esc(m.name)}</b>${esc(m.title)}</span><button type="button" class="btn sm" id="signout" data-act="signOut">Sign out</button></div>`;
+}
+function vLogin() {
+  const f = B.form;
+  return `<div class="login">
+    <form class="card" id="login-form" novalidate>
+      <div class="tile-h"><span class="logo">T</span><div><h3>Sign in to TwinTrack</h3><span class="small muted">One account for every module</span></div></div>
+      ${B.next === 'hr' ? '<div class="banner">After you sign in, you go back to HR.</div>' : ''}
+      ${B.error ? `<div class="banner bad" role="alert">${esc(B.error)}</div>` : ''}
+      <label class="field" for="email">Email<input id="email" type="email" autocomplete="off" value="${esc(f.email)}"></label>
+      <label class="field" for="password">Password<input id="password" type="text" autocomplete="off" value="${esc(f.password)}"></label>
+      <button class="btn primary" id="signin" type="submit">Sign in</button>
+    </form>
+    <div class="acct-list" aria-label="Demo accounts">
+      <span class="small muted">Demo accounts. Pick one, then sign in.</span>
+      ${ACCOUNTS.map(([email, name, title, note], i) => `<button type="button" class="acct${f.email === email ? ' on' : ''}" id="acct-${i}" data-act="fill" data-arg="${email}"><b>${name}</b><span class="small muted">${title}</span><small>${note}</small></button>`).join('')}
+    </div>
+  </div>`;
+}
+function vHome() {
+  const tiles = B.modules.map(m => {
+    const isHr = m.key === 'hr';
+    return `<button type="button" class="tile" id="open-${m.key}" data-act="open" data-arg="${m.key}" style="--c:var(--${isHr ? 'hr' : 'accent'})">
+      <span class="tile-h"><span class="logo${isHr ? ' hr' : ''}">${isHr ? 'H' : 'M'}</span><b>${esc(m.name)}</b></span>
+      <span class="small muted">${esc(m.desc)}</span>
+      <span class="small">Your role: ${esc(m.roleName)}</span>
+      <span class="mono">${esc(m.host)}</span>
+      <span class="open">${isHr ? 'Open, redirects to this address' : 'Open, stays on this site'}</span>
+    </button>`;
+  }).join('');
+  return portalTop('home') + `<div class="body">${banner()}
+    <div><h2>Your modules</h2><p class="muted small">Master returned this list from <code>GET /me/modules</code>. It shows only what ${esc(B.me.name.split(' ')[0])} can open.</p></div>
+    ${B.modules.length ? `<div class="tiles">${tiles}</div>` : `<div class="empty"><b>No modules yet</b><span>Your account works, but nobody has given you access to a module. Sign in as Farhana, open Master console, and give Karim an HR role. Then sign in as Karim again.</span><span>You can also press hr.twintrack.com above to see what happens if you go there anyway.</span></div>`}
+  </div>`;
+}
+function vProfile() {
+  const m = B.me;
+  const s = Master.other.session(B.cookie);
+  return portalTop('profile') + `<div class="body">${banner()}<div class="card">
+    <h2>${esc(m.name)}</h2>
+    <dl class="dl">
+      <dt>Email</dt><dd>${esc(m.email)}</dd><dt>Title</dt><dd>${esc(m.title)}</dd>
+      <dt>Department</dt><dd>${esc(m.department)}, ${esc(m.team)} team</dd><dt>Contract</dt><dd>${esc(m.contract)}</dd>
+      <dt>Manager</dt><dd>${esc(m.manager || 'None')}</dd><dt>Joined</dt><dd>${esc(m.joined)}</dd>
+      <dt>Access</dt><dd>${B.modules.length ? B.modules.map(x => `${esc(x.name)}: ${esc(x.roleName)}`).join('<br>') : 'No modules yet'}</dd>
+      <dt>Session ends</dt><dd>${s ? esc(dhakaDate(s.refreshExp)) + ', unless you keep using it' : ''}</dd>
+    </dl>
+  </div></div>`;
+}
+function vConsole() {
+  const c = B.con;
+  return portalTop('console') + `<div class="tabs" style="--c:var(--accent)">${c.allowed.map(t => `<button type="button" class="tab${t.key === c.tab ? ' on' : ''}" id="con-${t.key}" data-act="conTab" data-arg="${t.key}">${t.label}</button>`).join('')}</div>
+  <div class="body">${banner()}${c.data ? ({users: vUsers, modules: vModules, roles: vRoles, audit: vAudit})[c.tab](c) : '<div class="empty">Master refused this page.</div>'}</div>`;
+}
+function vUsers(c) {
+  const canEditAll = !!c.grant.perms['user.update'];
+  const canEditHr = canEditAll || !!c.grant.perms['hrAccess.update'];
+  const {users, roles, grantable} = c.data;
+  const roleCell = (u, mod) => {
+    if (u.superAdmin) return '<span class="muted">Super admin</span>';
+    const cur = u.assignments[mod] || '';
+    const canEdit = (mod === 'hr' ? canEditHr : canEditAll) && u.id !== B.meId;
+    if (!canEdit) return cur ? esc(roles[mod].find(r => r.key === cur).name) : '<span class="muted">None</span>';
+    return `<select id="r-${mod}-${u.id}" aria-label="${mod} role for ${esc(u.name)}" data-role="${mod}" data-user="${u.id}"><option value="">None</option>${roles[mod].map(r => `<option value="${r.key}"${r.key === cur ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}</select>`;
+  };
+  const privCell = u => {
+    if (u.superAdmin) return '<span class="muted">Not needed</span>';
+    const cur = u.privileges.hr || [];
+    if (!canEditHr || u.id === B.meId) return cur.length ? `<span class="chips">${cur.map(p => `<span class="chip sp">${p}</span>`).join('')}</span>` : '<span class="muted">None</span>';
+    return grantable.hr.map(g => `<label class="check"><input type="checkbox" id="p-${u.id}-${g.perm}" data-priv="${g.perm}" data-user="${u.id}"${cur.includes(g.perm) ? ' checked' : ''}>${g.perm}</label>`).join('');
+  };
+  return `${canEditHr ? '<p class="small muted">Layer 1: Master fixes what each role can do. Layer 2: here you choose each person\'s role and any special privilege.</p>' : '<div class="banner">You can read this list. Changing roles needs <code>user.update</code> or <code>hrAccess.update</code>, which your Master role does not include.</div>'}
+  <div class="tw"><table style="min-width:680px"><thead><tr><th>Person</th><th>HR role</th><th>HR special privileges</th><th>Master role</th></tr></thead><tbody>
+  ${users.map(u => `<tr><td>${esc(u.name)}${u.status !== 'active' ? ' <span class="pill bad">Inactive</span>' : ''}<small>${esc(u.title)}</small></td><td>${roleCell(u, 'hr')}</td><td>${privCell(u)}</td><td>${roleCell(u, 'master')}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function vModules(c) {
+  return `<div class="tw"><table style="min-width:560px"><thead><tr><th>Module</th><th>Address</th><th>Repo</th><th>Version</th><th>Routes on Master</th></tr></thead><tbody>
+  ${c.data.modules.map(m => `<tr><td>${esc(m.name)}<small>${esc(m.desc)}</small></td><td class="mono">${esc(m.host)}</td><td class="mono">${esc(m.repo)}</td><td class="tnum">${esc(m.version)}</td><td class="tnum">${m.routes}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function vRoles(c) {
+  return `<p class="small muted">These come from each module's manifest. Nobody edits them from a screen, HR included.</p><div class="tw"><table style="min-width:600px"><thead><tr><th>Module</th><th>Role</th><th>Permissions</th></tr></thead><tbody>
+  ${c.data.roles.map(r => `<tr><td>${r.module === 'hr' ? 'HR' : 'Master'}</td><td>${esc(r.name)}<small>${esc(r.desc)}</small></td><td><span class="chips">${r.perms.map(p => `<span class="chip ${r.module === 'hr' ? 'hr' : 'ma'}">${esc(p)}</span>`).join('')}</span></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function vAudit(c) {
+  return `<div class="tw"><table style="min-width:520px"><thead><tr><th>When</th><th>Who</th><th>What</th><th>On</th></tr></thead><tbody>
+  ${c.data.entries.map(a => `<tr><td class="tnum">${esc(dhakaDate(a.at))}</td><td>${esc(a.actor)}</td><td>${esc(a.action)}</td><td>${esc(a.target)}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+function hrTop() {
+  const m = B.me || {};
+  return `<div class="topbar" style="background:var(--hr-soft);border-bottom-color:var(--hr-line)"><span class="logo hr">H</span><span class="brand">HR</span>
+    <button type="button" class="btn sm" id="hr-all" data-act="goPortal">All modules</button><span class="spacer"></span>
+    <span class="who"><b>${esc(m.name)}</b>${B.hr && B.hr.grant ? esc(B.hr.grant.roleName || 'Special privileges') : ''}</span><button type="button" class="btn sm" id="hr-signout" data-act="signOut">Sign out</button></div>`;
+}
+function vHr() {
+  const h = B.hr;
+  const permsHtml = Object.entries(h.grant.perms).map(([p, sc]) => `<span class="chip ${h.grant.special.includes(p) ? 'sp' : 'hr'}">${p}${sc === 'team' ? ' (team)' : ''}</span>`).join('');
+  const views = {employees: vEmployees, leave: vLeave, attendance: vAttendance, jobs: vJobs};
+  return hrTop() + `<div class="tabs" style="--c:var(--hr)">${h.tabs.map(t => `<button type="button" class="tab${t.key === h.tab ? ' on' : ''}" id="hr-${t.key}" data-act="hrTab" data-arg="${t.key}">${t.label}</button>`).join('')}</div>
+  <div class="body">${banner()}
+    <div class="perm-row"><span>Master says you can use:</span>${permsHtml}</div>
+    ${h.tab && h.data ? views[h.tab](h) : '<div class="empty">Your access has no list to show here.</div>'}
+  </div>`;
+}
+const scopeNote = (d, what) => d.scope === 'team' ? `<p class="small muted">Showing your team's ${what}. Master filtered this before sending it, so nothing else reached the browser.</p>` : '';
+function vEmployees(h) {
+  const d = h.data;
+  const canSalary = !!h.grant.perms['salary.read'];
+  return `${scopeNote(d, 'records')}
+  ${h.salary ? `<div class="banner good">${esc(h.salary.name)}: ${esc(h.salary.currency)} ${h.salary.monthly.toLocaleString('en-US')} a month</div>` : ''}
+  <div class="tw"><table style="min-width:560px"><thead><tr><th>Name</th><th>Department</th><th>Contract</th><th>Joined</th><th>Status</th>${canSalary ? '<th>Salary</th>' : ''}</tr></thead><tbody>
+  ${d.items.map(e => `<tr><td>${esc(e.name)}<small>${esc(e.title)}</small></td><td>${esc(e.department)}</td><td>${esc(e.contract)}</td><td class="tnum">${esc(e.joined)}</td><td><span class="pill ${e.status === 'active' ? 'good' : 'bad'}">${e.status === 'active' ? 'Active' : 'Left'}</span></td>${canSalary ? `<td><button type="button" class="btn sm" id="sal-${e.id}" data-act="salary" data-arg="${e.id}">View</button></td>` : ''}</tr>`).join('')}
+  </tbody></table></div>`;
+}
+function vLeave(h) {
+  const can = !!h.grant.perms['leave.approve'];
+  return `${scopeNote(h.data, 'requests')}<div class="tw"><table style="min-width:520px"><thead><tr><th>Name</th><th>Type</th><th>Dates</th><th>Days</th><th>Status</th>${can ? '<th></th>' : ''}</tr></thead><tbody>
+  ${h.data.items.map(l => `<tr><td>${esc(l.name)}</td><td>${esc(l.type)}</td><td>${esc(l.dates)}</td><td class="tnum">${l.days}</td><td><span class="pill ${l.status === 'approved' ? 'good' : 'warn'}">${l.status === 'approved' ? 'Approved' : 'Pending'}</span></td>${can ? `<td>${l.status === 'pending' ? `<button type="button" class="btn sm hrb" id="ap-${l.id}" data-act="approve" data-arg="${l.id}">Approve</button>` : ''}</td>` : ''}</tr>`).join('')}
+  </tbody></table></div>${h.data.items.length ? '' : '<div class="empty">No leave requests.</div>'}`;
+}
+function vAttendance(h) {
+  return `<p class="small muted">${esc(h.data.date)}.${h.data.scope === 'team' ? ' Your team only.' : ''}</p><div class="tw"><table style="min-width:420px"><thead><tr><th>Name</th><th>Checked in</th><th>Status</th></tr></thead><tbody>
+  ${h.data.items.map(a => `<tr><td>${esc(a.name)}<small>${esc(a.title)}</small></td><td class="tnum">${esc(a.in || 'None')}</td><td><span class="pill ${a.status === 'present' ? 'good' : 'warn'}">${esc(a.status[0].toUpperCase() + a.status.slice(1))}</span></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function vJobs(h) {
+  return `<div class="tw"><table style="min-width:420px"><thead><tr><th>Job</th><th>Team</th><th>Applicants</th><th>Status</th></tr></thead><tbody>
+  ${h.data.items.map(j => `<tr><td>${esc(j.title)}</td><td>${esc(j.team)}</td><td class="tnum">${j.applicants}</td><td><span class="pill ${j.status === 'open' ? 'good' : ''}">${j.status === 'open' ? 'Open' : 'Closed'}</span></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function vHrNoAccess() {
+  return hrTop() + `<div class="body">${banner()}<div class="card"><h2>You don't have access to HR</h2>
+    <p class="muted">You are signed in as ${esc((B.me || {}).name)}, and your token is valid. Master says your account has no HR role, so this app shows no data. Ask HR or a Master admin if you need access.</p>
+    <div><button type="button" class="btn" id="back-all" data-act="goPortal">Back to your modules</button></div></div></div>`;
+}
+function renderScreen() {
+  const views = {
+    login: vLogin, home: vHome, profile: vProfile, console: vConsole, hr: vHr, 'hr-noaccess': vHrNoAccess,
+    loading: () => `<div class="loading"><span class="logo">T</span><p class="muted">Loading twintrack.com</p></div>`,
+    'hr-loading': () => `<div class="loading"><span class="logo hr">H</span><b>hr.twintrack.com</b><p class="muted small">This is a different app, with no token yet. It is asking Master for one.</p></div>`,
+  };
+  const focused = document.activeElement && document.activeElement.id;
+  $('screen').innerHTML = views[B.screen]();
+  if (focused && $('screen').contains($(focused))) $(focused).focus();
+}
+
+function renderToken() {
+  const box = $('token');
+  const session = B.cookie ? `<div class="cookie"><span><b>Refresh cookie:</b> <span class="mono">${B.cookie ? esc(B.cookie.slice(0, 14)) + '…' : ''}</span></span><span>HttpOnly, on api.twintrack.com. The frontends can't read this; only this panel shows it.</span></div>`
+    : '<div class="cookie">No refresh cookie in the browser yet.</div>';
+  if (!B.token) {
+    box.innerHTML = `<div class="panel-h"><h3>Access token</h3><span class="pill">None</span></div><p class="small muted">${B.origin === HR ? 'hr.twintrack.com is asking Master for one.' : 'Sign in to get one from Master.'}</p>${session}`;
+    return;
+  }
+  const [h, p, s] = B.token.split('.');
+  const claims = Master.decode(B.token);
+  const shown = {sub: claims.sub, name: claims.name, sid: claims.sid, iss: claims.iss, exp: hms(claims.exp) + ' (Dhaka)'};
+  box.innerHTML = `<div class="panel-h"><h3>Access token, in ${B.origin === HR ? 'HR' : 'Master'} frontend's memory</h3><span class="pill" id="ttl-state"></span></div>
+    <div class="ttl"><div class="ttl-t"><span id="ttl-text" class="tnum"></span><span class="muted">Clock runs 30× faster</span></div><div class="meter" id="ttl-m"><i id="ttl-bar"></i></div></div>
+    ${B.tampered ? '<div class="banner warn small">Edited in the browser. The signature no longer matches.</div>' : ''}
+    <div class="jwt" aria-label="Encoded token"><span class="jh">${esc(h)}</span>.<span class="jp">${esc(p)}</span>.<span class="js">${esc(s)}</span></div>
+    <pre class="claims" aria-label="Token contents">${esc(JSON.stringify(shown, null, 1))}</pre>
+    <p class="small muted">It says who you are and when it expires. No permissions inside.</p>
+    ${session}`;
+  tick();
+}
+function tick() {
+  const text = $('ttl-text');
+  if (!text || !B.token) return;
+  const claims = Master.decode(B.token);
+  const left = claims.exp - Master.now();
+  const expired = left <= 0;
+  const st = $('ttl-state');
+  if (expired) {
+    text.textContent = 'Expired. The next API call triggers a refresh.';
+    st.textContent = 'Expired'; st.className = 'pill bad';
+  } else {
+    const mm = Math.floor(left / 60), ss = String(left % 60).padStart(2, '0');
+    text.textContent = `${mm}:${ss} left of 15:00`;
+    st.textContent = B.tampered ? 'Edited' : 'Valid'; st.className = 'pill ' + (B.tampered ? 'warn' : 'good');
+  }
+  const pct = Math.max(0, Math.min(100, left / Master.ACCESS_TTL * 100));
+  $('ttl-bar').style.width = pct + '%';
+  $('ttl-m').className = 'meter' + (pct < 20 ? ' low' : '');
+}
+
+function renderScen() {
+  const signedIn = !!(B.token || B.cookie) && !!B.meId;
+  const u = B.meId ? Master.other.user(B.meId) : null;
+  const blocked = signedIn ? blockedCall() : null;
+  const hasRole = u && u.assignments.hr;
+  const items = [
+    ['sJump', 'Jump ahead 16 minutes', 'The token expires. Watch the 401, refresh and retry. You stay signed in.', signedIn],
+    ['sTamper', 'Edit my token', 'Change the token to say you are Farhana, then call the API.', signedIn && !!B.token],
+    ['sBlocked', blocked ? `Call ${blocked.path.replace('/hr/employees/u_05', '/hr/…')}` : 'Call a forbidden API', blocked ? `You lack ${blocked.perm}. Skip the screens and call it directly.` : 'A super admin has every permission, so nothing is forbidden here.', signedIn && !!blocked],
+    ['sRemove', 'Remove my HR role', hasRole ? 'Farhana changes your access in Master while you are working.' : 'Needs an account with an assigned HR role, such as Rahim.', signedIn && !!hasRole],
+    ['sDeactivate', 'Deactivate my account', 'You are signed out everywhere on the next API call.', signedIn],
+    ['sAway', 'Stay away for 8 days', 'The refresh token expires too. You log in again and return to where you were.', signedIn],
+  ];
+  $('scen').innerHTML = items.map(([act, b, s, on]) => `<button type="button" class="sc" id="${act}" data-act="${act}"${on ? '' : ' disabled'}><b>${esc(b)}</b><small>${esc(s)}</small></button>`).join('');
+}
+function renderLog() {
+  $('log').innerHTML = logs.length ? logs.map((l, i) => `<details class="lg"${i === 0 ? ' open' : ''}>
+    <summary><span class="m">${l.method}</span><span class="p">${esc(l.path)}</span><span class="st ${l.status < 400 ? 's2' : 's4'}">${l.status}</span></summary>
+    <div class="lg-b"><span class="meta">${hms(l.at)} from ${esc(l.origin)}. ${esc(l.auth)}</span>
+    ${l.checks.map(c => `<div class="ck ${c.ok ? 'y' : 'n'}"><i aria-label="${c.ok ? 'Passed' : 'Failed'}">${c.ok ? '✓' : '✕'}</i><span>${esc(c.label)}${c.detail ? `<br><small>${esc(c.detail)}</small>` : ''}</span></div>`).join('')}
+    ${l.status >= 400 && l.msg ? `<span class="meta">Answer: ${esc(l.msg)}</span>` : ''}</div></details>`).join('') : '<p class="small muted">No calls yet.</p>';
+}
+function renderPeople() {
+  const users = Master.other.users();
+  const rows = users.map(u => {
+    const hr = Master.permsFor(u, 'hr'), ma = Master.permsFor(u, 'master');
+    const mods = [hr.access ? 'HR' : '', ma.access ? 'Master console' : ''].filter(Boolean).join(', ');
+    return `<tr><td>${esc(u.name)}<small>${esc(u.email)}</small></td><td>${esc(u.title)}</td><td>${u.status === 'active' ? '<span class="pill good">Active</span>' : '<span class="pill bad">Inactive</span>'}</td><td>${esc(mods) || '<span class="muted">None</span>'}</td><td>${esc(hr.roleName || 'None')}</td><td>${hr.special.length ? `<span class="chips">${hr.special.map(p => `<span class="chip sp">${p}</span>`).join('')}</span>` : '<span class="muted">None</span>'}</td><td>${esc(ma.roleName || 'None')}</td></tr>`;
+  }).join('');
+  $('people').innerHTML = `<table><thead><tr><th>Person</th><th>Title</th><th>Status</th><th>Sees modules</th><th>HR role</th><th>Special privileges</th><th>Master role</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function renderRoutes() {
+  const kind = {public: '<span class="pill">Public</span>', signed: '<span class="pill warn">Signed</span>', private: '<span class="pill good">Private</span>'};
+  $('routes').innerHTML = `<table><thead><tr><th>Route</th><th>Access</th><th>Permission</th><th>What it does</th></tr></thead><tbody>${Master.ROUTES.map(r => `<tr><td class="mono" style="white-space:nowrap">${r.method} ${esc(r.path)}</td><td>${kind[r.access]}</td><td>${(r.anyPerm || (r.perm ? [r.perm] : [])).map(p => `<code>${p}</code>`).join(' or ')}</td><td>${esc(r.does)}</td></tr>`).join('')}</tbody></table>`;
+}
+function render() {
+  renderSteps(); renderAddr(); renderScreen(); renderToken(); renderScen(); renderPeople();
+}
+
+renderRoutes(); render(); renderLog();
+setInterval(tick, 250);
+run(goPortal);
+</script>
+</body>
+</html>

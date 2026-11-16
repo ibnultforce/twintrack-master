@@ -1,0 +1,1780 @@
+{
+  "info": {
+    "name": "TwinTrack HR API",
+    "description": "Every route of the Master API, with tests. Run it in Postman against a running API, or with `npm run test:postman`, which starts its own copy. Update this file in the same change as any route.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "webOrigin",
+      "value": "http://twintrack.localhost:3100"
+    },
+    {
+      "key": "email",
+      "value": "rahim@twintrack.test"
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "moduleKey",
+      "value": "hr"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "currentName",
+      "value": ""
+    },
+    {
+      "key": "adminEmail",
+      "value": "farhana@twintrack.test"
+    },
+    {
+      "key": "hrManagerEmail",
+      "value": "sabbir@twintrack.test"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "hrManagerToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": "u_04"
+    },
+    {
+      "key": "createdUserId",
+      "value": ""
+    },
+    {
+      "key": "createdUserEmail",
+      "value": ""
+    },
+    {
+      "key": "importedModuleKey",
+      "value": "postman-test"
+    },
+    {
+      "key": "newPassword",
+      "value": ""
+    },
+    {
+      "key": "superAdminId",
+      "value": "u_01"
+    },
+    {
+      "key": "inactiveEmail",
+      "value": "jahid@twintrack.test"
+    },
+    {
+      "key": "accessAdminToken",
+      "value": ""
+    },
+    {
+      "key": "noRoleToken",
+      "value": ""
+    },
+    {
+      "key": "importedRoleKey",
+      "value": "reader"
+    },
+    {
+      "key": "importedResourceKey",
+      "value": "thing"
+    },
+    {
+      "key": "moduleRoleKey",
+      "value": "manager"
+    },
+    {
+      "key": "moduleResourceKey",
+      "value": "salary"
+    },
+    {
+      "key": "newRoleKey",
+      "value": "postman-role"
+    },
+    {
+      "key": "newResourceKey",
+      "value": "extras"
+    },
+    {
+      "key": "hrAdminEmail",
+      "value": "kamrul@twintrack.test"
+    },
+    {
+      "key": "hrAdminToken",
+      "value": ""
+    },
+    {
+      "key": "hrTeamMemberId",
+      "value": "u_08"
+    },
+    {
+      "key": "hrStaffId",
+      "value": "u_03"
+    },
+    {
+      "key": "noAccessId",
+      "value": "u_09"
+    },
+    {
+      "key": "salaryId",
+      "value": "s_07"
+    },
+    {
+      "key": "jasminToken",
+      "value": ""
+    },
+    {
+      "key": "jackToken",
+      "value": ""
+    },
+    {
+      "key": "jackId",
+      "value": "u_13"
+    },
+    {
+      "key": "addableModuleKey",
+      "value": "hr"
+    },
+    {
+      "key": "orgRoleId",
+      "value": ""
+    },
+    {
+      "key": "accessProfileId",
+      "value": ""
+    },
+    {
+      "key": "shareId",
+      "value": ""
+    },
+    {
+      "key": "customRecordId",
+      "value": ""
+    },
+    {
+      "key": "customShareId",
+      "value": ""
+    },
+    {
+      "key": "customModuleKey",
+      "value": "hr"
+    },
+    {
+      "key": "customObjectKey",
+      "value": "postmanTask"
+    },
+    {
+      "key": "tasksLeadToken",
+      "value": ""
+    },
+    {
+      "key": "tasksDevToken",
+      "value": ""
+    },
+    {
+      "key": "tasksQaToken",
+      "value": ""
+    },
+    {
+      "key": "taskProjectId",
+      "value": ""
+    },
+    {
+      "key": "taskId",
+      "value": ""
+    },
+    {
+      "key": "otherTaskId",
+      "value": ""
+    },
+    {
+      "key": "accessAdminId",
+      "value": "u_10"
+    },
+    {
+      "key": "accessAdminEmail",
+      "value": "sumaiya@twintrack.test"
+    },
+    {
+      "key": "deletableUserId",
+      "value": ""
+    },
+    {
+      "key": "clientId",
+      "value": ""
+    },
+    {
+      "key": "impersonationToken",
+      "value": ""
+    },
+    {
+      "key": "apiToken",
+      "value": ""
+    },
+    {
+      "key": "apiTokenId",
+      "value": ""
+    },
+    {
+      "key": "oauthClientId",
+      "value": ""
+    },
+    {
+      "key": "oauthClientSecret",
+      "value": ""
+    },
+    {
+      "key": "oauthRequestId",
+      "value": ""
+    },
+    {
+      "key": "oauthCode",
+      "value": ""
+    },
+    {
+      "key": "oauthAccessToken",
+      "value": ""
+    },
+    {
+      "key": "connectedAppId",
+      "value": ""
+    },
+    {
+      "key": "pkceVerifier",
+      "value": ""
+    },
+    {
+      "key": "pkceChallenge",
+      "value": ""
+    },
+    {
+      "key": "oauthRedirectUri",
+      "value": "https://claude.ai/api/mcp/auth_callback"
+    },
+    {
+      "key": "qaTaskId",
+      "value": ""
+    },
+    {
+      "key": "credentialId",
+      "value": ""
+    },
+    {
+      "key": "attachmentId",
+      "value": ""
+    },
+    {
+      "key": "partToken",
+      "value": ""
+    },
+    {
+      "key": "partEtag",
+      "value": ""
+    },
+    {
+      "key": "contentToken",
+      "value": ""
+    },
+    {
+      "key": "tasksLeadId",
+      "value": "u_04"
+    },
+    {
+      "key": "tasksDevId",
+      "value": "u_07"
+    },
+    {
+      "key": "tasksQaId",
+      "value": "u_09"
+    },
+    {
+      "key": "accountsToken",
+      "value": ""
+    },
+    {
+      "key": "financeToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "vendorId",
+      "value": ""
+    },
+    {
+      "key": "bankAccountId",
+      "value": ""
+    },
+    {
+      "key": "usdBankId",
+      "value": ""
+    },
+    {
+      "key": "billId",
+      "value": ""
+    },
+    {
+      "key": "draftBillId",
+      "value": ""
+    },
+    {
+      "key": "deleteBillId",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "documentId",
+      "value": ""
+    },
+    {
+      "key": "accountsPartToken",
+      "value": ""
+    },
+    {
+      "key": "accountsPartEtag",
+      "value": ""
+    },
+    {
+      "key": "accountsClientId",
+      "value": ""
+    },
+    {
+      "key": "accountsProjectId",
+      "value": ""
+    },
+    {
+      "key": "invoiceId",
+      "value": ""
+    },
+    {
+      "key": "invoiceLineId",
+      "value": ""
+    },
+    {
+      "key": "receiptId",
+      "value": ""
+    },
+    {
+      "key": "allocationId",
+      "value": ""
+    },
+    {
+      "key": "draftInvoiceId",
+      "value": ""
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "runItemId",
+      "value": ""
+    },
+    {
+      "key": "draftRunId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "HR",
+      "description": "Run this folder in order. Salaries and module admins, with permissions and reach coming from each person's role. It creates one salary and approves another, so a re-run on a dev server changes that data.",
+      "item": [
+        {
+          "name": "Sign in as the HR Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{hrAdminEmail}}\",\"password\":\"{{password}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('hrAdminToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as an HR Manager",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('noRoleToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as HR Staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{hrManagerEmail}}\",\"password\":\"{{password}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('hrManagerToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin lists every salary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ]
+            },
+            "description": "Needs salary.read. How far it reaches comes from the permission set: own, team or all."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('reaches everyone', () => {",
+                  "  pm.expect(pm.response.json().scope).to.eql('all');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Manager lists their team's salaries",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{noRoleToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('reaches their team', () => {",
+                  "  pm.expect(pm.response.json().scope).to.eql('team');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Staff has no salary access",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrManagerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Salaries need a token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('no_token');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin adds a salary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"employeeId\":\"{{hrTeamMemberId}}\",\"amount\":99000,\"effectiveFrom\":\"2027-01-01\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ]
+            },
+            "description": "Needs salary.create. It starts as pending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.test('starts as pending', () => {",
+                  "  pm.expect(pm.response.json().status).to.eql('pending');",
+                  "  pm.collectionVariables.set('salaryId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adding a salary for nobody is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"employeeId\":\"no-such-person\",\"amount\":1,\"effectiveFrom\":\"2027-01-01\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 422', () => pm.response.to.have.status(422));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('validation_failed');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Manager can not add a salary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{noRoleToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"employeeId\":\"{{hrTeamMemberId}}\",\"amount\":1,\"effectiveFrom\":\"2027-01-01\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adding a salary needs a token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('no_token');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin approves a salary",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "approve"
+              ]
+            },
+            "description": "Needs salary.approve."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is approved', () => {",
+                  "  pm.expect(pm.response.json().status).to.eql('approved');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Manager can not approve a salary",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{noRoleToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "approve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approving needs a token",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "approve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('no_token');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approving a salary that does not exist",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/no-such-salary/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "no-such-salary",
+                "approve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 404', () => pm.response.to.have.status(404));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('unknown_salary');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Changing an amount sends it back to pending",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"amount\":100000}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}"
+              ]
+            },
+            "description": "Needs salary.update."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is pending again', () => {",
+                  "  pm.expect(pm.response.json().status).to.eql('pending');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Manager can not change an amount",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{noRoleToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"amount\":1}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Changing an amount needs a token",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('no_token');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Changing a salary that does not exist",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"amount\":1}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/no-such-salary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "no-such-salary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 404', () => pm.response.to.have.status(404));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('unknown_salary');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin reads the salary history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "history"
+              ]
+            },
+            "description": "Needs salary.read, within the reader's scope. Newest first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists what changed, newest first', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.entries[0].action).to.eql('updated');",
+                  "  pm.expect(body.entries[body.entries.length - 1].action).to.eql('created');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An edit from an old version is refused",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"amount\":1,\"version\":0}"
+            },
+            "description": "Sending the version you read refuses the edit if someone changed it since."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 409', () => pm.response.to.have.status(409));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error.code).to.eql('version_conflict'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Manager can not delete a salary",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{noRoleToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin deletes a salary",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}"
+              ]
+            },
+            "description": "Needs salary.delete. Moves it to the recycle bin."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('records who deleted it', () => pm.expect(pm.response.json().deletedAt).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin opens the recycle bin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries?deleted=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries"
+              ],
+              "query": [
+                {
+                  "key": "deleted",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Needs salary.delete."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('holds the deleted salary', () => pm.expect(pm.response.json().salaries.map((salary) => salary.id)).to.include(pm.collectionVariables.get('salaryId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin restores the salary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/restore",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "restore"
+              ]
+            },
+            "description": "Needs salary.delete."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restoring a salary that is not deleted",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/restore",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "restore"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 404', () => pm.response.to.have.status(404));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error.code).to.eql('unknown_salary'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Salary history needs a token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "history"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin shares the salary with HR Staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/shares",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "shares"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"granteeType\":\"user\",\"granteeId\":\"{{hrStaffId}}\",\"access\":\"read\"}"
+            },
+            "description": "Needs salary.read. The owner, anyone above them, or someone with salary.share may share. Sharing again with the same grantee changes the access."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.test('saves the share', () => pm.collectionVariables.set('shareId', pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin lists the salary shares",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/shares",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "shares"
+              ]
+            },
+            "description": "Needs salary.read, reaching the salary."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists the share', () => pm.expect(pm.response.json().shares.map((share) => share.id)).to.include(pm.collectionVariables.get('shareId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin stops sharing the salary",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/shares/{{shareId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "shares",
+                "{{shareId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stopping a share that is gone",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hr/salaries/{{salaryId}}/shares/{{shareId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hr",
+                "salaries",
+                "{{salaryId}}",
+                "shares",
+                "{{shareId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 404', () => pm.response.to.have.status(404));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error.code).to.eql('unknown_share'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR access manager lists the people in HR",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrManagerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{moduleKey}}/people",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{moduleKey}}",
+                "people"
+              ]
+            },
+            "description": "Signed. For anyone with user.read in Master, or the right to change access in this module."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists people', () => {",
+                  "  pm.expect(pm.response.json().people).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HR Admin, who reads no people, can not list a module's people",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/master/people",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "master",
+                "people"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listing people needs a token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{moduleKey}}/people",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{moduleKey}}",
+                "people"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('names the problem', () => {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('no_token');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign out after the HR requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Someone who gives no profiles can not list who could be given one",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('names the problem', () => pm.expect(pm.response.json().error.code).to.eql('forbidden'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jasminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{addableModuleKey}}/addable-people",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{addableModuleKey}}",
+                "addable-people"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
