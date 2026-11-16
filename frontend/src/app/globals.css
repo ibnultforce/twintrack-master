@@ -505,3 +505,13 @@ button.org-tree-toggle:hover { background: var(--neutral-soft); }
 .reference-pickers { display: grid; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px 14px; }
 .reference-pickers legend { font-weight: 600; padding: 0 4px; }
 .reference-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 16px; }
+/* Super admin's Claude Code on the web guide: a modal dialog pinned to the right edge. */
+dialog.side-panel { margin: 0 0 0 auto; height: 100vh; max-height: 100vh; width: min(520px, 100vw); border-radius: 0; overflow-y: auto; }
+.side-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.side-panel-head h2 { margin: 0; }
+.side-panel-links { display: flex; flex-wrap: wrap; gap: 16px; }
+.guide-steps { padding-left: 20px; display: grid; gap: 14px; }
+.guide-steps h3 { margin: 0 0 4px; font-size: 14px; }
+.guide-steps p { margin: 0; }
+.guide-prompt { margin-top: 8px; display: grid; gap: 6px; justify-items: start; }
+.guide-prompt pre { margin: 0; width: 100%; white-space: pre-wrap; font-size: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--accent-soft); }

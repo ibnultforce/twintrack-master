@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { describeError } from '@/lib/api/http';
 import { ACCOUNT_NAVIGATION, CONSOLE_NAVIGATION, isCurrentSection, isNavigationItemAllowed, type NavigationItem, type NavigationRights } from '@/lib/navigation';
 import { useSession } from '@/session/SessionProvider';
+import { ClaudeWebGuidePanel } from './ClaudeWebGuidePanel';
 import { PersonPhoto } from './PersonPhoto';
 import { Notice } from './ui';
 
@@ -36,6 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { status, profile, can, canChangeAccess, signOut } = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   useEffect(() => {
     if (status === 'signed-out' || status === 'unavailable') router.replace(`/sign-in?next=${encodeURIComponent(pathname)}`);
@@ -77,6 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="meta">{profile.superAdmin ? 'Super admin' : profile.title}</div>
             </div>
           </div>
+          {profile.superAdmin ? <button type="button" className="link" onClick={() => setIsGuideOpen(true)}>Claude Code on the web</button> : null}
           <button type="button" className="link" onClick={() => void signOut()}>Sign out</button>
         </div>
       </aside>
@@ -86,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ? <section className="card"><p className="empty">Your access doesn&apos;t include this screen.</p></section>
           : children}
       </main>
+      {isGuideOpen && profile.superAdmin ? <ClaudeWebGuidePanel onClose={() => setIsGuideOpen(false)} /> : null}
     </div>
   );
 }
