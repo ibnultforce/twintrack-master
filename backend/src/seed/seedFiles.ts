@@ -19,7 +19,6 @@ export const readManifestFiles = (): unknown[] => [
   readJson('manifests/hr.manifest.json'),
   readJson('manifests/projects.manifest.json'),
   readJson('manifests/accounts.manifest.json'),
-  readJson('manifests/new-test.manifest.json'),
 ];
 
 export function readSeedFiles(): SeedFiles {
