@@ -212,6 +212,7 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
         <li>Nobody can build a profile or set beyond their own access. A change applies on the person's next request, even with a token they already hold.</li>
         <li>HR access managers can change HR permission sets only.</li>
         <li>Nobody can change their own access. Only a super admin can edit, deactivate or reset a super admin, so an admin can't take over that account.</li>
+        <li>The Profiles screen lists who holds each profile, with their role, status and the modules it gives them, and a Remove button wherever the viewer may take the profile away.</li>
       </ul>
     </div>
     <div class="feature-group">
@@ -315,6 +316,7 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
       <tr><td class="nowrap"><code>POST /access-profiles</code></td><td><code>accessProfile.create</code></td><td>Adds an org-wide profile</td></tr>
       <tr><td class="nowrap"><code>PATCH /access-profiles/:id</code></td><td><code>accessProfile.update</code></td><td>Changes a profile, for everyone holding it</td></tr>
       <tr><td class="nowrap"><code>DELETE /access-profiles/:id</code></td><td><code>accessProfile.delete</code></td><td>Removes a profile nobody holds</td></tr>
+      <tr><td class="nowrap"><code>GET /access-profiles/:id/people</code></td><td><code>user.read</code> or <code>userProfile.update</code></td><td>Lists who holds a profile, and whether you may take it away from each</td></tr>
       <tr><td class="nowrap"><code>GET /modules/:key/addable-people</code></td><td>Right to change access in that module</td><td>Searches who can be added to a module</td></tr>
       <tr><td class="nowrap"><code>GET /org-roles</code></td><td><code>orgRole.read</code></td><td>Lists the org tree, parents first, with how many people hold each role</td></tr>
       <tr><td class="nowrap"><code>POST /org-roles</code></td><td><code>orgRole.create</code></td><td>Adds an org role below a parent, or the root while the tree is empty</td></tr>
@@ -391,6 +393,14 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
 <section aria-labelledby="log-heading">
   <h2 id="log-heading">Change log</h2>
   <div class="log">
+    <div class="log-entry">
+      <h3>16 November 2026: who holds each profile, with Remove</h3>
+      <ul>
+        <li>New route <code>GET /access-profiles/:id/people</code> (Master manifest 3.10.0), for <code>user.read</code> or <code>userProfile.update</code>, as <code>GET /modules/:key/people</code>. Each holder comes with <code>canRemove</code>, worked out with the same rules <code>PUT /users/:id/profile</code> applies: in your scope, not yourself, and the profile within your own access. No new permission.</li>
+        <li>Profiles screen: a "People with" card under each profile lists its holders with role, status and the modules it gives them (hover for the permissions), and Remove takes the profile away after a confirmation.</li>
+        <li>Claude Code on the web panel: steps are marked Important or Optional, and screenshots are their own optional step.</li>
+      </ul>
+    </div>
     <div class="log-entry">
       <h3>16 November 2026: Test module removed</h3>
       <ul>

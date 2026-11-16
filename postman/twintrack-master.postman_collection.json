@@ -392,6 +392,10 @@
     {
       "key": "draftRunId",
       "value": ""
+    },
+    {
+      "key": "holderProfileId",
+      "value": "ap_developer"
     }
   ],
   "item": [
@@ -4709,6 +4713,85 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Super admin lists who holds a profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/access-profiles/{{holderProfileId}}/people",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "access-profiles",
+                "{{holderProfileId}}",
+                "people"
+              ]
+            },
+            "description": "Needs user.read or userProfile.update. Lists each holder with their org role and whether you may take the profile away (canRemove)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 200 with the profile and its holders', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.profile.id).to.eql(pm.collectionVariables.get('holderProfileId'));",
+                  "  pm.expect(body.people).to.be.an('array');",
+                  "  body.people.forEach((person) => pm.expect(person.canRemove).to.be.a('boolean'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Someone who neither reads people nor gives profiles can not list holders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/access-profiles/{{holderProfileId}}/people",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "access-profiles",
+                "{{holderProfileId}}",
+                "people"
+              ]
+            },
+            "description": "Refused with 403 forbidden without user.read and userProfile.update."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refuses with 403 forbidden', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
                 ]
               }
             }

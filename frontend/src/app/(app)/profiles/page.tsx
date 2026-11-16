@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { ConfirmDialog, Dialog } from '@/components/Dialog';
 import { GrantsMatrix } from '@/components/GrantsMatrix';
+import { ProfileHolders } from '@/components/ProfileHolders';
 import { Card, Chips, Loaded, Notice, PageHead } from '@/components/ui';
 import { getMyModuleAccess } from '@/lib/api/account';
 import { describeError } from '@/lib/api/http';
@@ -70,6 +71,8 @@ export default function ProfilesPage() {
   const canUpdate = can('accessProfile.update');
   const canDelete = can('accessProfile.delete');
   const canReadModules = can('module.read');
+  // Listing who holds a profile follows the API: people readers see everyone, profile givers those their scope reaches.
+  const canSeeHolders = can('user.read') || can('userProfile.update');
 
   const data = useLoad(async () => {
     const [profiles, modules] = await Promise.all([listProfiles(), canReadModules ? listModules() : Promise.resolve<RegisteredModule[]>([])]);
@@ -126,6 +129,7 @@ export default function ProfilesPage() {
                           ) : null}
                         </div>
                       </section>
+                      {canSeeHolders ? <ProfileHolders profile={profile} onChanged={data.reload} /> : null}
                       {module ? (
                         <>
                           <Chips label="Choose a module" value={module.key} onChange={setModuleKey} options={modules.map((candidate) => ({ value: candidate.key, label: candidate.name }))} />

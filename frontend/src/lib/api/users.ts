@@ -1,5 +1,5 @@
 import { apiBlob, apiRequest, describeError, setAccessToken, tryApiRequest, type TryResult } from './http';
-import type { AccessModule, AddablePerson, CreatedUserResult, ModuleAccess, ModulePerson, PasswordLinkResult, User, UserDetails, UserStatus } from './types';
+import type { AccessModule, AddablePerson, CreatedUserResult, ModuleAccess, ModulePerson, PasswordLinkResult, ProfileHolder, User, UserDetails, UserStatus } from './types';
 
 type TryMethod = Parameters<typeof tryApiRequest>[0];
 
@@ -107,6 +107,11 @@ export const listAddablePeople = (moduleKey: string, search: string) =>
   apiRequest<{ total: number; people: AddablePerson[] }>(`/modules/${encodeURIComponent(moduleKey)}/addable-people`, {
     query: { page: 1, pageSize: ADDABLE_PEOPLE_PAGE_SIZE, search },
   });
+
+/** Who holds one profile. Needs user.read or userProfile.update; without user.read, only people that scope reaches. */
+export async function listProfileHolders(profileId: string): Promise<ProfileHolder[]> {
+  return (await apiRequest<{ people: ProfileHolder[] }>(`/access-profiles/${encodeURIComponent(profileId)}/people`)).people;
+}
 
 export async function listModulePeople(moduleKey: string): Promise<ModulePerson[]> {
   return (await apiRequest<{ people: ModulePerson[] }>(`/modules/${encodeURIComponent(moduleKey)}/people`)).people;

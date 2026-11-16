@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CLAUDE_CODE_WEB_URL, CLAUDE_WEB_GUIDE, REPOSITORY_COLLABORATORS_URL, REPOSITORY_URL } from '@/lib/claudeWebGuide';
+import { Pill } from '@/components/ui';
+import { CLAUDE_CODE_WEB_URL, CLAUDE_WEB_GUIDE, REPOSITORY_COLLABORATORS_URL, REPOSITORY_URL, type StepImportance } from '@/lib/claudeWebGuide';
+
+const IMPORTANCE_PILLS: Record<StepImportance, { tone: 'warning' | 'neutral'; label: string }> = {
+  important: { tone: 'warning', label: 'Important' },
+  optional: { tone: 'neutral', label: 'Optional' },
+};
 
 function CopyButton({ text }: { text: string }) {
   const [label, setLabel] = useState('Copy');
@@ -41,7 +47,10 @@ export function ClaudeWebGuidePanel({ onClose }: { onClose: () => void }) {
           <ol className="guide-steps">
             {section.steps.map((step) => (
               <li key={step.title}>
-                <h4>{step.title}</h4>
+                <h4>
+                  {step.title}
+                  {step.importance ? <> <Pill tone={IMPORTANCE_PILLS[step.importance].tone}>{IMPORTANCE_PILLS[step.importance].label}</Pill></> : null}
+                </h4>
                 <p>{step.text}</p>
                 {step.prompt ? (
                   <div className="guide-prompt">

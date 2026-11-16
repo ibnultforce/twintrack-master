@@ -254,6 +254,18 @@ Only a super admin can change a super admin's profile or their own.
 
 **Errors:** `404 unknown_module`
 
+### `GET /access-profiles/:id/people`
+
+**Access:** `private`, needs `user.read` or `userProfile.update`. Without `user.read`, only the people your `userProfile.update` reaches are listed.
+
+**Returns:** `profile` (`id` and `name`) and `people` who hold it, by name, each with `id`, `name`, `email`, `status`, `orgRole` (`id` and `name`, or `null`) and `canRemove`. `canRemove` is true when you may take the profile away from them with `PUT /users/:id/profile` and `null`: the person is in your `userProfile.update` scope, isn't you, and the profile stays within your own access. Every holder has exactly what the profile allows, which `GET /access-profiles` lists.
+
+**Errors:** `404 unknown_profile`
+
+```sh
+curl "$API/access-profiles/ap_developer/people" -H "Authorization: Bearer eyJ..."
+```
+
 ### `GET /modules/:key/addable-people`
 
 **Access:** `private`, needs `userProfile.update`

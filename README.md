@@ -144,6 +144,7 @@ These routes run the admin console. Each one's permission is in `manifests/maste
 | `GET /users/access-options` | The loaded modules, for the Access screen. Needs `user.read` or `userProfile.update`. |
 | `PUT /users/:id/profile` | Give someone a profile, or take it away with `null`. Needs `userProfile.update`. |
 | `GET /modules/:key/people`, `GET /modules/:key/addable-people` | Who has access to a module through their profile, and who could be given a profile covering it |
+| `GET /access-profiles/:id/people` | Who holds a profile, and whether you may take it away from each (`canRemove`). Needs `user.read` or `userProfile.update`. The Profiles screen lists them with a Remove button. |
 | `GET`, `POST /access-profiles`, `PATCH` and `DELETE /access-profiles/:id` | List, add, edit and remove profiles. Need `accessProfile.read`, `.create`, `.update` and `.delete`. |
 | `GET /modules`, `POST /modules/import`, `DELETE /modules/:key` | List, import and remove modules |
 | `PUT` and `DELETE /modules/:key/resources/:resource` | Add a resource (`module.create`), change it and its actions (`module.update`), or remove it (`module.delete`), which is how a module gains or loses permissions. |

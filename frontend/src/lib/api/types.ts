@@ -242,6 +242,17 @@ export interface ModulePerson {
   profilePermissions: PermissionMap;
 }
 
+/** Someone who holds a profile, from GET /access-profiles/:id/people. */
+export interface ProfileHolder {
+  id: string;
+  name: string;
+  email: string;
+  status: UserStatus;
+  orgRole: { id: string; name: string } | null;
+  /** Whether the viewer may take the profile away from them. The API refuses anyone else. */
+  canRemove: boolean;
+}
+
 export interface AddablePerson {
   id: string;
   name: string;

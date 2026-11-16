@@ -3091,6 +3091,68 @@
           ]
         },
         {
+          "id": "GET /access-profiles/:id/people",
+          "method": "GET",
+          "path": "/access-profiles/:id/people",
+          "purpose": "Lists who holds one profile, with their org role and status, and whether you may take the profile away from each of them (canRemove).",
+          "input": "profile id in the path",
+          "access": "Needs user.read or userProfile.update. Without user.read, only the people your userProfile.update reaches",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Super admin sees the holders and may remove any",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/access-profiles/ap_developer/people",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Auditor reads them, with no remove",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/access-profiles/ap_developer/people",
+                "as": "rumana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without either permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/access-profiles/ap_developer/people",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/access-profiles/ap_developer/people"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Profile does not exist",
+              "expected": 404,
+              "code": "unknown_profile",
+              "request": {
+                "method": "GET",
+                "path": "/access-profiles/ap_nowhere/people",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
           "id": "POST /access-profiles",
           "method": "POST",
           "path": "/access-profiles",

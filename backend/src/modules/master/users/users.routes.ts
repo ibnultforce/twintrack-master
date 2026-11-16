@@ -7,7 +7,7 @@ import type { UserReferenceCheck } from '../../../lib/userReferences.js';
 import { getActor, getCaller } from '../access/caller.js';
 import { sendResetLinks, type PasswordLinkMailer } from '../auth/passwordLinks.service.js';
 import { CONTRACTS, USER_STATUSES } from '../models/user.js';
-import { GIVE_PROFILE_PERMISSION, listAccessModules, listAddablePeople, listModulePeople, setUserProfile } from './userAccess.service.js';
+import { GIVE_PROFILE_PERMISSION, listAccessModules, listAddablePeople, listModulePeople, listProfileHolders, setUserProfile } from './userAccess.service.js';
 import { emailField, nameField } from './userFields.js';
 import { previewNextEmployeeNumber } from './employeeNumbers.js';
 import { createUser, deleteNeverSignedInUser, getUser, listUsers, setUserStatus, updateUserDetails } from './users.service.js';
@@ -82,6 +82,10 @@ const handleListModulePeople: RequestHandler = async (req, res) => {
   res.json(await listModulePeople(getActor(req), String(req.params.key)));
 };
 
+const handleListProfileHolders: RequestHandler = async (req, res) => {
+  res.json(await listProfileHolders(getActor(req), String(req.params.id)));
+};
+
 const handleListAddablePeople: RequestHandler = async (req, res) => {
   res.json(await listAddablePeople(getActor(req), String(req.params.key), parseRequestQuery(addablePeopleQuerySchema, req.query)));
 };
@@ -143,6 +147,7 @@ export function createUsersRoutes(mailer: PasswordLinkMailer, referenceChecks: U
     // userProfile.update is scoped: its scope decides whose profile someone may change. The service checks the rest.
     { method: 'PUT', path: '/users/:id/profile', access: 'private', permission: GIVE_PROFILE_PERMISSION, bodySchema: setProfileBodySchema, handler: handleSetProfile },
     { method: 'GET', path: '/modules/:key/people', access: 'private', anyPermission: [READ_PEOPLE, GIVE_PROFILE_PERMISSION], handler: handleListModulePeople },
+    { method: 'GET', path: '/access-profiles/:id/people', access: 'private', anyPermission: [READ_PEOPLE, GIVE_PROFILE_PERMISSION], handler: handleListProfileHolders },
     { method: 'GET', path: '/modules/:key/addable-people', access: 'private', permission: GIVE_PROFILE_PERMISSION, handler: handleListAddablePeople },
   ];
 }

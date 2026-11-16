@@ -5,6 +5,7 @@ import { actorFields, type Actor } from '../access/caller.js';
 import { listGrantPermissions, readOwnEntry } from '../access/permissions.js';
 import { peopleInScope } from '../access/scope.js';
 import { findAllProfiles, findProfileById, findProfileIdsGranting } from '../accessProfiles/accessProfiles.repository.js';
+import type { AccessProfileDoc } from '../models/accessProfile.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import type { UserDoc } from '../models/user.js';
 import { assertProfileWithinOwnAccess } from '../moduleRegistry/grantEditing.js';
@@ -31,15 +32,32 @@ async function requireModule(moduleKey: string) {
 }
 
 /**
- * Only a super admin can change a super admin, or their own profile. Anyone else needs the target inside the scope of
- * their userProfile.update.
+ * Why this caller may not change the target's profile, or null when they may. Only a super admin can change a super
+ * admin, or their own profile. Anyone else needs the target inside the scope of their userProfile.update, which
+ * reachable holds (from peopleWhoseProfileCanChange).
  */
+function profileChangeRefusal(actor: Actor, target: Pick<UserDoc, '_id' | 'superAdmin'>, reachable: string[] | null): ApiError | null {
+  if (actor.user.superAdmin) return null;
+  if (target.superAdmin) return new ApiError(409, 'super_admin', "Only a super admin can change a super admin's profile.");
+  if (target._id === actor.user._id) return new ApiError(403, 'own_access', 'Nobody can change their own profile.');
+  if (reachable && !reachable.includes(target._id)) return new ApiError(403, 'out_of_scope', 'This person is outside what your access reaches.');
+  return null;
+}
+
 async function assertMayChangeProfileOf(actor: Actor, target: UserDoc): Promise<void> {
-  if (actor.user.superAdmin) return;
-  if (target.superAdmin) throw new ApiError(409, 'super_admin', "Only a super admin can change a super admin's profile.");
-  if (target._id === actor.user._id) throw new ApiError(403, 'own_access', 'Nobody can change their own profile.');
-  const reachable = await peopleWhoseProfileCanChange(actor);
-  if (reachable && !reachable.includes(target._id)) throw new ApiError(403, 'out_of_scope', 'This person is outside what your access reaches.');
+  const refusal = profileChangeRefusal(actor, target, actor.user.superAdmin ? null : await peopleWhoseProfileCanChange(actor));
+  if (refusal) throw refusal;
+}
+
+/** Whether a profile stays within the caller's own access in every module, so they may give it or take it away. */
+async function isProfileWithinOwnAccess(actor: Actor, profile: Pick<AccessProfileDoc, 'grants'>): Promise<boolean> {
+  try {
+    await assertProfileWithinOwnAccess(actor, profile);
+    return true;
+  } catch (error) {
+    if (error instanceof ApiError) return false;
+    throw error;
+  }
 }
 
 /**
@@ -114,6 +132,36 @@ export async function listModulePeople(actor: Actor, moduleKey: string) {
           profilePermissions: profileGrants ? listGrantPermissions(profileGrants, module.resources) : {},
         };
       }),
+  };
+}
+
+/**
+ * The people who hold one profile, with their place in the org tree and whether this caller may take the profile away
+ * from them (with PUT /users/:id/profile). Someone without user.read sees only the people whose profile they may change.
+ */
+export async function listProfileHolders(actor: Actor, profileId: string) {
+  const profile = await findProfileById(profileId);
+  if (!profile) throw new ApiError(404, 'unknown_profile', 'No such profile.');
+  const seesEveryone = actor.user.superAdmin || Boolean(actor.permissions[READ_PEOPLE_PERMISSION]);
+  const [holders, orgRoles, reachable, mayRemoveThisProfile] = await Promise.all([
+    findUsersWithAccessIn([profile._id]),
+    findAllOrgRoles(),
+    actor.user.superAdmin ? null : peopleWhoseProfileCanChange(actor),
+    isProfileWithinOwnAccess(actor, profile),
+  ]);
+  const orgRoleNames = new Map(orgRoles.map((orgRole) => [orgRole._id, orgRole.name]));
+  return {
+    profile: { id: profile._id, name: profile.name },
+    people: holders
+      .filter((person) => seesEveryone || !reachable || reachable.includes(person._id))
+      .map((person) => ({
+        id: person._id,
+        name: person.name,
+        email: person.email,
+        status: person.status,
+        orgRole: person.orgRoleId ? { id: person.orgRoleId, name: orgRoleNames.get(person.orgRoleId) ?? person.orgRoleId } : null,
+        canRemove: mayRemoveThisProfile && profileChangeRefusal(actor, person, reachable) === null,
+      })),
   };
 }
 
