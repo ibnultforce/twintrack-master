@@ -212,7 +212,7 @@ Posted payments and receipts are never edited: a mistake gets a linked reversal.
 
 ## Test
 
-A one-route module in `backend/src/modules/test/` for checking that a module's routes, permissions and sessions work end to end. `GET /test` needs `test.read` and answers with the module key and the server time. It has no frontend yet; its handoff pack is in `module-packs/test/`. The reference is in [docs/api/test.md](docs/api/test.md).
+A small module in `backend/src/modules/test/` for checking that a module's routes, permissions and sessions work end to end. Both routes need `test.read`: `GET /test` answers with the module key and the server time, and `GET /test/users` lists active colleagues from Master's directory (the same people and fields `GET /directory` shows anyone signed in), with `page`, `pageSize` and `search`. It has no frontend yet; its handoff pack is in `module-packs/test/`. The reference is in [docs/api/test.md](docs/api/test.md).
 
 ## Checks
 

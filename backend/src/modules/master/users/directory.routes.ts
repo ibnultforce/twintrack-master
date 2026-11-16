@@ -9,7 +9,8 @@ import { recordHeartbeat } from './presence.service.js';
 
 const MAX_SEARCH_LENGTH = 100;
 
-const directoryQuerySchema = z.object({
+/** Page, page size and search for the colleague directory. Other modules listing colleagues use the same rules. */
+export const directoryQuerySchema = z.object({
   ...paginationQueryFields,
   search: z.string().trim().max(MAX_SEARCH_LENGTH).optional(),
 });

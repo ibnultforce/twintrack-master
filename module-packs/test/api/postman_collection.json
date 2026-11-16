@@ -473,6 +473,95 @@
               }
             }
           ]
+        },
+        {
+          "name": "Super admin lists colleagues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/test/users?page=1&pageSize=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "test",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Needs test.read in Test. Returns active colleagues from the directory, without super admins, and a total."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 200 with a page of colleagues and a total', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.people).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(body.people.length).to.be.at.most(5);",
+                  "  pm.expect(body.total).to.be.a('number');",
+                  "  pm.expect(body.people[0]).to.include.all.keys('id', 'name', 'email');",
+                  "  pm.expect(body.people[0]).to.not.have.any.keys('profileId', 'superAdmin', 'status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Someone without test.read cannot list colleagues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{noRoleToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/test/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "test",
+                "users"
+              ]
+            },
+            "description": "Refused with 403 forbidden when the caller's profile doesn't grant test.read."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refuses with 403 forbidden', () => {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().error.code).to.eql('forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

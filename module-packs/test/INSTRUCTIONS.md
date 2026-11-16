@@ -19,7 +19,7 @@ When these disagree, `api/test.md` wins, then `DATA_MODEL.md`. Never invent a ro
 
 ## 1. What you're building
 
-A small web app for checking that a TwinTrack module works end to end: signing in through Master, reading the person's access, and calling a permission-checked route. The API has one route: **`GET /test`**, which needs `test.read`. It answers with the module key and the server time. Build only what that route allows.
+A small web app for checking that a TwinTrack module works end to end: signing in through Master, reading the person's access, and calling permission-checked routes. The API has two routes, both needing `test.read`: **`GET /test`**, which answers with the module key and the server time, and **`GET /test/users`**, which lists active colleagues. Build only what those routes allow.
 
 It has **no backend of its own**. Everything comes from the TwinTrack API (the Master backend), which also decides who may see and do what. People sign in at the Master frontend; this app reuses that session.
 
@@ -93,10 +93,17 @@ Sidebar, in this order, under the heading "Test". Each entry shows only with its
 | Path | Sidebar label | Needs |
 |---|---|---|
 | `/test` | Test | `test.read` |
+| `/people` | People | `test.read` |
 
 ### Test (`/test`)
 - Head: "Test", subtitle "Check that this module answers you." Action "Run test" with `test.read`.
 - **Result card:** calls `GET /test` on load and on "Run test", and shows status as a pill (`ok` "OK", `good` tone), the module key, and the server time formatted with `format.ts`. While it loads, the card shows "Loading…"; a refusal shows the API's error message.
+
+### People (`/people`)
+- Head: "People", subtitle "Colleagues this module can read from TwinTrack." No actions.
+- Filters: search by name, email or title (`search`). Changing it goes back to page 1.
+- Table: name, email, title, department, team. When a person has `online`, show a pill after the name ("Online", `good` tone; nothing when false). 25 per page with `pageSize=25`, using `total` for pagination.
+- Empty state: "Nobody matches."
 
 `/` sends people to `/test` when they hold `test.read`, or says "Your Test profile doesn't include any screens yet."
 
@@ -105,6 +112,7 @@ Routes this module can call:
 | Route | Needs |
 |---|---|
 | `GET /test` | `test.read` |
+| `GET /test/users` | `test.read` |
 
 ## 6. Look and feel
 

@@ -44,4 +44,40 @@ describe('Test module', () => {
       expect(response.body.error.code).toBe('no_token');
     });
   });
+
+  describe('GET /test/users', () => {
+    it('lists active colleagues, without super admins, to someone who holds test.read', async () => {
+      const response = await (await as('farhana')).get('/test/users?pageSize=100');
+      expect(response.status).toBe(200);
+      expect(response.body.total).toBe(response.body.people.length);
+      const emails = response.body.people.map((person: { email: string }) => person.email);
+      expect(emails).toContain('kamrul@twintrack.test');
+      expect(emails).not.toContain('farhana@twintrack.test');
+      expect(response.body.people[0]).not.toHaveProperty('profileId');
+    });
+
+    it('searches by name', async () => {
+      const response = await (await as('farhana')).get('/test/users?search=kamrul');
+      expect(response.status).toBe(200);
+      expect(response.body.people.map((person: { email: string }) => person.email)).toEqual(['kamrul@twintrack.test']);
+    });
+
+    it('refuses someone without test.read', async () => {
+      const response = await (await as('kamrul')).get('/test/users');
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('forbidden');
+    });
+
+    it('refuses a caller with no session', async () => {
+      const response = await request(app).get('/test/users');
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe('no_token');
+    });
+
+    it('refuses a page size over the limit', async () => {
+      const response = await (await as('farhana')).get('/test/users?pageSize=1000');
+      expect(response.status).toBe(422);
+      expect(response.body.error.code).toBe('validation_failed');
+    });
+  });
 });

@@ -276,7 +276,7 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
     <div class="feature-group">
       <h3>Test module (API)</h3>
       <ul>
-        <li>A one-route module for checking a module end to end: <code>GET /test</code> needs <code>test.read</code> and answers with the module key and the server time.</li>
+        <li>A small module for checking a module end to end. Both routes need <code>test.read</code>: <code>GET /test</code> answers with the module key and the server time, and <code>GET /test/users</code> lists active colleagues from Master's directory.</li>
       </ul>
     </div>
     <div class="feature-group">
@@ -397,6 +397,13 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
 <section aria-labelledby="log-heading">
   <h2 id="log-heading">Change log</h2>
   <div class="log">
+    <div class="log-entry">
+      <h3>16 November 2026: Test module lists colleagues</h3>
+      <ul>
+        <li>New route <code>GET /test/users</code> (Test manifest 1.1.0), needing the existing <code>test.read</code>. It lists active colleagues from Master's directory, without super admins, with <code>page</code>, <code>pageSize</code> and <code>search</code>: the same people and fields <code>GET /directory</code> shows anyone signed in.</li>
+        <li>Described in Postman, the <code>/try</code> scenarios, <code>docs/api/test.md</code> and the handoff pack, which gains a People screen.</li>
+      </ul>
+    </div>
     <div class="log-entry">
       <h3>16 November 2026: Test module added</h3>
       <ul>

@@ -13092,6 +13092,68 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /test/users",
+          "method": "GET",
+          "path": "/test/users",
+          "purpose": "Lists active colleagues from the directory, without super admins: the same people and fields GET /directory shows anyone signed in.",
+          "input": "page, pageSize (up to 100), search (all optional)",
+          "access": "Needs test.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Super admin lists colleagues",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/test/users?page=1&pageSize=2",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Search by name",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/test/users?search=kamrul",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Someone without test.read",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/test/users",
+                "as": "kamrul@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No session",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/test/users"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Page size over 100",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/test/users?pageSize=1000",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
         }
       ]
     }

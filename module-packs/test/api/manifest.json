@@ -3,8 +3,8 @@
   "module": {
     "key": "test",
     "name": "Test",
-    "version": "1.0.0",
-    "description": "A one-route module for checking that a module's routes, permissions and sessions work end to end.",
+    "version": "1.1.0",
+    "description": "A small module for checking that a module's routes, permissions and sessions work end to end, and that it can read people from Master.",
     "repository": "twintrack-test",
     "baseUrl": "/test"
   },
@@ -21,6 +21,12 @@
     {
       "method": "GET",
       "path": "/",
+      "access": "private",
+      "permission": "test.read"
+    },
+    {
+      "method": "GET",
+      "path": "/users",
       "access": "private",
       "permission": "test.read"
     }

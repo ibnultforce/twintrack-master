@@ -1,6 +1,6 @@
 # Test: data model
 
-What the Test API returns. Module key: `test`. Its one route is `GET /test`. It stores no records.
+What the Test API returns. Module key: `test`. Its routes are `GET /test` and `GET /test/users`. It stores no records; the people come from Master.
 
 The same model is in `schema.json` as JSON Schema. Routes and error codes are in `api/test.md`.
 
@@ -28,6 +28,38 @@ The answer to `GET /test`.
 | Value | Label | Pill |
 |---|---|---|
 | `ok` | OK | `good` |
+
+## ColleagueList
+
+The answer to `GET /test/users`.
+
+| Field | Type | Always | Field access | Meaning |
+|---|---|---|---|---|
+| `people` | Colleague[] | yes | | One page, by name |
+| `total` | number | yes | | How many people match, across every page |
+
+## Colleague
+
+An active colleague from Master's directory. Super admins are never listed.
+
+| Field | Type | Always | Field access | Meaning |
+|---|---|---|---|---|
+| `id` | string | yes | | The person's id |
+| `name` | string | yes | | |
+| `email` | string | yes | | |
+| `title` | string | no | | Job title |
+| `department` | string | no | | |
+| `team` | string | no | | |
+| `employeeNumber` | number | no | | |
+| `photoUpdatedAt` | date-time | no | | When their photo last changed; missing when they have none |
+| `online` | boolean | no | | Missing when the viewer's Master `presence.read` scope doesn't reach this person |
+
+### Online
+
+| Value | Label | Pill |
+|---|---|---|
+| `true` | Online | `good` |
+| `false` | (nothing shown) | |
 
 ## Shared types
 
