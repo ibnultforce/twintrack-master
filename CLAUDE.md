@@ -91,6 +91,10 @@ The full checklist and rules are in `docs/adding-an-api.md`. Keep these in step 
 
 `postman/` and `manifests/` are committed. Every push to `main` deploys to demo.twintrack.work and reloads them (see the README's Deploying section).
 
+## Committing and pushing
+
+In Claude Code on the web (or any cloud session), when the work is finished and `npm test`, `npm run typecheck` and `npm run lint` pass, commit it and push it straight to `main`, without asking first. The owner has asked for this standing rule. If a check fails or couldn't run, don't push: report what failed. Put the twintrack-sync skill's "Still to do" list in the commit message body, and in the final summary say that the push deploys to demo.twintrack.work.
+
 # TwinTrack development guidelines
 
 These apply to all work in this workspace, in every module repo.
