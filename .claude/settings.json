@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/sync-guard.mjs\" session-start" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/sync-guard.mjs\" post-tool" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/sync-guard.mjs\" stop" }] }
+    ]
+  }
+}

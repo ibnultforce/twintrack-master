@@ -29,7 +29,7 @@ The screens never list routes or permissions in frontend code. The **Modules**, 
 - [ ] Raise the module `version`: minor for new routes or actions, patch for fixes.
 - [ ] Run `npm run seed:modules`. This updates the **Modules**, **Profiles**, **Permissions**, **My permissions** and **Access** screens. People, profiles and custom objects stay as they are.
 
-`tests/routes.test.ts` compares Master routes with the Master manifest. It doesn't compare other modules, so check those by hand.
+`tests/routes.test.ts` compares Master routes with the Master manifest, and `tests/module-routes.test.ts` does the same for every other module. Add a new module's route list there.
 
 ### 3. Postman
 - [ ] A request in `postman/` for the route, with path parameters as variables (`{{baseUrl}}/users/{{userId}}`).
@@ -71,7 +71,7 @@ npm run test:postman
 | Missing step | Caught by |
 |---|---|
 | Master route not in the manifest, or a different `access` | `tests/routes.test.ts` |
-| HR, Tasks or other module route not in the manifest | Nothing. Check by hand. |
+| HR, Project management, Accounts or other module route not in the manifest | `tests/module-routes.test.ts` |
 | Manifest not reloaded into the database | Nothing. The screens don't show the route and nobody can be granted it. |
 | No Postman request | `tests/postman-coverage.test.ts` |
 | No test-page scenario | `tests/test-page.test.ts` |
