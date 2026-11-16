@@ -1,8 +1,8 @@
 # The frontend handoff pack
 
-Each module frontend is built by someone who never sees this backend. They get `../module-packs/<key>/` and nothing else, so the pack must always match the backend, and every pack must look the same so each app looks and behaves like Master.
+Each module frontend is built by someone who never sees this backend. They get `module-packs/<key>/` and nothing else, so the pack must always match the backend, and every pack must look the same so each app looks and behaves like Master.
 
-`../module-packs/projects/` is the model. Every pack has these files, with the same section order:
+`module-packs/projects/` is the model. Every pack has these files, with the same section order:
 
 | File | Contents |
 |---|---|

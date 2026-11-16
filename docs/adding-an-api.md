@@ -46,8 +46,8 @@ The screens never list routes or permissions in frontend code. The **Modules**, 
 
 ### 6. Published pages (artifacts)
 - [ ] **API scenarios page** (`design/master-api-scenarios.html`):
-  1. Record samples by running `API_SAMPLES_FILE=../../design/api-samples.json npx vitest run tests/test-page.test.ts` from `backend/`.
-  2. Rebuild the page with `python design/build-api-page.py`. Don't edit the HTML by hand.
+  1. Record samples by running `API_SAMPLES_FILE=../design/api-samples.json npx vitest run tests/test-page.test.ts` from `backend/`.
+  2. Rebuild the page with `python design/build-api-page.py` from `twintrack-master/`. Don't edit the HTML by hand.
   3. Republish it.
 - [ ] **Progress page** (`design/master-progress.html`): update its status, add a change log entry and republish it.
 
@@ -62,7 +62,7 @@ npm run test:postman
 ```
 
 ### 8. Change summary
-- [ ] List every file changed, including `manifests/` and `postman/`. Those two are gitignored, so `git status` doesn't show them.
+- [ ] List every file changed, including `manifests/` and `postman/`.
 - [ ] Name any new resource or action and which profiles will need it ticked.
 - [ ] Report which checks ran and their results.
 

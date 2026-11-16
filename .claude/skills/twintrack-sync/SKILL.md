@@ -5,7 +5,7 @@ description: "Keeps everything that describes the TwinTrack Master backend in st
 
 # TwinTrack sync
 
-A backend change is finished only when every place that describes it agrees with the code, in the same change. The detailed rules are in `docs/adding-an-api.md`; read it first. This skill says which parts apply and in what order. Paths are relative to `twintrack-master/` unless they start with `../`.
+A backend change is finished only when every place that describes it agrees with the code, in the same change. The detailed rules are in `docs/adding-an-api.md`; read it first. This skill says which parts apply and in what order. Paths are relative to `twintrack-master/` unless they start with `../`, which is the local workspace around it.
 
 ## 1. Classify the change
 
@@ -32,7 +32,7 @@ Don't skip a step because it looks small. If one can't run here (no local MongoD
 
 ## 3. Postman (for the super admin and testers)
 
-`postman/twintrack-master.postman_collection.json`, in the module's folder. Path parameters are variables (`{{baseUrl}}/hr/salaries/{{salaryId}}`). Give writes a realistic body. `postman/` is gitignored, so list it in the summary.
+`postman/twintrack-master.postman_collection.json`, in the module's folder. Path parameters are variables (`{{baseUrl}}/hr/salaries/{{salaryId}}`). Give writes a realistic body.
 
 ## 4. Test page `/try`
 
@@ -46,8 +46,8 @@ Don't skip a step because it looks small. If one can't run here (no local MongoD
 
 ## 6. Published pages
 
-- API scenarios page: from `backend/`, record samples with `API_SAMPLES_FILE=../../design/api-samples.json npx vitest run tests/test-page.test.ts` (in PowerShell set `$env:API_SAMPLES_FILE` first), run `python design/build-api-page.py` from the workspace root, then republish `../design/master-api-scenarios.html`.
-- Progress page `../design/master-progress.html`: update the status, add a dated change log entry, republish.
+- API scenarios page: from `backend/`, record samples with `API_SAMPLES_FILE=../design/api-samples.json npx vitest run tests/test-page.test.ts` (in PowerShell set `$env:API_SAMPLES_FILE` first), run `python design/build-api-page.py`, then republish `design/master-api-scenarios.html`.
+- Progress page `design/master-progress.html`: update the status, add a dated change log entry, republish.
 
 ## 7. Run the checks
 
@@ -57,7 +57,22 @@ From `twintrack-master/`: `npm run typecheck`, `npm run lint`, `npm test`, and `
 
 End with:
 
-- Every file changed, grouped as code, manifest, Postman, scenarios, docs, frontend pack, pages. Include `postman/`, which `git status` doesn't show.
+- Every file changed, grouped as code, manifest, Postman, scenarios, docs, frontend pack, pages.
 - New or removed resources and actions, and which profiles will need them ticked or unticked.
 - Whether `seed:modules` ran.
 - Each check that ran and its result, and each step skipped and why. Never say a check passed if it didn't run.
+
+## Working without the workspace
+
+A session with only this repo (Claude Code on the web, a fresh clone) has no `../twintrack-module-starter/`, no module frontends, no local MongoDB and maybe no Artifact connection. Check what's there, do every step you can, and never skip one silently:
+
+| Step | Without the workspace |
+|---|---|
+| `npm run seed:modules` | Can't run without MongoDB. Merging to `main` reloads the manifests on demo.twintrack.work; locally, run it after pulling. |
+| `npm run test:postman` | Can't run without MongoDB. Still add and edit requests in `postman/`. |
+| `npm test` | Runs: it starts its own in-memory MongoDB, which needs internet access to download once. |
+| `export:module-pack` | Fails without the starter's template and stylesheet. Edit `module-packs/<key>/` by hand instead: `api/<key>.md` and `api/manifest.json` as copies of `docs/api/<key>.md` and the manifest, plus `INSTRUCTIONS.md`, `DATA_MODEL.md` and `schema.json`. |
+| Module frontends | Not reachable. Name the screens and API calls that need changing. |
+| Published pages | Edit `design/master-progress.html` and rebuild the API scenarios page as usual. Republish only if the Artifact tool is available. |
+
+Put each step that didn't run under **Still to do** in your summary and in the pull request description, with the command to run, so whoever pulls the branch can finish it.

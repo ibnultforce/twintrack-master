@@ -8,7 +8,7 @@
  *
  *   npm run export:module-pack -- <module key> [output folder]
  *
- * Files written by hand are never overwritten. The pack goes to ../module-packs/<module key>/ by default.
+ * Files written by hand are never overwritten. The pack goes to module-packs/<module key>/ in this repo by default.
  * Copy its contents into the frontend's docs/ folder.
  */
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -112,7 +112,7 @@ if (!existsSync(apiDocPath)) fail(`Missing ${apiDocPath}`);
 if (!existsSync(INSTRUCTIONS_TEMPLATE)) fail(`Missing the starter's instructions template at ${INSTRUCTIONS_TEMPLATE}`);
 if (!existsSync(SHARED_STYLESHEET)) fail(`Missing the starter's stylesheet at ${SHARED_STYLESHEET}`);
 
-const outputDir = resolve(outputArgument ?? join(MASTER_ROOT, '../module-packs', moduleKey));
+const outputDir = resolve(outputArgument ?? join(MASTER_ROOT, 'module-packs', moduleKey));
 mkdirSync(join(outputDir, 'api'), { recursive: true });
 
 writeFileSync(join(outputDir, 'api', apiDocFile), readFileSync(apiDocPath, 'utf8'));

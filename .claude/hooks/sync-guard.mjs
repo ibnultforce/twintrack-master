@@ -18,7 +18,7 @@ const SKILL_HINT = 'use the twintrack-sync skill (twintrack-master/.claude/skill
 /** Backend source whose changes can change the API contract. */
 const BACKEND_FOLDERS = ['backend/src'];
 /** Everything that describes the backend. A change to any of them shows the sync was at least started. */
-const DESCRIBING_FOLDERS = ['manifests', 'docs', 'postman', 'backend/test-page', '../module-packs'];
+const DESCRIBING_FOLDERS = ['manifests', 'docs', 'postman', 'backend/test-page', 'module-packs', 'design'];
 const SKIPPED_FOLDERS = new Set(['node_modules', '.next', 'dist']);
 
 function readInput() {

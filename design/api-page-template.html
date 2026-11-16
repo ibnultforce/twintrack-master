@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TwinTrack API Scenarios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a route list you can search on the left, and one route at a time on the right. */
+:root {
+  --paper: #f6f7f9; --panel: #ffffff; --ink: #18202c; --muted: #5b6676; --line: #d9dee6; --accent: #1f5f8b; --accent-soft: #e3eef6;
+  --good: #1a7048; --good-soft: #e1f3ea; --warn: #94600a; --warn-soft: #fbf0d9; --bad: #b3261e; --bad-soft: #fbe6e4; --quiet: #47536a; --quiet-soft: #e9ecf1;
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; --mono: "IBM Plex Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12161d; --panel: #1a2029; --ink: #e6e9ee; --muted: #9aa5b4; --line: #2d3642; --accent: #79b8e0; --accent-soft: #1d3140;
+    --good: #6fd3a2; --good-soft: #17352a; --warn: #e6b866; --warn-soft: #3a2e15; --bad: #f2928b; --bad-soft: #3f1f1d; --quiet: #b2bccb; --quiet-soft: #29313c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12161d; --panel: #1a2029; --ink: #e6e9ee; --muted: #9aa5b4; --line: #2d3642; --accent: #79b8e0; --accent-soft: #1d3140;
+  --good: #6fd3a2; --good-soft: #17352a; --warn: #e6b866; --warn-soft: #3a2e15; --bad: #f2928b; --bad-soft: #3f1f1d; --quiet: #b2bccb; --quiet-soft: #29313c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 14.5px/1.5 var(--sans); }
+.app { display: grid; grid-template-columns: 300px minmax(0, 1fr); height: 100%; }
+.rail { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.rail-top { padding: 14px; display: grid; gap: 10px; border-bottom: 1px solid var(--line); }
+h1 { font-size: 16px; font-weight: 700; margin: 0; }
+h2 { font-size: 20px; font-weight: 600; margin: 0; line-height: 1.25; text-wrap: balance; }
+h3 { font-size: 14.5px; font-weight: 600; margin: 0; }
+p { margin: 0; max-width: 72ch; }
+label { font-size: 12px; font-weight: 600; color: var(--muted); display: grid; gap: 3px; }
+input { font: 13.5px var(--sans); padding: 7px 8px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); width: 100%; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.home { display: block; padding: 6px 8px; border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 13.5px; font-weight: 600; text-align: center; }
+.navs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.who { font-weight: 600; white-space: nowrap; }
+.demo-note { border-left: 4px solid var(--warn); }
+.home.current { background: var(--accent-soft); border-color: var(--accent); }
+.list { overflow-y: auto; flex: 1; padding: 6px 0 14px; min-height: 0; }
+.list h3 { font-size: 11.5px; color: var(--muted); padding: 10px 14px 3px; }
+.item { display: flex; gap: 8px; align-items: center; padding: 4px 14px; color: var(--ink); text-decoration: none; font-size: 13px; }
+.item:hover { background: var(--paper); }
+.item.current { background: var(--accent-soft); }
+.item code { overflow-wrap: anywhere; }
+.none { padding: 12px 14px; color: var(--muted); }
+code { font-family: var(--mono); font-size: 0.92em; }
+.method { flex: none; display: inline-block; min-width: 46px; text-align: center; font: 500 11px var(--mono); padding: 1px 4px; background: var(--quiet-soft); color: var(--quiet); }
+.method.get { background: var(--good-soft); color: var(--good); }
+.method.post { background: var(--warn-soft); color: var(--warn); }
+.method.delete { background: var(--bad-soft); color: var(--bad); }
+.view { overflow-y: auto; padding: 24px 28px 48px; display: grid; gap: 14px; align-content: start; min-height: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; display: grid; gap: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tile { background: var(--panel); border: 1px solid var(--line); padding: 10px 12px; display: grid; }
+.tile b { font-size: 19px; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 12.5px; color: var(--muted); }
+.open { display: inline-block; padding: 5px 12px; background: var(--accent); color: var(--panel); text-decoration: none; font-weight: 600; font-size: 13.5px; justify-self: start; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font: 13px var(--sans); padding: 3px 11px; background: var(--panel); border: 1px solid var(--line); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.request { display: block; font: 12px var(--mono); color: var(--muted); overflow-wrap: anywhere; margin-top: 2px; }
+.status { font: 500 13px var(--mono); }
+.status.good { color: var(--good); }
+.status.refused { color: var(--quiet); }
+.pill { font-size: 11.5px; font-weight: 700; padding: 1px 8px; white-space: nowrap; display: inline-block; }
+.pill.done { background: var(--good-soft); color: var(--good); }
+.pill.partly { background: var(--warn-soft); color: var(--warn); }
+.pill.missing { background: var(--bad-soft); color: var(--bad); }
+.pill.question { background: var(--accent-soft); color: var(--accent); }
+ul, ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; max-width: 72ch; }
+@media (max-width: 760px) {
+  html, body { height: auto; }
+  .app { display: block; height: auto; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--line); }
+  .list { max-height: 240px; }
+  .view { padding: 16px; overflow: visible; }
+}
+</style>
+<style>
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); }
+.tab { padding: 7px 6px; text-align: center; color: var(--ink); text-decoration: none; font-size: 13.5px; font-weight: 600; border-right: 1px solid var(--line); background: var(--panel); }
+.tab:last-child { border-right: 0; }
+.tab small { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+.tab.current { background: var(--accent-soft); box-shadow: inset 0 -3px 0 var(--accent); }
+.overview-link { font-size: 13px; color: var(--accent); font-weight: 600; }
+.as { font: 12px var(--mono); color: var(--muted); }
+.inline { display: inline; }
+.setup { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.setup summary { cursor: pointer; }
+.setup ol { margin-top: 4px; }
+.sample { display: grid; gap: 10px; }
+.sample-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.sample-part { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.sample-part h4 { margin: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+.sample pre { margin: 0; padding: 10px 12px; background: var(--paper); border: 1px solid var(--line); font: 12px/1.5 var(--mono); overflow: auto; max-height: 360px; white-space: pre; }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" aria-label="Routes">
+    <div class="rail-top">
+      <h1>TwinTrack API</h1>
+      <div class="tabs" id="tabs" role="tablist" aria-label="Modules"></div>
+      <label for="search">Find a route, error or scenario
+        <input id="search" type="search" placeholder="salaries, out_of_scope, approve" autocomplete="off">
+      </label>
+    </div>
+    <div class="list" id="list"></div>
+  </nav>
+  <main class="view" id="view"></main>
+</div>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  var page = JSON.parse(document.getElementById('data').textContent);
+  var modules = page.modules;
+  var view = document.getElementById('view');
+  var list = document.getElementById('list');
+  var tabs = document.getElementById('tabs');
+  var search = document.getElementById('search');
+  var filter = 'all';
+  var address = 'http://localhost:4100';
+  try { address = localStorage.getItem('tt-api-base') || address; } catch (error) { /* Only a convenience. */ }
+
+  var slug = function (id) { return id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); };
+  var esc = function (value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var routesOf = function (key) { return page.data[key].groups.reduce(function (all, group) { return all.concat(group.routes); }, []); };
+
+  /** The hash is #module or #module/route. */
+  function whereWeAre() {
+    var parts = location.hash.slice(1).split('/');
+    var module = modules.find(function (m) { return m.key === parts[0]; }) || modules[0];
+    var route = parts[1] ? routesOf(module.key).find(function (r) { return slug(r.id) === parts[1]; }) : null;
+    return { module: module, route: route || null };
+  }
+
+  var matches = function (route, query) {
+    var text = [route.id, route.purpose, route.access].concat(route.rows.map(function (row) { return row[1] + ' ' + row[3]; })).join(' ').toLowerCase();
+    return text.indexOf(query) !== -1;
+  };
+
+  function renderRail(here) {
+    var query = search.value.trim().toLowerCase();
+    tabs.innerHTML = modules.map(function (m) {
+      var count = query ? routesOf(m.key).filter(function (r) { return matches(r, query); }).length + ' found' : m.routes + ' routes';
+      var isCurrent = m === here.module;
+      return '<a class="tab' + (isCurrent ? ' current' : '') + '" role="tab" aria-selected="' + isCurrent + '" href="#' + m.key + '">' + esc(m.name) + '<small>' + count + '</small></a>';
+    }).join('');
+    var html = '<a class="item' + (here.route ? '' : ' current') + '" href="#' + here.module.key + '"><span class="overview-link">' + esc(here.module.name) + ' overview</span></a>';
+    var found = 0;
+    page.data[here.module.key].groups.forEach(function (group) {
+      var hits = group.routes.filter(function (route) { return matches(route, query); });
+      if (hits.length === 0) return;
+      found += hits.length;
+      html += '<h3>' + esc(group.name) + '</h3>';
+      hits.forEach(function (route) {
+        html += '<a class="item' + (route === here.route ? ' current' : '') + '" href="#' + here.module.key + '/' + slug(route.id) + '"><span class="method ' + route.method.toLowerCase() + '">' + route.method + '</span><code>' + esc(route.path) + '</code></a>';
+      });
+    });
+    if (found === 0) html += '<p class="none">No ' + esc(here.module.name) + ' route matches that search. The tab counts show matches in the other modules.</p>';
+    list.innerHTML = html;
+  }
+
+  function accountsTable(module) {
+    var rows = page.people.map(function (person) {
+      var sets = person.tests[module.key] || [];
+      return '<tr><td>' + esc(person.name) + '</td><td><code>' + esc(person.email) + '</code></td><td>' + esc(person.live) + '</td><td>' + (sets.length ? esc(sets.join(', ')) : '<span class="muted">none</span>') + '</td></tr>';
+    }).join('');
+    return '<div class="card"><h3>Test accounts</h3><p class="small muted">Every password is <code>' + esc(page.password) + '</code>. On the live test page only the super admin starts with access. The automated replay also gives people the test profiles in the last column.</p>'
+      + '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>On the test page</th><th>' + esc(module.name) + ' access in the replay (profile)</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
+
+  function renderOverview(module) {
+    var routes = routesOf(module.key);
+    var successes = routes.reduce(function (n, r) { return n + r.rows.filter(function (row) { return row[0]; }).length; }, 0);
+    view.innerHTML = '<h2>' + esc(module.name) + '</h2><p>' + esc(module.about) + '</p>'
+      + '<div class="tiles">'
+      + '<div class="tile"><b>' + module.routes + '</b><span>routes</span></div>'
+      + '<div class="tile"><b>' + module.scenarios + ' of ' + module.scenarios + '</b><span>scenarios behaved as expected</span></div>'
+      + '<div class="tile"><b>' + successes + ' / ' + (module.scenarios - successes) + '</b><span>success / failure cases</span></div>'
+      + '</div>'
+      + '<div class="card"><label for="address">API address<input id="address" value="' + esc(address) + '" spellcheck="false"></label>'
+      + '<a class="open" id="open" href="' + esc(address) + '/try/">Open the test page</a>'
+      + '<p class="small muted">Artifact pages can’t call other servers, so this page shows results recorded by the automated replay. To run a scenario yourself, use the API’s test page, which needs <code>TEST_PAGE_ENABLED=true</code>.</p></div>'
+      + accountsTable(module)
+      + '<div class="card"><h3>Checks on ' + esc(page.checks.date) + '</h3><ul class="small">'
+      + '<li>Every route has at least one success and one failure scenario. When a success needs a record first, its setup steps create it, and the test page runs those steps too.</li>'
+      + '<li>Every scenario on this page was replayed against the real app with a temporary database. Each one returned the status and error code shown.</li>'
+      + '<li><code>npm test</code>: ' + page.checks.tests + ' of ' + page.checks.tests + ' passed.</li>'
+      + '<li><code>npm run test:postman</code>: ' + page.checks.postmanAssertions + ' assertions over ' + page.checks.postmanRequests + ' requests, all passing.</li>'
+      + '<li>The route tables match the manifests, and every route has a Postman request and a scenario.</li>'
+      + '</ul></div>';
+  }
+
+  /** The request and response recorded for the route's first success scenario. */
+  function sampleCard(route) {
+    var sample = route.sample;
+    if (!sample) return '<div class="card"><h3>Sample data</h3><p class="small muted">This entry has no success scenario, so there is no sample.</p></div>';
+    var json = function (value) { return '<pre>' + esc(JSON.stringify(value, null, 2)) + '</pre>'; };
+    var sent = sample.request;
+    var requestLines = [sent.method + ' ' + sent.path];
+    if (sent.as) requestLines.push('Authorization: Bearer <access token for ' + sent.as + '>');
+    if (sent.body !== undefined) requestLines.push('Content-Type: application/json');
+    requestLines = requestLines.join(String.fromCharCode(10));
+    return '<div class="card sample"><h3>Sample data</h3>'
+      + '<p class="small muted">Recorded from the scenario "' + esc(sample.title) + '" against the seeded test data. Tokens and temporary passwords are replaced, and lists show their first ' + page.sampleListLength + ' items.</p>'
+      + '<div class="sample-parts">'
+      + '<div class="sample-part"><h4>Request</h4><pre>' + esc(requestLines) + '</pre>' + (sent.body !== undefined ? json(sent.body) : '<p class="small muted">No body.</p>') + '</div>'
+      + '<div class="sample-part"><h4>Response ' + sample.response.status + '</h4>' + (sample.response.body === '' || sample.response.body === undefined || (typeof sample.response.body === 'object' && sample.response.body !== null && Object.keys(sample.response.body).length === 0) ? '<p class="small muted">No body.</p>' : json(sample.response.body)) + '</div>'
+      + '</div></div>';
+  }
+
+  function renderRoute(module, route) {
+    var count = function (isSuccess) { return route.rows.filter(function (row) { return Boolean(row[0]) === isSuccess; }).length; };
+    var chip = function (key, label) { return '<button class="chip" data-filter="' + key + '" aria-pressed="' + (filter === key) + '">' + label + '</button>'; };
+    var rows = route.rows.filter(function (row) { return filter === 'all' || (filter === 'success') === Boolean(row[0]); }).map(function (row) {
+      var setup = row[6].length ? '<details class="setup"><summary>' + row[6].length + ' setup ' + (row[6].length === 1 ? 'step' : 'steps') + ' first</summary><ol>' + row[6].map(function (step) { return '<li><code>' + esc(step) + '</code></li>'; }).join('') + '</ol></details>' : '';
+      var replayOnly = row[7] ? '<span class="as">Automated replay only: browsers set Origin themselves.</span>' : '';
+      return '<tr><td>' + esc(row[1]) + '<span class="request">' + esc(row[4]) + '</span>' + setup + replayOnly + '</td>'
+        + '<td>' + (row[5] ? '<span class="as">' + esc(row[5].split('@')[0]) + '</span>' : '<span class="muted">nobody</span>') + '</td>'
+        + '<td><span class="status ' + (row[2] < 400 ? 'good' : 'refused') + '">' + row[2] + '</span></td>'
+        + '<td>' + (row[3] ? '<code>' + esc(row[3]) + '</code>' : '<span class="muted">none</span>') + '</td></tr>';
+    }).join('');
+    view.innerHTML = '<div><span class="method ' + route.method.toLowerCase() + '">' + route.method + '</span> <h2 class="inline">' + esc(route.path) + '</h2></div>'
+      + '<p>' + esc(route.purpose) + '</p>'
+      + '<p class="small muted">' + esc(module.name) + '. Needs: ' + esc(route.access) + '. Input: ' + esc(route.input) + '.</p>'
+      + '<a class="open" href="' + esc(address) + '/try/#' + slug(route.id) + '">Run this on the test page</a>'
+      + sampleCard(route)
+      + '<div class="chips">' + chip('all', 'All ' + route.rows.length) + chip('success', 'Success ' + count(true)) + chip('fail', 'Failure ' + count(false)) + '</div>'
+      + '<div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Signed in as</th><th>Status</th><th>Error code</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  function render() {
+    var here = whereWeAre();
+    renderRail(here);
+    if (here.route) renderRoute(here.module, here.route);
+    else renderOverview(here.module);
+  }
+
+  view.addEventListener('click', function (event) {
+    var button = event.target.closest('button');
+    if (button && button.dataset.filter) { filter = button.dataset.filter; render(); }
+  });
+  view.addEventListener('input', function (event) {
+    if (event.target.id !== 'address') return;
+    address = event.target.value.trim().replace(/\/+$/, '') || 'http://localhost:4100';
+    document.getElementById('open').href = address + '/try/';
+    try { localStorage.setItem('tt-api-base', address); } catch (error) { /* Only a convenience. */ }
+  });
+  search.addEventListener('input', function () { renderRail(whereWeAre()); });
+  window.addEventListener('hashchange', function () { filter = 'all'; render(); view.scrollTop = 0; });
+  render();
+})();
+</script>
+</body>
+</html>

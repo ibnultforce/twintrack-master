@@ -1,0 +1,819 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TwinTrack Master Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* A build ledger: one reading column, state shown as pills, newest changes first in the log. */
+:root {
+  --paper: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #18222f;
+  --muted: #566476;
+  --line: #d9dee6;
+  --accent: #1f5f8b;
+  --good: #1c7044;
+  --good-fill: #e2f3e9;
+  --next: #8a5a00;
+  --next-fill: #fbf0d5;
+  --idle: #566476;
+  --idle-fill: #e9ecf1;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #12181f;
+    --surface: #1a222c;
+    --ink: #e7ebf0;
+    --muted: #9eabba;
+    --line: #2f3a47;
+    --accent: #7dbbe6;
+    --good: #7fd6a4;
+    --good-fill: #17352a;
+    --next: #e8c26f;
+    --next-fill: #3a2f14;
+    --idle: #a8b4c2;
+    --idle-fill: #28323e;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #12181f;
+  --surface: #1a222c;
+  --ink: #e7ebf0;
+  --muted: #9eabba;
+  --line: #2f3a47;
+  --accent: #7dbbe6;
+  --good: #7fd6a4;
+  --good-fill: #17352a;
+  --next: #e8c26f;
+  --next-fill: #3a2f14;
+  --idle: #a8b4c2;
+  --idle-fill: #28323e;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--font-body);
+}
+main {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 40px 20px 64px;
+  display: grid;
+  gap: 40px;
+}
+h1, h2 { margin: 0; font-weight: 600; text-wrap: balance; }
+h1 { font-size: 30px; line-height: 1.2; }
+h2 { font-size: 20px; line-height: 1.3; }
+h3 { margin: 0; font-size: 16px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+section { display: grid; gap: 14px; }
+code { font: 400 0.88em var(--font-mono); overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+header { display: grid; gap: 10px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 2px;
+}
+.tile b { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 13px; font-weight: 600; color: var(--muted); }
+td.numeric { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.nowrap { white-space: nowrap; }
+.pill {
+  display: inline-block;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pill.done { color: var(--good); background: var(--good-fill); }
+.pill.next { color: var(--next); background: var(--next-fill); }
+.pill.later { color: var(--idle); background: var(--idle-fill); }
+.feature-groups { display: grid; gap: 20px; }
+.feature-group { display: grid; gap: 8px; }
+.log { display: grid; gap: 16px; }
+.log-entry { display: grid; gap: 6px; padding-left: 14px; border-left: 3px solid var(--accent); }
+footer { border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>TwinTrack Master Progress</h1>
+  <p class="muted">What has been added to the Master module so far, and what comes next. Updated whenever the code changes.</p>
+  <p class="small muted">Last updated 16 November 2026. The redesign (phases 1 to 6), the Project management module (formerly Tasks), the Accounts API and the HR data models are not committed yet.</p>
+</header>
+
+<section aria-labelledby="summary-heading">
+  <h2 id="summary-heading">Where things stand</h2>
+  <p>The Master backend is finished for now. Besides signing in and managing their own account, admins can now manage people, roles, special privileges and modules, and read the activity log, all through the API. The portal and admin console now run on these routes in the browser. What remains of step 6 is turning the demo scenarios into tests and checking the cookie across real subdomains. The 7 remaining routes wait for the Employee module. A redesign on profiles, an org tree and shared records has started: all six phases are built: the org tree, profiles with permission sets, the record base, sharing, field-level security and custom objects. The Project management module (called Tasks until 13 November) is complete in the API and its own frontend, with everything from the old app: points, logins with one-time codes, files, incentives, flags, billing, health and team reports, exports and MCP tools. On 11 November, Master gained everything it owns from the old TwinTrack app: emailed set-password links through Resend in place of temporary passwords, employee numbers, profile photos, online status, a directory, clients, deleting people added by mistake, personal API tokens, OAuth for connectors, an MCP endpoint, and a development-only "Log in as". The Accounts module has its API, with no frontend yet: vendors, bills, payments, receipts, bank accounts, invoices billed from Project management work, and payroll from HR salaries. The rest of HR has its data models, ready for the old app's data; its APIs come next.</p>
+  <div class="tiles">
+    <div class="tile"><b>5 of 6</b><span class="small muted">build steps finished</span></div>
+    <div class="tile"><b>81</b><span class="small muted">Master routes built</span></div>
+    <div class="tile"><b>1,386</b><span class="small muted">automated tests, all passing</span></div>
+    <div class="tile"><b>665</b><span class="small muted">Postman assertions, all passing</span></div>
+  </div>
+</section>
+
+<section aria-labelledby="steps-heading">
+  <h2 id="steps-heading">Build steps</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Step</th><th>What it covers</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="nowrap">Refactor</td><td>A folder per module, with routes, rules and database queries in separate files</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">1. Groundwork</td><td>Route table, manifest and Postman checks, frontend address setting</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">2. Login and sessions</td><td>Login, refresh and logout, with stolen-token detection</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">3. Access checks</td><td>Token and permission middleware, profile, password change, "my modules" and "my permissions"</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">4. Admin API</td><td>Users, roles, special privileges, modules and the activity log</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">5. Portal</td><td>Login page, password change, module list and profile</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">6. Console and finish</td><td>Admin screens are done. Demo scenarios as tests and the cross-subdomain cookie check remain.</td><td><span class="pill next">In progress</span></td></tr>
+      <tr><td class="nowrap">Redesign 1. Org tree</td><td>Org roles with one root, a place in the tree for every person, and <code>team</code> scope reaching every role below</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">Redesign 2. Profiles</td><td>One org-wide profile per person and named permission sets per module, replacing roles and special privileges, in the API and the console</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">Redesign 3. Record base</td><td>Who made each change, versions that refuse stale edits, field history, and a recycle bin, for salaries</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">Redesign 4. Sharing</td><td>Share one salary with a person, an org role, or a role and everything below it, for reading or editing</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">Redesign 5. Field security</td><td>Every record field hidden, read-only, create-only or editable, as a profile or permission set gives. Protected fields, such as salary amounts, start hidden</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">Redesign 6. Custom objects</td><td>Admins define objects and fields in the app. Records get scope, sharing, history, field security and a recycle bin, and a Records screen</td><td><span class="pill done">Done</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="added-heading">
+  <h2 id="added-heading">What has been added</h2>
+  <div class="feature-groups">
+    <div class="feature-group">
+      <h3>Signing in and staying signed in</h3>
+      <ul>
+        <li>Access tokens last 15 minutes and hold only who you are. Permissions are read from the database on each call, so a role change applies on the next request.</li>
+        <li>Refresh tokens sit in an <code>HttpOnly</code> cookie that JavaScript can't read, and only their hashes are stored. Each one is replaced when it's used.</li>
+        <li>A session ends after 7 days without use, and after 30 days regardless.</li>
+        <li>Two open tabs can refresh together, thanks to a 10-second grace period.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>Checking access on every call</h3>
+      <ul>
+        <li>Each route declares its access, and the matching checks attach automatically, so a protected route can't go live without them.</li>
+        <li>Each call checks the token's signature and expiry, that the session is still open, and that the account is active. Signing out or being deactivated takes effect at once, even with a token that hasn't expired.</li>
+        <li>A person's profile and the permission sets they hold combine into one set of permissions, and the widest scope wins. A set the module no longer has, or a module that isn't loaded, grants nothing.</li>
+        <li>Someone with a temporary password can only see their profile, change the password or sign out until they've changed it.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>My account</h3>
+      <ul>
+        <li>People can read their profile and change their own name. Job details such as title stay with HR, and a request trying to change anything else is refused.</li>
+        <li>Changing a password needs the current one, at least 8 characters for the new one, and ends the person's other sessions. Repeated wrong guesses get blocked.</li>
+        <li>People can list the modules they can open, and see what they're allowed to do in each.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>Managing people</h3>
+      <ul>
+        <li>Admins can list, search, add and edit people. Lists come in pages, and a request trying to set a field such as super admin is refused.</li>
+        <li>Nobody is given a password. New people and password resets get a one-time link by email, sent through Resend. Only a hash is stored, a newer link replaces an older one, and using it signs the person out everywhere.</li>
+        <li>Each person gets the next employee number. Admins can change it, and it stays unique.</li>
+        <li>Someone added by mistake can be deleted, but only if they never signed in and no module's records name them. Everyone else is deactivated.</li>
+        <li>Deactivating someone signs them out everywhere, and reactivating them doesn't bring an old session back.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>Profiles and permission sets</h3>
+      <ul>
+        <li>Each person has one org-wide profile, which sets their baseline in every module. Only Master admins build profiles and give them.</li>
+        <li>Permission sets are named bundles in one module, given on top of the profile. Module admins give them, and giving one needs a reason.</li>
+        <li>Nobody can build a profile or set beyond their own access. A change applies on the person's next request, even with a token they already hold.</li>
+        <li>HR access managers can change HR permission sets only.</li>
+        <li>Nobody can change their own access. Only a super admin can edit, deactivate or reset a super admin, so an admin can't take over that account.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>Modules and the activity log</h3>
+      <ul>
+        <li>Admins can import a module's manifest, and every problem in an invalid one is listed. Master can't be replaced or removed through the API.</li>
+        <li>Removing a module ends access from it. People's roles stay on record and work again if it's imported again.</li>
+        <li>Every admin change writes to the activity log in the same transaction, with who did it and what changed. Passwords are never included.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>Protection</h3>
+      <ul>
+        <li>Reusing an old refresh token ends the whole session and records it in the activity log.</li>
+        <li>Login, refresh and logout refuse any address not on the allow-list. CORS alone would still have let those requests run.</li>
+        <li>Failed logins are limited per address, with counts shared between API instances. A wrong password and an unknown email get the same answer, in about the same time.</li>
+        <li>Tokens and cookies are removed from the logs.</li>
+        <li>The API won't start without a signing secret of at least 32 characters, and production refuses a cookie that isn't HTTPS-only.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>From the old app (11 November)</h3>
+      <ul>
+        <li>Profile photos, with initials when there is none. People change their own; someone else's needs <code>user.update</code>.</li>
+        <li>Online status from a heartbeat every 45 seconds, shown only where the viewer's <code>presence.read</code> scope reaches.</li>
+        <li>A directory of active colleagues for everyone signed in.</li>
+        <li>Clients, shared by every module, with history and field access. Made inactive, never deleted.</li>
+        <li>Personal API tokens and OAuth connected apps, both acting as their person, through an MCP endpoint with Master's tools. Other modules add their own tools.</li>
+        <li>"Log in as" on a person's page, for super admins in development only. A banner shows it, and it is logged.</li>
+        <li>Confirming your password before something sensitive, for salaries later.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>Project management module (called Tasks until 13 November)</h3>
+      <ul>
+        <li>Projects with a lead and members. Tasks go only to the lead or a member, and someone with open tasks can't be removed.</li>
+        <li>Each task gets a number such as <code>T-00102</code> that is never reused. It moves from to-do through work, QA and approval, can be reverted with a reason, and can be cancelled unless it's done.</li>
+        <li>Separate timers for the assignee and for QA, which can be paused and resumed, and the approver settles the hours.</li>
+        <li>Access comes from permission sets and the task's own people, never from role names. Only the assignee runs the timer, only the QA person runs QA, and nobody approves their own work.</li>
+        <li>QA hours are protected fields. Comments are kept for good, and tasks can link to each other.</li>
+        <li>Career points: 50 per approved hour of work or QA, less 5% of a task's points each time it is reverted. A revert can give the fix to someone else.</li>
+        <li>QA tasks record their own pass or fail. QA can't start without a QA estimate. Tasks can be flagged, marked not billable, and have their actual hours corrected.</li>
+        <li>Search, filters, sorting, totals and CSV export. Project health and team reports.</li>
+        <li>Shared project logins, encrypted, showing the current one-time code but never its secret.</li>
+        <li>Files on tasks, up to 5 GB a task, sent straight from the browser to Cloudflare R2, or to the local disk in development.</li>
+        <li>Monthly incentives from the hours a team lead led, at each person's rate, and one-off project incentives. A paid month is frozen.</li>
+        <li>MCP tools to list, create, update, reassign and hand over tasks by name.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>Accounts module (API)</h3>
+      <ul>
+        <li>Categories, vendors and bank accounts, made inactive rather than deleted. Vendor and account numbers are stored encrypted and shown only where field access reaches them.</li>
+        <li>Bank balances are never typed in: the opening balance plus receipts after bank fees, less payments and paid salaries. A statement lists each movement with a running balance.</li>
+        <li>Bills go from draft to approval to paid. Whoever made a bill or payroll run can't approve it, super admins included.</li>
+        <li>Payments and receipts are never edited: a mistake gets a linked reversal dated the day it's made. Receipts are counted against invoices, never beyond either amount.</li>
+        <li>Invoices bill a client's Tasks work at its estimate, mark the tasks billed, and make an editable Word document that can be emailed with Resend.</li>
+        <li>Payroll runs pay each person's approved HR salary plus their unpaid Tasks incentive, which is marked paid when the pay goes out.</li>
+        <li>Evidence documents on bills, payments, receipts and payroll items, uploaded straight to storage like task files.</li>
+      </ul>
+    </div>
+    <div class="feature-group">
+      <h3>Keeping the project consistent</h3>
+      <ul>
+        <li>Manifests live in <code>twintrack-master/manifests/</code>, one per module: Master, HR, Tasks and Accounts.</li>
+        <li>A test fails if any module's route table and its manifest disagree about which routes are built or who can use them.</li>
+        <li>A test fails if a route has no Postman request.</li>
+        <li><code>npm run seed</code> now requires <code>SEED_PASSWORD</code>, in place of a password written into the code.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="routes-heading">
+  <h2 id="routes-heading">Routes built</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Route</th><th>Access</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td class="nowrap"><code>GET /health</code></td><td>Public</td><td>Reports whether the API and database are connected</td></tr>
+      <tr><td class="nowrap"><code>POST /auth/login</code></td><td>Public</td><td>Checks the email and password, returns an access token, sets the refresh cookie</td></tr>
+      <tr><td class="nowrap"><code>POST /auth/refresh</code></td><td>Public</td><td>Uses the refresh cookie to return a new access token, and replaces the cookie</td></tr>
+      <tr><td class="nowrap"><code>POST /auth/logout</code></td><td>Public</td><td>Uses the refresh cookie to end the session, and clears the cookie</td></tr>
+      <tr><td class="nowrap"><code>GET /auth/me</code></td><td>Signed</td><td>Returns your profile</td></tr>
+      <tr><td class="nowrap"><code>PATCH /auth/me</code></td><td>Signed</td><td>Changes your own name</td></tr>
+      <tr><td class="nowrap"><code>POST /auth/change-password</code></td><td>Signed</td><td>Replaces your password and ends your other sessions</td></tr>
+      <tr><td class="nowrap"><code>GET /me/modules</code></td><td>Signed</td><td>Lists the modules you can open and where to find them</td></tr>
+      <tr><td class="nowrap"><code>GET /me/permissions/:module</code></td><td>Signed</td><td>Says what you can do in one module, for showing tabs and buttons</td></tr>
+      <tr><td class="nowrap"><code>GET /users</code></td><td><code>user.read</code></td><td>Lists people, with search, status filter and pages</td></tr>
+      <tr><td class="nowrap"><code>POST /users</code></td><td><code>user.create</code></td><td>Adds a person and returns a temporary password once</td></tr>
+      <tr><td class="nowrap"><code>GET /users/access-options</code></td><td><code>user.read</code></td><td>Lists the roles and privileges each module offers, and whether you may change them</td></tr>
+      <tr><td class="nowrap"><code>GET /users/:id</code></td><td><code>user.read</code></td><td>Returns one person and their access</td></tr>
+      <tr><td class="nowrap"><code>PATCH /users/:id</code></td><td><code>user.update</code></td><td>Edits a person's details</td></tr>
+      <tr><td class="nowrap"><code>PATCH /users/:id/status</code></td><td><code>user.update</code></td><td>Deactivates or reactivates a person</td></tr>
+      <tr><td class="nowrap"><code>POST /users/:id/reset-password</code></td><td><code>user.update</code></td><td>Signs a person out and returns a new temporary password once</td></tr>
+      <tr><td class="nowrap"><code>PUT /users/:id/permission-sets</code></td><td><code>user.update</code>, <code>hrAccess.update</code> or the module's <code>access.update</code></td><td>Replaces the permission sets a person holds in one module</td></tr>
+      <tr><td class="nowrap"><code>GET /permission-sets</code></td><td>Any permission set permission in a module</td><td>Lists the modules you can reach sets in, what you may put in one, and the APIs each permission opens</td></tr>
+      <tr><td class="nowrap"><code>POST /permission-sets/:module</code></td><td><code>permissionSet.create</code></td><td>Adds a permission set to a module</td></tr>
+      <tr><td class="nowrap"><code>PATCH /permission-sets/:module/:key</code></td><td><code>permissionSet.update</code></td><td>Changes what a permission set allows</td></tr>
+      <tr><td class="nowrap"><code>DELETE /permission-sets/:module/:key</code></td><td><code>permissionSet.delete</code></td><td>Removes a permission set nobody holds</td></tr>
+      <tr><td class="nowrap"><code>GET /access-profiles</code></td><td><code>accessProfile.read</code></td><td>Lists profiles, what each allows per module, and how many hold it</td></tr>
+      <tr><td class="nowrap"><code>POST /access-profiles</code></td><td><code>accessProfile.create</code></td><td>Adds an org-wide profile</td></tr>
+      <tr><td class="nowrap"><code>PATCH /access-profiles/:id</code></td><td><code>accessProfile.update</code></td><td>Changes a profile, for everyone holding it</td></tr>
+      <tr><td class="nowrap"><code>DELETE /access-profiles/:id</code></td><td><code>accessProfile.delete</code></td><td>Removes a profile nobody holds</td></tr>
+      <tr><td class="nowrap"><code>GET /modules/:key/addable-people</code></td><td>Right to change access in that module</td><td>Searches who can be added to a module</td></tr>
+      <tr><td class="nowrap"><code>GET /org-roles</code></td><td><code>orgRole.read</code></td><td>Lists the org tree, parents first, with how many people hold each role</td></tr>
+      <tr><td class="nowrap"><code>POST /org-roles</code></td><td><code>orgRole.create</code></td><td>Adds an org role below a parent, or the root while the tree is empty</td></tr>
+      <tr><td class="nowrap"><code>PATCH /org-roles/:id</code></td><td><code>orgRole.update</code></td><td>Renames an org role, or moves it and everything below it</td></tr>
+      <tr><td class="nowrap"><code>DELETE /org-roles/:id</code></td><td><code>orgRole.delete</code></td><td>Removes an org role with nobody in it and nothing below it</td></tr>
+      <tr><td class="nowrap"><code>GET /modules</code></td><td><code>module.read</code></td><td>Lists loaded modules</td></tr>
+      <tr><td class="nowrap"><code>POST /modules/import</code></td><td><code>module.create</code></td><td>Adds or replaces a module from its manifest</td></tr>
+      <tr><td class="nowrap"><code>DELETE /modules/:key</code></td><td><code>module.delete</code></td><td>Removes a module, except Master</td></tr>
+      <tr><td class="nowrap"><code>GET /audit</code></td><td><code>audit.read</code></td><td>Lists the activity log, newest first</td></tr>
+      <tr><td class="nowrap"><code>PUT /modules/:key/resources/:resource</code></td><td><code>module.update</code></td><td>Adds a resource, or changes its actions</td></tr>
+      <tr><td class="nowrap"><code>DELETE /modules/:key/resources/:resource</code></td><td><code>module.update</code></td><td>Removes a resource nothing uses</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">The manifest lists only built routes.</p>
+</section>
+
+<section aria-labelledby="storage-heading">
+  <h2 id="storage-heading">Where the data lives</h2>
+  <div class="table-wrap"><table>
+    <tbody>
+      <tr><th scope="row">Database server</th><td>Local MongoDB service, at <code>127.0.0.1:27017</code>, running as replica set <code>rs0</code></td></tr>
+      <tr><th scope="row">Files on disk</th><td><code>C:\Program Files\MongoDB\Server\9.0\data</code></td></tr>
+      <tr><th scope="row">Server settings</th><td><code>C:\Program Files\MongoDB\Server\9.0\bin\mongod.cfg</code></td></tr>
+      <tr><th scope="row">App database</th><td><code>twintrack</code>, with 10 users and 3 modules. Sessions and the activity log are empty until someone signs in through it.</td></tr>
+      <tr><th scope="row">Postman database</th><td><code>twintrack_postman</code>, used only by <code>npm run test:postman</code></td></tr>
+      <tr><th scope="row">Automated tests</th><td>A temporary in-memory database that is deleted after each run</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="results-heading">
+  <h2 id="results-heading">Latest check results</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Check</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td><code>npm test</code></td><td><span class="pill done">1,386 of 1,386 passed</span></td></tr>
+      <tr><td><code>npm run test:postman</code>, 409 requests against a real server, including a full OAuth connection and file uploads</td><td><span class="pill done">665 of 665 passed</span></td></tr>
+      <tr><td>Project management frontend (then Tasks) in real Chrome as a lead, a tester and a developer (12 November): lists, filters, export, points, QA, revert, files, logins, health, team, points and incentives</td><td><span class="pill done">21 of 21 checks passed</span></td></tr>
+      <tr><td>New Master screens in real Chrome (11 November): password links, person page, photo, directory, clients and history, API tokens, profile, Log in as and stop, set-password page, phone width</td><td><span class="pill done">14 of 14 steps passed</span></td></tr>
+      <tr><td>Test page, sign-in, permission, role editing and demo steps in real Chrome (6 November, not re-run for the Employee demo)</td><td><span class="pill done">All passed</span></td></tr>
+      <tr><td>Master UI in real Chrome: sign-in, reload, temporary passwords, access changes, role and module editing, token refresh</td><td><span class="pill done">47 of 47 passed</span></td></tr>
+      <tr><td>Typecheck, lint and build</td><td><span class="pill done">Passed</span></td></tr>
+      <tr><td>Console walkthrough in real Chrome: profiles, permission sets, field access, custom objects, records, history and what each person sees (10 November)</td><td><span class="pill done">13 of 13 steps passed</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">Not tried yet: signing in across real subdomains over HTTPS. The frontend has no automated tests in the repo yet, so the Chrome run was a one-off.</p>
+</section>
+
+<section aria-labelledby="limits-heading">
+  <h2 id="limits-heading">Known limits</h2>
+  <ul>
+    <li>Every permission check reads the session, user and module from the database. That's what makes changes apply at once, at the cost of a few extra queries per call.</li>
+    <li>A stolen refresh token that has just been replaced still works for up to 10 seconds. That's the cost of supporting two open tabs.</li>
+    <li>The login limit counts per address, so attacks spread across many addresses get past it.</li>
+    <li>Permission sets have no end date, and the reason for giving one is kept only in the activity log.</li>
+    <li>A database seeded before profiles keeps the old <code>assignments</code> and <code>privileges</code> fields, which now grant nothing. Run <code>npm run seed</code> to reload it.</li>
+    <li>Only Master admins can give profiles. A module admin can't change someone's profile, only their sets in that module.</li>
+    <li>A real Resend key hasn't been tried yet. Without one, links go to the backend log, which only development allows.</li>
+    <li>People seeded before employee numbers have none until an admin gives them one. New people get the next number.</li>
+    <li>OAuth client secrets need <code>ENCRYPTION_KEY</code>. Without it in development, a random key is used, so apps must connect again after a restart.</li>
+    <li>A production database has no way to get its first super admin or the Master manifest, because the seed refuses to run in production and the API can't create either.</li>
+    <li>People created before the org tree have no <code>orgRoleId</code>. They see only their own records and direct reports until someone gives them a place in the tree.</li>
+    <li>The admin console has no screen for the org tree yet. It is managed through the API, Postman and the test page.</li>
+    <li>Anyone with <code>user.update</code> can place people below their own org role, which widens what they see. That is by design, as with assigning a manager, but the role should go only to trusted admins.</li>
+    <li>Accounts has no frontend yet, so it is used through the API, Postman, the test page and Your permissions.</li>
+    <li>Payroll uses one HR salary amount per person. The old app's breakdown into basic pay and allowances waits for HR.</li>
+    <li>Invoice documents carry no company logo yet.</li>
+    <li>R2 storage hasn't been tried with a real bucket. The bucket needs CORS that allows PUT from the frontends and exposes <code>ETag</code>.</li>
+    <li>The Project management frontend has no automated tests in the repo; the Chrome run was a one-off.</li>
+    <li>Approving a task whose QA result is <code>fail</code> is allowed. The approver is expected to revert it instead.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="log-heading">
+  <h2 id="log-heading">Change log</h2>
+  <div class="log">
+    <div class="log-entry">
+      <h3>16 November 2026: the repo carries everything a cloud session needs</h3>
+      <ul>
+        <li><code>twintrack-master/CLAUDE.md</code> now holds the commands, architecture, route checklist and development guidelines, so Claude Code on the web gets them. The workspace <code>CLAUDE.md</code> imports it.</li>
+        <li>The Postman collection is committed (it holds only seed test logins, already public in the repo), and <code>design/</code> and <code>module-packs/</code> moved into the repo. This page's source is now <code>twintrack-master/design/master-progress.html</code>.</li>
+        <li>The <code>twintrack-sync</code> skill has a "Working without the workspace" section: steps a cloud session can't run, such as <code>seed:modules</code>, <code>test:postman</code> and republishing, go under "Still to do" in its summary and pull request.</li>
+        <li>Checks: 1,386 backend tests and lint pass. The API scenarios page builder and the pack exporter work from their new places.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>16 November 2026: everything that describes the backend stays in step with it</h3>
+      <ul>
+        <li>New Claude Code skill <code>twintrack-sync</code> in <code>twintrack-master/.claude/skills/</code>: for a new module, a new, changed or removed route, or a model change, it updates the manifest and reloads it with <code>seed:modules</code> (so the change shows on Modules and Profiles), plus Postman, <code>/try</code> scenarios, <code>docs/api</code>, these pages and the module's frontend pack.</li>
+        <li>Hooks in <code>.claude/settings.json</code> (in the workspace and in <code>twintrack-master</code>) remind Claude of the skill and stop it finishing once when backend source changed but nothing describing it did. Changes are found by file time, so shell edits count too.</li>
+        <li>New test <code>tests/module-routes.test.ts</code>: HR, Project management and Accounts route lists must match their manifests, as Master's already did.</li>
+        <li><code>npm run export:module-pack</code> now writes the full pack for every module: <code>api/</code>, the shared <code>design.css</code>, and <code>INSTRUCTIONS.md</code> (from the starter's new <code>docs/INSTRUCTIONS.template.md</code>), <code>DATA_MODEL.md</code> and <code>schema.json</code>, which it never overwrites. The old one-page brief is gone. The HR and Accounts packs were written in the new format.</li>
+        <li>HR (3200, as <code>.env.example</code> already had it) and Accounts (3400) have their dev ports in <code>twintrack.modules.json</code>, and Accounts' address is in <code>ALLOWED_ORIGINS</code> and <code>MODULE_FRONTEND_URLS</code> in <code>.env.example</code>, ready for their frontends.</li>
+        <li>The Project management frontend's folder is now <code>twintrack-projects</code>, matching the workspace list, so <code>npm run dev</code> in the workspace starts it again.</li>
+        <li>Checks: 1,386 backend tests pass, lint passes on the changed files. No routes changed, so Postman was not re-run.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>13 November 2026: Tasks becomes Project management, and HR data models</h3>
+      <ul>
+        <li>The Tasks module is now <strong>Project management</strong>, key <code>projects</code> (manifest 2.0.0). Its APIs moved from <code>/tasks/...</code> to <code>/projects/...</code>, such as <code>GET /projects/projects</code> and <code>POST /projects/tasks/:id/approve</code>. Tasks inside projects keep their name.</li>
+        <li>The backend code is in <code>modules/projects/</code>, and the frontend is <code>twintrack-projects</code> on <code>projects.twintrack.localhost:3300</code>. <code>ALLOWED_ORIGINS</code> and <code>MODULE_FRONTEND_URLS</code> use the new address.</li>
+        <li>New <code>npm run migrate:rename-module -- tasks projects /projects</code> moves a module's key in the database in one transaction: the module, profile grants, super admins' API access changes, and the module on audit entries, custom records, field history and shares. Run it once on each database, then <code>npm run seed:modules</code>. The local database is done.</li>
+        <li>HR gained data models, with no APIs yet, for everything left from the old app: employee profile with education, experience, certifications, nominees and training; payroll profile; promotions; employee documents; leave balances and requests with lead approvals; work from home; holiday pay; attendance with device punches; reviews.</li>
+        <li>Checks: 1383 backend tests and the Postman run (409 requests, 665 assertions) pass.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>13 November 2026: Super admins change who may call an API, and samples from the database</h3>
+      <ul>
+        <li>New <code>PUT /modules/:key/route-access</code> (Master manifest 3.8.0): a super admin makes an API signed in or private, and picks the permission that opens a private one. Saved on the module, read on every request, kept through manifest imports, and written to the activity log. APIs that work before sign-in stay public; any other API can't be made public because its code needs the caller. A private API opened to everyone gives people without its permission the <code>own</code> scope.</li>
+        <li>Modules, APIs card: a Change button on every API, showing which rules it can take and marking changed ones.</li>
+        <li>API explorer: a super admin's Try samples now use real record ids from the database, and a sample that creates something gets a fresh name, key and email.</li>
+        <li>Try dialog, for super admins: a "Values from the database" box beside each body field or path parameter that takes a record's id, such as <code>managerId</code> or <code>orgRoleId</code>. Records are listed by name, and choosing one puts its id in the request.</li>
+        <li>Try dialog: fields with a fixed set of values, such as a project's status or true and false, get a list of exactly what the API accepts, read from the schema it checks its body with (each route now declares it as <code>bodySchema</code>). Id fields the API takes but a sample leaves out, such as <code>leadId</code>, also get a list of records. Choosing a value rewrites the JSON body.</li>
+        <li>Explorer: a third way to test, "Everyone, one by one", sends the request as each active person and lists every answer.</li>
+        <li>Checks: 1,370 tests pass, including 10 new ones. Typecheck and lint pass. In Chrome, a developer got 403, then 200 once the salary list was opened, then 403 once it was set back. Postman was not re-run.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>12 November 2026: Bug sweep across Master, Tasks and Accounts</h3>
+      <ul>
+        <li>Master backend: changing someone's email now needs their profile within your own access (it could be used to take over a wider account through a reset link). Client search only searches fields you can see. Removing a custom object through the resources route is refused while it has records. Renaming yourself no longer hides impersonation.</li>
+        <li>Tasks backend: login addresses must be http(s). Project incentives are given and listed only within your scope. A task can't be reassigned to its own QA person. The task picker hides titles your field access hides. A lead change is refused while the old lead has open tasks there.</li>
+        <li>Accounts backend (manifest 1.0.1): payments made at the same moment can't overpay a bill. A bill is paid only to its vendor. Amounts are whole cents. Non-USD invoices need a rate. Invoice totals equal the sum of their lines. A draft invoice can't drop below what receipts count against it. Payroll items only take a bank account in their currency, and an incentive Tasks already paid can't be paid again.</li>
+        <li>Master frontend: client edits send only changed fields. Restore errors show. "Try" no longer swaps identity while impersonating. The person form keeps an org role or manager you can't list. Tasks frontend: comments refresh after a revert and page past 100, editing works without an estimate, project status isn't reset when hidden, file viewing works in Safari, due dates show the right day west of UTC, and only web addresses become links.</li>
+        <li>Checks: 1,343 tests pass. 663 Postman assertions pass over 407 requests. Typecheck and lint pass. Manifests reloaded with <code>seed:modules</code>.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>12 November 2026: Accounts module API</h3>
+      <ul>
+        <li>New <code>accounts</code> module (manifest 1.0.0, 65 routes under <code>/accounts</code>), moved over from the old app: categories, vendors, bank accounts with balances and statements, company bank details, bills, payments, receipts and allocations, invoices, payroll runs and evidence documents. API only, as asked.</li>
+        <li>Decisions: payroll pays the HR salary plus the Tasks incentive; invoices make a Word document emailed with Resend; invoices don't change projects' allocated hours; whoever made a bill or payroll run can't approve it.</li>
+        <li>Tasks gains <code>invoiceId</code> on tasks and a small billing interface in <code>modules/tasks/billing/</code>, the only part of Tasks that Accounts reads or writes. HR gains a lookup of the salary in effect on a date. Files storage can now save and read whole files, and email can carry attachments.</li>
+        <li>New settings: <code>INVOICE_HOURLY_RATE_USD</code>, <code>INVOICE_NUMBER_PREFIX</code>, <code>COMPANY_NAME</code>, <code>COMPANY_ADDRESS</code>. Loaded with <code>seed:modules</code>. In the test data, HR admins run Accounts and the auditor approves.</li>
+        <li>Checks: 1,318 tests pass, including 22 new Accounts tests and 128 test-page scenarios. 661 Postman assertions pass over 406 requests. Typecheck and lint pass. Running all test files at once needs <code>--maxWorkers=2</code> on this machine, which otherwise runs short of memory.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>12 November 2026: API tokens get their own permission</h3>
+      <ul>
+        <li>New Master resource <code>apiToken</code> (scoped), so admins control API access from profiles. Master is now version 3.7.0.</li>
+        <li><code>apiToken.create</code> is needed to make a personal token (<code>POST /me/api-tokens</code>) or approve an app on the OAuth consent page. Declining an app, and listing or revoking your own tokens and apps, still need only a session.</li>
+        <li>New admin routes: <code>GET /api-tokens</code> and <code>POST /api-tokens/:id/revoke</code>, <code>GET /connected-apps</code> and <code>POST /connected-apps/:id/revoke</code>. <code>apiToken.read</code> and <code>apiToken.delete</code> reach the people the scope covers. A super admin's tokens are out of reach for everyone else.</li>
+        <li>New console screen API tokens. Apps and API tokens hides the form for people without <code>apiToken.create</code>.</li>
+        <li>Nothing is granted automatically: after this change only super admins can make tokens until a profile gives <code>apiToken.create</code>. Existing tokens keep working.</li>
+        <li>Checks: 1,167 tests pass, 540 Postman assertions pass over 320 requests, and typecheck and lint pass. The new screen hasn't been tried in a browser yet.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>12 November 2026: sample requests on Your permissions</h3>
+      <ul>
+        <li><code>GET /me/permissions/:module</code> now also returns <code>guides</code>: for each API you hold, what it does, what it takes, and sample requests with the answer each should get. They come from the test page scenarios, which tests replay against the API, so they stay accurate.</li>
+        <li>The Try dialog lists the samples, accepted ones first. Picking one fills the path parameters, query and body, and says who sends it in the example data, what the example sends first, and which values come from an earlier request, such as a new project's id.</li>
+        <li>96 of the 98 permission-gated routes have an accepted sample. Finishing a file upload and getting a file link show only refused ones, since their success needs a real upload in between.</li>
+        <li>Checks: 1,149 tests pass, lint and build pass. In Chrome, an HR sample answered 200 and a version-conflict sample 409 as expected, and the Tasks samples showed what to fill in first, at desktop and phone widths.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>12 November 2026: Tasks code review fixes</h3>
+      <ul>
+        <li>Points: reverting a done task now takes back what its approval gave (<code>approval_reversed</code>) and clears the finished QA round, so approving it again never counts twice. Giving the fix to someone else starts their timer from zero. The 5% penalty on every revert stays, as in the old app.</li>
+        <li>Field security: the task summary leaves out the variance when actual or estimated hours are hidden. The <code>get_workload</code> MCP tool needs <code>task.read</code> and counts only tasks the caller reaches.</li>
+        <li>Incentives pay approved hours, not the timer, and nobody can change, pay or give their own incentive (<code>403 own_incentive</code>).</li>
+        <li>Older tasks without flags or billing now match the billable and not-flagged filters. A task stuck in QA without an estimate can be given one.</li>
+        <li>Files: the 5 GB limit is claimed atomically, so two uploads can't both take the last space. A part that fails to save is now a logged server error with its partial file removed, not a silent "upload closed".</li>
+        <li>Checks: 1,148 tests and 531 Postman assertions pass. Typecheck, lint and both builds pass. The browser was not re-tested for these fixes.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>12 November 2026: Tasks module completed from the old app</h3>
+      <ul>
+        <li>New task fields: <code>kind</code>, <code>pointValue</code>, <code>qaPointValue</code>, <code>billable</code>, <code>flagged</code>, <code>flagNote</code>. Projects gain a Master client.</li>
+        <li>New routes: task summary, export and search; QA estimate, flag, billable and actual-hours corrections; project health and roster; points; project logins; task files; monthly and project incentives. Master gains the public <code>/files</code> routes for local files in development.</li>
+        <li>New settings: <code>R2_*</code>, <code>STORAGE_DIR</code>, <code>INCENTIVE_HOURLY_RATE_BDT</code>. Tasks is at 1.6.0 and Master at 3.6.0, loaded with <code>seed:modules</code>.</li>
+        <li>The Tasks frontend gained Project health, Team, Points and Incentives pages, and the task and project pages gained the new controls. The leftover password-change gate is gone.</li>
+        <li>Checks: 1,137 tests and 529 Postman assertions pass. The frontend typecheck and build pass, and 21 of 21 browser checks pass. The browser run found two bugs, both fixed: a tester whose profile hides the QA estimate couldn't start QA, and the link search covered dialog buttons.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>11 November 2026: Master features moved over from the old app</h3>
+      <ul>
+        <li>Password links by email, through Resend, replace temporary passwords and the forced change at first sign-in: <code>POST /users/password-links</code>, <code>POST /auth/set-password</code> and a Set password page. <code>POST /users/:id/reset-password</code> is gone.</li>
+        <li>People: employee numbers, photos, online status (<code>presence.read</code>), <code>GET /directory</code>, <code>POST /me/heartbeat</code>, deleting someone who never signed in (<code>user.delete</code>), and <code>POST /auth/verify-password</code>.</li>
+        <li>Clients: six routes and two screens, with history.</li>
+        <li>API tokens, connected apps, OAuth consent and <code>POST /mcp</code>, with the MCP SDK's OAuth handlers as the one allowed exception to direct routes.</li>
+        <li>"Log in as" for super admins with <code>IMPERSONATION_ENABLED=true</code>, which production refuses.</li>
+        <li>The raw admin table panel from the old app was left out, on purpose.</li>
+        <li>Checks: 997 tests, 465 Postman assertions, typecheck, lint and build pass. 14 browser steps pass in Chrome.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>11 November 2026: try your APIs from Your permissions</h3>
+      <ul>
+        <li><code>GET /me/permissions/:module</code> now also returns <code>apis</code>: each permission held, and the routes it opens.</li>
+        <li>Your permissions lists those routes next to each permission, each with a Try button. It opens a dialog to fill in path parameters, a query and a JSON body, sends the request with your own access, and shows the status, time and answer. Requests run for real.</li>
+        <li>A workspace command, <code>npm run dev</code> in the workspace folder, starts every app listed in <code>twintrack.modules.json</code>: Master and the Tasks frontend today.</li>
+        <li>Checks: access and test page tests pass, typecheck, lint and build pass. Not yet tried in the browser.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>11 November 2026: permission sets removed, profiles given within your own reach</h3>
+      <ul>
+        <li>Permission sets are gone. Each person's one profile is now the only place their access comes from. Removed: the five <code>/permission-sets</code> routes, <code>PUT /users/:id/permission-sets</code>, the per-module <code>permissionSet</code> and <code>access</code> resources, Master's <code>hrAccess</code> and <code>managesAccessOf</code>, and the Permission sets screen.</li>
+        <li>New route <code>PUT /users/:id/profile</code>, with a new scoped Master permission <code>userProfile.update</code>. Its scope decides whose profile someone may change: <code>team</code> is their reports and the org roles below theirs. The new profile, and the one it replaces, must stay within the giver's own access. A project manager can now build developer profiles and give them.</li>
+        <li><code>PATCH /users/:id</code> and <code>POST /users</code> no longer take <code>profileId</code>. <code>GET /users/access-options</code> now lists the loaded modules, and the Access, People, Person, Overview and Permissions screens work from profiles alone.</li>
+        <li>Manifests and seed files that still list <code>permissionSets</code> are refused with a clear message, and the seed clears the old field from stored modules and people. Master is at 3.0.0, HR 1.11.0 and Tasks 1.2.0.</li>
+        <li>Checks: 822 tests, 396 Postman assertions over 232 requests, typecheck, lint and build pass. The browser was not re-tested.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>11 November 2026: field access in the console</h3>
+      <ul>
+        <li>In the profile and permission set editors, each resource's fields now fold into a "Field access" panel, laid out as a grid, with a count of the fields set and a "(protected)" marker.</li>
+        <li>A "Hide the fields left on Default" button sets every unset field to hidden in one step, for a set that should reach only a few fields.</li>
+        <li>Your permissions now shows a table of each field you can reach and its access, in place of a comma list. Hidden fields are left out.</li>
+        <li>Checks: typecheck, lint and build pass. Not yet tried in the browser.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>11 November 2026: access for every field</h3>
+      <ul>
+        <li>Field access now covers every field of a business record, not just protected ones. Manifests list them in a new <code>recordFields</code>: salary <code>amount</code>, <code>currency</code>, <code>effectiveFrom</code> and <code>status</code>, plus project and task fields. Custom objects use their own fields.</li>
+        <li>A new <code>hidden</code> level takes a field away. A field the grant doesn't name follows its actions: update gives edit, create gives create only, read gives read. Protected fields still start hidden. Existing profiles and permission sets work as before.</li>
+        <li>Projects now have field security. Task create and update and project changes check each field they set.</li>
+        <li>The permission editors list every field, with a Default option that shows the level the ticked actions give. Profiles and permission sets return only the levels they state.</li>
+        <li>HR is at 1.10.0 and Tasks at 1.1.0, loaded with <code>seed:modules</code>. The API scenarios page has four new field access scenarios and a sample request and response for every route.</li>
+        <li>Checks: 937 tests, 435 Postman assertions over 257 requests, typecheck and lint pass. The browser was not re-tested.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>11 November 2026: create-only field access</h3>
+      <ul>
+        <li>Field access now has three levels, from narrowest to widest: <code>read</code>, <code>create</code> and <code>edit</code>. <code>create</code> lets someone set a protected field on a new record, but they can't change it afterwards.</li>
+        <li>The widest level from the profile and permission sets wins, and nobody can give a level beyond the one they hold. The same ranking decides both.</li>
+        <li>Salaries, tasks and custom records now tell the field check whether a write creates or changes a record. The permission editors offer "Create only", and the Records form unlocks create-only fields on new records.</li>
+        <li>No routes changed, so the manifests and Postman are unchanged. Checks: 928 tests, typecheck and lint pass. Postman was not re-run, and the browser was not re-tested.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: Tasks module, first slice</h3>
+      <ul>
+        <li>New <code>tasks</code> module (manifest 1.0.0, 23 routes under <code>/tasks</code>). It covers projects and members, plus tasks with the full lifecycle: assignee timer, QA handover and timer, approve with estimated, actual or custom hours, revert with a comment, and cancel. Comments, links between tasks and field history are included.</li>
+        <li>Permissions are <code>project.read/create/update</code> and <code>task.read/create/update/approve/delete</code>, scoped through the task's assignee, TL, QA person and project lead. Only the assignee runs the timer and only the QA person runs QA, both checked from the task's fields. A self-approval guard is now enforced.</li>
+        <li>Fixed a shared bug: record changes dropped any <code>$inc</code> other than the version.</li>
+        <li>Older tests and test-page scenarios that used <code>tasks</code> as a made-up module now use <code>inventory</code>.</li>
+        <li>Checks: 879 tests, 435 Postman assertions over 257 requests, typecheck and lint pass. Manifest loaded locally with <code>seed:modules</code>.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: Employee and Project Management modules removed</h3>
+      <ul>
+        <li>Removed the Employee and Project Management modules: their backend code, manifests, API docs, routes (<code>/employee/me/profile</code> and <code>/project/*</code>), Project model, tests, Postman requests and test page scenarios. Master and HR remain.</li>
+        <li>Master is at 2.8.0. The <code>employeeAccess</code> resource is gone, so <code>hrAccess</code> is the only Master resource that manages another module's access. The test fixture lost the Employee access manager and Profile viewer sets.</li>
+        <li>Postman's custom object requests now define their test object in HR. A database seeded earlier still holds the two modules and any projects until <code>npm run seed</code> is run again.</li>
+        <li>Checks: 820 tests, 391 Postman assertions, typecheck and lint pass.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: Org roles screen</h3>
+      <ul>
+        <li>The console has an Org roles screen. It shows the tree with how many people are in each role, and lets you add a role below another, rename it, move it with everything below it, or delete an empty one. The move list never offers a role's own branch.</li>
+        <li><code>GET /auth/me</code> now returns <code>orgRoleId</code>, so the screen can tell someone when a role is their own.</li>
+        <li>Fixed: the console couldn't read a <code>204 No Content</code> answer and showed "The API can't be reached" after deleting an org role, although the delete had worked.</li>
+        <li>Checked in real Chrome: 7 of 7 steps passed. The guide has a new section on the org tree with screenshots.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: field security and custom objects (redesign phases 5 and 6)</h3>
+      <ul>
+        <li>A resource can list <code>protectedFields</code>, such as salary <code>amount</code>. A profile or permission set gives <code>read</code> or <code>edit</code> on them through <code>fieldAccess</code>. Hidden fields are left out of responses and history, and writing one without edit access is refused.</li>
+        <li>Admins can define custom objects with typed fields on any module. They become ordinary resources, so profiles, permission sets, scope, sharing, history, field security and the recycle bin all apply. New routes: <code>/modules/:key/objects</code> for definitions, and <code>/records</code> and <code>/records/:module/:object</code> for records.</li>
+        <li>The console has a Records screen, a Custom objects section on Modules, and field access controls in the permission editors.</li>
+        <li>A walkthrough in real Chrome passed all 13 steps. The new guide in <code>documents/TwinTrack-Master-Access-Guide.md</code> uses its screenshots. The walkthrough also found and fixed two layout bugs: the custom object form was clipped, and the field access column didn't fit.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: sharing (redesign phase 4)</h3>
+      <ul>
+        <li>A salary or project can be shared with one person, an org role, or an org role and every role below it, for reading or editing, with an optional end date. Shares are in a new <code>record_shares</code> collection.</li>
+        <li>A share never adds a permission. It only lets someone's <code>salary.read</code> or <code>salary.update</code> reach that record. Approving, deleting and restoring still follow the scope alone.</li>
+        <li>The owner, anyone above them in the org tree, or someone with the new <code>share</code> action may share. A salary belongs to its employee, and a project to its owner.</li>
+        <li>Each resource has a <code>sharingModel</code> in its manifest. Salaries and projects start <code>private</code>. <code>publicRead</code> and <code>publicReadWrite</code> open every record to readers or editors.</li>
+        <li>New routes list, add and remove shares on salaries and projects. HR is at 1.8.0 and Project at 0.5.0. The console's permission editors now show the share action.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: record base (redesign phase 3)</h3>
+      <ul>
+        <li>Salaries and projects now carry who created and last changed them, a version number, and soft delete. One shared plugin adds these, and keeps deleted records out of every query unless asked for.</li>
+        <li>Each change writes to the record's history in the same transaction, for the fields the manifest lists in <code>trackedFields</code>. The history holds values such as amounts, so it follows the same reach as reading the record. The activity log still leaves amounts out.</li>
+        <li>Sending the version you read with an edit refuses it with <code>409 version_conflict</code> if someone changed the record since.</li>
+        <li>Tests, Postman, the test page, the API docs and the README cover it. HR and Project have no frontend yet, so there is nothing new in the console.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: profiles and permission sets (redesign phase 2)</h3>
+      <ul>
+        <li>Roles and special privileges are gone. Each person now has one org-wide profile for their baseline in every module, plus any number of permission sets, each belonging to one module.</li>
+        <li>New routes: <code>/access-profiles</code> to list, add, change and remove profiles, and <code>/permission-sets</code> in place of <code>/roles</code>. <code>PUT /users/:id/permission-sets</code> replaces <code>PATCH /users/:id/roles</code> and <code>PUT /users/:id/privileges</code>, and <code>PATCH /users/:id</code> takes <code>profileId</code>. The grantable route is removed.</li>
+        <li>Only Master admins give profiles. Module admins still delegate, by giving their module's permission sets. Nobody can build a profile or set beyond their own access, and giving a set needs a reason.</li>
+        <li>Manifests now hold <code>permissionSets</code>. The old <code>roles</code> and <code>grantable</code> fields are refused. Master is at 2.6.0, HR 1.6.0, Employee 0.9.0 and Project 0.3.0.</li>
+        <li>The console has new Profiles and Permission sets screens, a profile picker on each person, and permission sets in place of roles everywhere. Adding a person now asks for their place in the org tree, which phase 1 had left out.</li>
+        <li>Tests, Postman, the test page, the API docs and the README cover it.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: org tree (redesign phase 1)</h3>
+      <ul>
+        <li>New org roles form a tree with exactly one root. Four routes under <code>/org-roles</code> list, add, rename or move, and remove them. Moving a role moves everything below it, and circles are refused.</li>
+        <li>Adding a person now needs an <code>orgRoleId</code>, and it can be changed afterwards. Nobody but a super admin can move themselves or the role they hold.</li>
+        <li><code>team</code> scope now reaches direct reports plus everyone in the org roles below, at any depth, for HR salaries and projects. The tree passes on what people can see, never what they can do. Peers in the same role don't see each other's records.</li>
+        <li>The Master manifest is at 2.5.0, with a new <code>orgRole</code> resource. The seed adds a sample tree in <code>seed/org-roles.json</code> that matches the existing reporting lines.</li>
+        <li>Tests, Postman, the test page, the API docs and the README cover it.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: projects can be created</h3>
+      <ul>
+        <li>The Project Management module has a Project model, with an owner, members and a status, and routes to list, read and create projects.</li>
+        <li><code>project.read</code> is scoped. <code>own</code> reaches projects you own or work on, <code>team</code> adds your direct reports' projects, and <code>all</code> reaches every project.</li>
+        <li>HR salaries and projects now share one helper for who a scope reaches.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>10 November 2026: Project Management module started</h3>
+      <ul>
+        <li>A super admin can call it right away, and can give it to others from Master by creating a Project role or giving <code>project.read</code> as a special privilege.</li>
+        <li>Postman, the test page, the API docs and the README cover it. The Postman run was not repeated for this change.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: super admins can remove actions in use</h3>
+      <ul>
+        <li>A super admin can untick any action on a resource. Roles lose it, and an API that needs it can then be used only by super admins. Everyone else still sees actions in use locked.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: actions in use are locked</h3>
+      <ul>
+        <li>When editing a resource, an action used by an API or role is locked, with what uses it listed. The server's refusal now names those instead of manifest paths.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: separate module permissions</h3>
+      <ul>
+        <li>On the Modules screen, adding a resource needs <code>module.create</code>, changing a resource or what's grantable needs <code>module.update</code>, and removing a resource needs <code>module.delete</code>.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: separate role permissions</h3>
+      <ul>
+        <li>Each module now has separate <code>role.read</code>, <code>role.create</code>, <code>role.update</code> and <code>role.delete</code>. Holding <code>role.update</code> no longer lets someone create or delete roles.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: export and confirmed import</h3>
+      <ul>
+        <li>The Modules screen can export any module's manifest, from a button beside Import manifest.</li>
+        <li>Importing a manifest now asks for your password before anything is saved.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: manifests match the code</h3>
+      <ul>
+        <li><code>npm run seed:modules</code> reloads manifests without touching people, and keeps roles created in the app.</li>
+        <li>Manifests now list only built routes and the resources they use. Planned routes, unbuilt resources such as leave and attendance, <code>user.delete</code> and the Account manifest are gone.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: shorter passwords</h3>
+      <ul>
+        <li>A new password now needs at least 8 characters instead of 12.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: code review fixes</h3>
+      <ul>
+        <li>Only a super admin can import roles or widen what's grantable. <code>module.update</code> can still narrow it.</li>
+        <li>Role and resource edits read and save in one transaction, so two editors can't overwrite each other, and a role can't be deleted while someone is being given it.</li>
+        <li>A server outage no longer signs people out, switching modules no longer shows the previous module's people, and role names without Latin letters now work.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: no ready-made roles</h3>
+      <ul>
+        <li>Only the super admin has access now. Every manifest ships with no roles, and the sample people start with none.</li>
+        <li>Each module has its own <code>role.update</code>. A super admin can give it to someone, who can then create and edit roles in that module using only permissions they hold.</li>
+        <li>The Roles screen works from empty and lists the APIs each permission opens. Changing what a module offers now needs <code>module.update</code>.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: Master portal and admin console</h3>
+      <ul>
+        <li>On Access, choosing a person is now a search box with a dropdown list, backed by a new route that works for module admins too.</li>
+        <li>Added a slim custom scrollbar across the app, in light and dark mode.</li>
+        <li>On Your permissions, each module's list now has a set height and scrolls inside it.</li>
+        <li>The sidebar now stays in place at the window height while the page scrolls.</li>
+        <li>Several special privileges can now be given to one person in a single save, with one reason, using a search box with a dropdown list.</li>
+        <li>Opening the app at <code>localhost</code> now redirects to the address set by the new <code>NEXT_PUBLIC_APP_URL</code>, so sign-in works from either.</li>
+        <li>Built the sign-in, temporary password, module list, permissions and profile screens.</li>
+        <li>Built the Overview, People, Access, Roles, Permissions, Modules and Activity log screens on the real API. Each person only sees what their permissions allow.</li>
+        <li>The new Access screen lets module admins, who can't open People, manage their own module.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>9 November 2026: Employee profile, Jasmin and Jack</h3>
+      <ul>
+        <li>Added Jasmin, an HR Admin who manages Employee access through the Master role <code>employee-access</code>, and Jack, an Employee Profile viewer.</li>
+        <li>Jack can view his profile but not change it there. Jasmin can give or remove <code>profile.update</code>, or change his role, and it applies on his next request.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: module admins and salaries</h3>
+      <ul>
+        <li>A module's admin can now give or change anyone's roles and privileges in that module, with no Master role.</li>
+        <li>Added the first HR routes: listing, adding, changing and approving salaries. A role's reach decides whose salaries a person sees.</li>
+        <li>Kamrul is now HR Admin only, and Arif is the sample Access Admin. The API page has a Demos tab to try all of this.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: permissions driven by data</h3>
+      <ul>
+        <li>Added routes to add and remove roles, and to add, change and remove a module's resources and actions.</li>
+        <li>Editing permission rules now depends only on <code>role.update</code>, which only super admins have by default. Which module a Master role can change access in now comes from the manifest, not the code.</li>
+        <li>HR salary now has create and approve permissions. HR Admin gets them all, HR Manager can read salary, and Kamrul starts as HR Admin.</li>
+        <li>The test page has a role editor for anyone holding <code>role.update</code>. Salary routes aren't built yet.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: testing as any account</h3>
+      <ul>
+        <li>On the test page, people sign in as one test account with its email and password, and see what that person can do and reach.</li>
+        <li>A super admin can change someone's access there, then sign in as that person to test it.</li>
+        <li>The sample data now gives Kamrul the Access Admin role, so every Master role has an account. The API scenarios page lists every test account and its password.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: super admin powers and test page</h3>
+      <ul>
+        <li>A super admin can now give anyone any permission, change their own and other super admins' access, edit role templates, and choose what's grantable.</li>
+        <li>After a super admin edits a module's permissions, only a super admin can re-import or remove it.</li>
+        <li>Added a test page at <code>/try</code>, where people can run scenarios from a browser. It's off by default and refused in production.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: audit fixes</h3>
+      <ul>
+        <li>Fixed a bug where a module named <code>constructor</code> broke the module list for everyone except super admins.</li>
+        <li>Manifests can no longer put a permission on a public or signed route, or a narrow scope on an unscoped resource.</li>
+        <li>Added 71 Postman requests, so every route now has a successful request and its refusals.</li>
+        <li>Marked the unbuilt routes in the HR, Employee and Account manifests as planned, and added how to share the API for testing to the README.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: step 4</h3>
+      <ul>
+        <li>Added the 14 admin routes for people, roles, special privileges, modules and the activity log, with tests and Postman requests for each.</li>
+        <li>Moved the failed-attempt limits into MongoDB, so API instances share counts and a restart doesn't clear them. This was planned for step 6.</li>
+        <li><code>npm run test:postman</code> now empties its own database before each run.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: step 3</h3>
+      <ul>
+        <li>Added token, session, account and permission checks that attach automatically from each route's declared access.</li>
+        <li>Added the profile, password change, "my modules" and "my permissions" routes, with Postman requests for each.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: manifests finished moving</h3>
+      <ul>
+        <li>Moved the Employee and Account manifests into <code>manifests/</code>, and deleted the old copies from <code>repos/</code>.</li>
+        <li>Added a test that every manifest in the folder is valid and named after its module.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: steps 1 and 2</h3>
+      <ul>
+        <li>Added the route table, stricter manifest and Postman checks, and the frontend address setting.</li>
+        <li>Added login, refresh and logout, with the protections listed above.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>6 November 2026: refactor</h3>
+      <ul>
+        <li>Moved the backend into a folder per module, and split long functions without changing what they do.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer class="small muted">
+  <p>Source of this page: <code>twintrack-master/design/master-progress.html</code>.</p>
+</footer>
+
+</main>
+</body>
+</html>
+
+</body></html>

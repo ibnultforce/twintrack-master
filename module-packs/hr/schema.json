@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TwinTrack HR API",
+  "description": "HR records as the API returns them. Read with DATA_MODEL.md.",
+  "$defs": {
+    "Scope": {
+      "type": "string",
+      "enum": [
+        "own",
+        "team",
+        "all"
+      ]
+    },
+    "Id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "DateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "CalendarDay": {
+      "type": "string",
+      "format": "date-time",
+      "description": "A calendar day, returned as midnight UTC. Sent as YYYY-MM-DD. Display it in UTC."
+    },
+    "SalaryStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved"
+      ]
+    },
+    "Salary": {
+      "type": "object",
+      "required": [
+        "id",
+        "employeeId",
+        "version",
+        "createdBy",
+        "createdAt",
+        "updatedBy",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "employeeId": {
+          "$ref": "#/$defs/Id"
+        },
+        "employeeName": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "x-fieldAccess": "protected"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "x-fieldAccess": "controlled"
+        },
+        "effectiveFrom": {
+          "$ref": "#/$defs/CalendarDay",
+          "x-fieldAccess": "controlled"
+        },
+        "status": {
+          "$ref": "#/$defs/SalaryStatus",
+          "x-fieldAccess": "controlled"
+        },
+        "approvedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "approvedAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "updatedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "deletedAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "deletedBy": {
+          "$ref": "#/$defs/Id"
+        }
+      }
+    },
+    "SalaryPage": {
+      "type": "object",
+      "required": [
+        "scope",
+        "total",
+        "salaries"
+      ],
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "salaries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Salary"
+          }
+        }
+      }
+    },
+    "Share": {
+      "type": "object",
+      "required": [
+        "id",
+        "granteeType",
+        "granteeId",
+        "access",
+        "sharedBy",
+        "createdAt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "granteeType": {
+          "type": "string",
+          "enum": [
+            "user",
+            "orgRole",
+            "orgRoleAndBelow"
+          ]
+        },
+        "granteeId": {
+          "$ref": "#/$defs/Id"
+        },
+        "access": {
+          "type": "string",
+          "enum": [
+            "read",
+            "edit"
+          ]
+        },
+        "expiresAt": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "sharedBy": {
+          "$ref": "#/$defs/Id"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/DateTime"
+        }
+      }
+    },
+    "HistoryEntry": {
+      "type": "object",
+      "required": [
+        "id",
+        "at",
+        "action",
+        "changes",
+        "actorName"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "at": {
+          "$ref": "#/$defs/DateTime"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "created",
+            "updated",
+            "deleted",
+            "restored"
+          ]
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "field"
+            ],
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "from": {},
+              "to": {}
+            }
+          }
+        },
+        "actorName": {
+          "type": "string"
+        },
+        "actorId": {
+          "$ref": "#/$defs/Id"
+        }
+      }
+    },
+    "ModuleAccess": {
+      "description": "GET /me/permissions/hr: what the signed-in person may do here.",
+      "type": "object",
+      "required": [
+        "module",
+        "hasAccess",
+        "permissions",
+        "fieldAccess"
+      ],
+      "properties": {
+        "module": {
+          "const": "hr"
+        },
+        "hasAccess": {
+          "type": "boolean"
+        },
+        "profileName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Scope"
+          },
+          "description": "Such as { \"task.read\": \"team\" }. A missing key means no permission."
+        },
+        "fieldAccess": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "hidden",
+              "read",
+              "create",
+              "edit"
+            ]
+          },
+          "description": "Keyed resource.field, such as \"task.estimatedHours\"."
+        }
+      }
+    },
+    "ApiError": {
+      "type": "object",
+      "required": [
+        "error"
+      ],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string",
+              "description": "Written for people; show it as is."
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "message"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
