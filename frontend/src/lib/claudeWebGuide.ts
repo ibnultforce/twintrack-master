@@ -15,7 +15,7 @@ export type GuideStep = {
   title: string;
   text: string;
   importance?: StepImportance;
-  /** Text to paste into Claude Code, shown with a Copy button. */
+  /** Text to copy, such as a prompt for Claude Code or the hosts to allow, shown with a Copy button. */
   prompt?: string;
 };
 
@@ -35,7 +35,8 @@ export const CLAUDE_WEB_GUIDE: GuideSection[] = [
       {
         title: 'Allow the network',
         importance: 'important',
-        text: 'In the environment settings, allow registry.npmjs.org, fastdl.mongodb.org and playwright.azureedge.net, for packages, the test database and screenshots.',
+        text: 'In the session\'s title bar, open the cloud environment menu, then Edit. Under Network access pick Limited, keep "Allow package managers" ticked (it covers npm), and add these under Allowed domains, for the test database and the demo:',
+        prompt: ['fastdl.mongodb.org', 'demo.twintrack.work'].join('\n'),
       },
       {
         title: 'Ask for what you want',
