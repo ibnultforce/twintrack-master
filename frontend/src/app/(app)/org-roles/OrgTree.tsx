@@ -65,8 +65,9 @@ export function OrgTree(props: OrgTreeProps) {
                   type="button"
                   className="org-tree-name"
                   aria-current={role.id === props.chosenId}
-                  title={`${role.name}: ${peopleCount(role.peopleCount)}`}
+                  title={`${role.name}: ${peopleCount(role.peopleCount)}${hasChildren ? '. Double-click to show or hide the roles below' : ''}`}
                   onClick={() => props.onChoose(role.id)}
+                  onDoubleClick={hasChildren ? () => props.onToggle(role.id) : undefined}
                 >
                   {role.name}
                 </button>
