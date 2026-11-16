@@ -84,7 +84,7 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 
 `manifests/` has one file per module: `master`, `hr`, `projects`, `accounts` and `new-test`. Each lists only that module's built routes and the resources they use. Access comes from profiles, which are built in the app. They are committed, because deploys and `npm test` need them. The seed loads them, and a test checks that every file in the folder is valid.
 
-To load changed manifests without touching people or profiles, run `npm run seed:modules`. It takes resources and routes from the files, and keeps custom objects created in the app.
+To load changed manifests without touching people or profiles, run `npm run seed:modules`. It takes resources and routes from the files, and keeps custom objects created in the app. A module whose manifest file was deleted is removed, unless it was imported in the app or holds custom objects (those are kept, with a warning). Profiles keep their part for a removed module, which grants nothing.
 
 To hand a module to a frontend developer, run `npm run export:module-pack -- <module key>`. It writes `module-packs/<key>/` in the same format for every module: `api/` (the module's API doc, the API guide, its manifest and its Postman folder with secrets removed) and `design.css` (the starter's stylesheet), both rewritten each time, plus `INSTRUCTIONS.md` (from the starter's template), `DATA_MODEL.md` and `schema.json`, which it starts only when missing and never overwrites. Write their FILL IN parts by hand, then send the pack with a copy of `twintrack-module-starter/` and the dev server addresses and test accounts.
 

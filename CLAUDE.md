@@ -19,7 +19,7 @@ Run these from this folder. It needs Node 22+.
 ```sh
 npm run dev            # backend on :4100 and frontend on :3100 (dev:backend / dev:frontend for one)
 npm run seed           # loads manifests/ and seed/ into local MongoDB; needs SEED_PASSWORD in backend/.env
-npm run seed:modules   # reloads manifests/ only: keeps people, profiles and custom objects created in the app
+npm run seed:modules   # reloads manifests/ only: keeps people, profiles and custom objects created in the app; removes modules whose file is gone
 npm run migrate:rename-module -- tasks projects /projects   # once per database: moves a module key everywhere it is stored; then seed:modules. Not from Git Bash, which mangles the /path
 npm run typecheck
 npm run lint

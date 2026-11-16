@@ -4,7 +4,7 @@ import { ApiError } from '../../../lib/errors.js';
 import { actorFields, type Actor } from '../access/caller.js';
 import { findAllProfiles, findProfileIdsGranting } from '../accessProfiles/accessProfiles.repository.js';
 import { recordAudit } from '../audit/audit.repository.js';
-import type { ModuleDoc } from '../models/module.js';
+import type { ModuleDoc, ModuleSource } from '../models/module.js';
 import { countUsersWithProfiles } from '../users/users.repository.js';
 import { validateManifest, type Manifest } from './manifest.js';
 import { deleteModule, findAllModules, findModuleByKey, saveModule } from './moduleRegistry.repository.js';
@@ -43,9 +43,9 @@ function assertMayReplaceEdits(actor: Actor, module: ModuleDoc | null): void {
 /** Saves a validated manifest. Only the seed may set up core modules, so the API can't replace Master's own rules. */
 export async function importManifest(
   manifest: Manifest,
-  options: { allowCore?: boolean; assertMayReplace?: (existing: ModuleDoc | null) => void; session?: ClientSession } = {},
+  options: { allowCore?: boolean; source?: ModuleSource; assertMayReplace?: (existing: ModuleDoc | null) => void; session?: ClientSession } = {},
 ): Promise<ImportResult> {
-  const { allowCore = false, assertMayReplace, session } = options;
+  const { allowCore = false, source = 'app', assertMayReplace, session } = options;
   const { key, version, core: isCore = false } = manifest.module;
 
   if (!allowCore) {
@@ -58,7 +58,7 @@ export async function importManifest(
   const existing = await findModuleByKey(key, session);
   const fileResourceKeys = new Set(manifest.resources.map((resource) => resource.key));
   const customResources = (existing?.resources ?? []).filter((resource) => resource.custom === true && !fileResourceKeys.has(resource.key));
-  const created = await saveModule({ ...manifest, resources: [...manifest.resources, ...customResources] }, isCore, session);
+  const created = await saveModule({ ...manifest, resources: [...manifest.resources, ...customResources] }, isCore, source, session);
   return { key, version, created };
 }
 

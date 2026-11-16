@@ -27,7 +27,7 @@ The screens never list routes or permissions in frontend code. The **Modules**, 
 - [ ] Add the route to `manifests/<module>.manifest.json`: `method`, `path` (relative to the module's `baseUrl`), `access`, `permission` or `anyPermission`.
 - [ ] Add any new resource or action. Set `scoped`, `sharingModel`, `trackedFields`, `recordFields` and `protectedFields` as the resource needs.
 - [ ] Raise the module `version`: minor for new routes or actions, patch for fixes.
-- [ ] Run `npm run seed:modules`. This updates the **Modules**, **Profiles**, **Permissions**, **My permissions** and **Access** screens. People, profiles and custom objects stay as they are.
+- [ ] Run `npm run seed:modules`. This updates the **Modules**, **Profiles**, **Permissions**, **My permissions** and **Access** screens. People, profiles and custom objects stay as they are. A module whose manifest file you deleted is removed.
 
 `tests/routes.test.ts` compares Master routes with the Master manifest, and `tests/module-routes.test.ts` does the same for every other module. Add a new module's route list there.
 

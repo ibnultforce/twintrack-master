@@ -398,6 +398,14 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>16 November 2026: reloading manifests removes deleted modules</h3>
+      <ul>
+        <li>API Test was deleted from the code but still showed on Your modules and Profiles, because <code>seed:modules</code> only added and updated modules. It now also removes a module whose manifest file is gone, and writes the removal to the activity log.</li>
+        <li>Modules record where they came from (<code>source</code>: <code>file</code> or <code>app</code>). Modules imported in the app, core modules and modules holding custom objects are never removed this way; the last are kept with a warning.</li>
+        <li>Checks: 1,405 tests, typecheck and lint pass.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>16 November 2026: New test module replaces API Test</h3>
       <ul>
         <li>The <code>api-test</code> module is removed: its manifest, routes, Postman folder, <code>/try</code> scenarios, docs and handoff pack.</li>

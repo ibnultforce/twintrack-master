@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
+import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { Module } from '../src/modules/master/models/module.js';
 import { User } from '../src/modules/master/models/user.js';
 import type { ManifestResource } from '../src/modules/master/moduleRegistry/manifest.js';
@@ -31,9 +32,9 @@ describe('reloading modules from their manifests', () => {
   });
 
   it('takes resources from the file, and keeps custom objects built in the app', async () => {
-    const [synced] = await syncModules([manifest([taskResource])]);
+    const { loaded } = await syncModules([manifest([taskResource])]);
 
-    expect(synced).toEqual({ key: 'projects', version: '2.0.0' });
+    expect(loaded).toEqual([{ key: 'projects', version: '2.0.0' }]);
     const stored = await Module.findOne({ key: 'projects' }).lean();
     expect(stored?.version).toBe('2.0.0');
     expect(stored?.resources.map((resource) => resource.key)).toEqual(['task', 'trip']);
@@ -53,5 +54,39 @@ describe('reloading modules from their manifests', () => {
   it('changes nothing when a manifest is invalid', async () => {
     await expect(syncModules([manifest([taskResource]), { manifestVersion: 1, module: { key: 'BAD KEY' } }])).rejects.toThrow();
     expect((await Module.findOne({ key: 'projects' }).lean())?.version).toBe('1.0.0');
+  });
+
+  describe('a module whose manifest file is gone', () => {
+    const otherModule = (key: string, extra: object = {}) =>
+      Module.create({ key, name: key, version: '1.0.0', resources: [{ key: 'test', label: 'Test', actions: ['read'] }], routes: [], ...extra });
+
+    it('is removed, and the removal is in the activity log', async () => {
+      await otherModule('api-test', { source: 'file' });
+      const { removed } = await syncModules([manifest([taskResource])]);
+
+      expect(removed).toEqual(['api-test']);
+      expect(await Module.exists({ key: 'api-test' })).toBeNull();
+      expect(await AuditLog.findOne({ action: 'module.removed', targetId: 'api-test' }).lean()).toMatchObject({ actorName: 'Manifest reload' });
+    });
+
+    it('is removed when it was saved before modules recorded where they came from', async () => {
+      await otherModule('old-module');
+      expect((await syncModules([manifest([taskResource])])).removed).toEqual(['old-module']);
+    });
+
+    it('stays when it was imported in the app, or holds custom objects', async () => {
+      await otherModule('imported', { source: 'app' });
+      await otherModule('with-objects', { source: 'file', resources: [customResource] });
+      const result = await syncModules([manifest([taskResource])]);
+
+      expect(result.removed).toEqual([]);
+      expect(result.keptWithCustomObjects).toEqual(['with-objects']);
+      expect(await Module.countDocuments({ key: { $in: ['imported', 'with-objects'] } })).toBe(2);
+    });
+
+    it('never removes a core module', async () => {
+      await otherModule('master', { core: true });
+      expect((await syncModules([manifest([taskResource])])).removed).toEqual([]);
+    });
   });
 });

@@ -16,6 +16,7 @@ Read the diff (`git diff` and `git status` in `twintrack-master/`, plus the file
 | New module | [references/new-module.md](references/new-module.md), then "New route" for each of its routes |
 | New route | Steps 2 to 8 |
 | Changed route (path, method, access, permission, body, response, errors) | Steps 2 to 8. Change the existing docs, Postman and scenario entries; don't add duplicates |
+| Removed module | Delete its code, its registration in `app.ts`, its manifest file, its entry in `seedFiles.ts`, its Postman folder, scenarios, `docs/api/<key>.md` and `module-packs/<key>/`. Then `npm run seed:modules`, which removes the module from the database because its file is gone; on the demo the deploy runs it. Say which profiles held its permissions |
 | Removed route | Steps 2 to 8, removing it everywhere. Remove an action or resource only when no other route or service uses it, and say which profiles held it |
 | New or changed resource, action, field, `recordFields`, `protectedFields`, `trackedFields`, `sharingModel` | Steps 2, 5, 6, 7, 8 |
 | Model or response shape change, no route change | Steps 5 (data model and `schema.json`), 6, 7, 8 |
@@ -28,7 +29,7 @@ Don't skip a step because it looks small. If one can't run here (no local MongoD
 - `manifests/<module>.manifest.json`: each route's `method`, `path` (relative to the module's `baseUrl`), `access`, `permission` or `anyPermission`; any new resource or action with `scoped`, `sharingModel`, `trackedFields`, `recordFields`, `protectedFields` as needed.
 - Raise `module.version`: major when a route or action is removed or renamed, minor for new routes or actions, patch for fixes.
 - Reuse an action before adding one. Nothing is granted automatically: a new action is held only by the super admin until someone ticks it on the Profiles screen.
-- Run `npm run seed:modules`. This is what puts the change on the Modules, Profiles, Permissions, My permissions and Access screens. Without it the route grants nothing.
+- Run `npm run seed:modules`. This is what puts the change on the Modules, Profiles, Permissions, My permissions and Access screens. Without it the route grants nothing. It also removes modules whose manifest file was deleted, so a removed module leaves the Modules, Profiles and Your modules screens.
 
 ## 3. Postman (for the super admin and testers)
 

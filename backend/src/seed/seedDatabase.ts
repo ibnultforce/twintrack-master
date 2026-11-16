@@ -60,7 +60,7 @@ export async function seedDatabase(options: {
 
   return runInTransaction(async (session) => {
     const modules: ImportResult[] = [];
-    for (const manifest of manifests) modules.push(await importManifest(manifest, { allowCore: true, session }));
+    for (const manifest of manifests) modules.push(await importManifest(manifest, { allowCore: true, source: 'file', session }));
 
     await upsertOrgRoles(orgRoles.value, session);
     await upsertProfiles(profiles.value, session);
