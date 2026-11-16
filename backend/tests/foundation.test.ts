@@ -121,6 +121,13 @@ describe('app foundation', () => {
     expect(res.body).toEqual({ status: 'unavailable', database: 'disconnected' });
   });
 
+  it('answers /api-check even while the database is disconnected', async () => {
+    const res = await request(app).get('/api-check');
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: 'ok', module: 'master' });
+    expect(Number.isNaN(Date.parse(res.body.time))).toBe(false);
+  });
+
   it('allows listed origins and gives no CORS approval to others', async () => {
     const allowed = await request(app).get('/health').set('Origin', 'http://twintrack.localhost:3100');
     expect(allowed.headers['access-control-allow-origin']).toBe('http://twintrack.localhost:3100');

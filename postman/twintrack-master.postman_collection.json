@@ -431,6 +431,39 @@
               }
             }
           ]
+        },
+        {
+          "name": "API check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api-check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api-check"
+              ]
+            },
+            "description": "Public. Returns 200 whenever the API is answering, without checking MongoDB."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 200 with status ok for the master module', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ok');",
+                  "  pm.expect(body.module).to.eql('master');",
+                  "  pm.expect(Date.parse(body.time)).to.not.be.NaN;",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

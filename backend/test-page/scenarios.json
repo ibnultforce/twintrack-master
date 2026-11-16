@@ -31,6 +31,35 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /api-check",
+          "method": "GET",
+          "path": "/api-check",
+          "purpose": "Says the API is answering, without checking the database.",
+          "input": "nothing",
+          "access": "Public",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "API answers",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/api-check"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Wrong method on the API check route",
+              "expected": 404,
+              "code": "no_route",
+              "request": {
+                "method": "POST",
+                "path": "/api-check"
+              }
+            }
+          ]
         }
       ]
     },
