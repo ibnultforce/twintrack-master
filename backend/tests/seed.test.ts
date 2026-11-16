@@ -108,7 +108,7 @@ describe('seedDatabase', () => {
     expect(again.usersCreated).toBe(0);
     expect(again.modules.every((module) => !module.created)).toBe(true);
     expect(await User.countDocuments()).toBe(12);
-    expect(await Module.countDocuments()).toBe(4);
+    expect(await Module.countDocuments()).toBe(again.modules.length);
   });
 
   it('resets access on re-run but keeps passwords already set', async () => {

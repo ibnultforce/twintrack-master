@@ -97,7 +97,10 @@ In Claude Code on the web (or any cloud session), when the work is finished, run
 
 1. Run `npm run typecheck`, `npm run lint` and `npm test`.
 2. If `npm test` can't start only because the MongoDB binary download is blocked (the cloud network often blocks it), run every test file that doesn't need a database instead: at least `tests/routes.test.ts`, `tests/module-routes.test.ts`, `tests/postman-coverage.test.ts` and the manifest validation tests. If those, typecheck and lint pass, push to `main`, and list the database tests that didn't run in the commit body and the final summary.
-3. If any check that did run fails, fix it. Don't push failing code: report what failed. Put the twintrack-sync skill's "Still to do" list in the commit message body, and in the final summary say that the push deploys to demo.twintrack.work.
+3. If any check that did run fails, fix it. Don't push failing code: report what failed.
+4. After pushing, wait for the "Deploy demo" GitHub Actions run of your commit (`.github/workflows/deploy.yml`), which runs the full `npm test` with MongoDB before deploying. Use `gh run watch` (find the run with `gh run list --branch main --limit 1`), or the GitHub API if `gh` isn't there. If its `check` job fails, read the log (`gh run view --log-failed`), fix the cause, run the checks again and push the fix. Repeat until the run is green, then finish. Tests that the new code broke count as yours to fix, for example a test that counts the seeded modules.
+
+Tests shouldn't hard-code how many modules, routes or manifests exist: work the number out from the manifests or the seed result, so a new module doesn't break them. Put the twintrack-sync skill's "Still to do" list in the commit message body, and in the final summary say that the push deploys to demo.twintrack.work.
 
 # TwinTrack development guidelines
 
