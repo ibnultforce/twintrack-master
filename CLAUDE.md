@@ -93,7 +93,11 @@ The full checklist and rules are in `docs/adding-an-api.md`. Keep these in step 
 
 ## Committing and pushing
 
-In Claude Code on the web (or any cloud session), when the work is finished and `npm test`, `npm run typecheck` and `npm run lint` pass, commit it and push it straight to `main`, without asking first. The owner has asked for this standing rule. If a check fails or couldn't run, don't push: report what failed. Put the twintrack-sync skill's "Still to do" list in the commit message body, and in the final summary say that the push deploys to demo.twintrack.work.
+In Claude Code on the web (or any cloud session), when the work is finished, run the checks yourself and then commit and push straight to `main`, without asking first and without a side branch or pull request. The owner has asked for this standing rule.
+
+1. Run `npm run typecheck`, `npm run lint` and `npm test`.
+2. If `npm test` can't start only because the MongoDB binary download is blocked (the cloud network often blocks it), run every test file that doesn't need a database instead: at least `tests/routes.test.ts`, `tests/module-routes.test.ts`, `tests/postman-coverage.test.ts` and the manifest validation tests. If those, typecheck and lint pass, push to `main`, and list the database tests that didn't run in the commit body and the final summary.
+3. If any check that did run fails, fix it. Don't push failing code: report what failed. Put the twintrack-sync skill's "Still to do" list in the commit message body, and in the final summary say that the push deploys to demo.twintrack.work.
 
 # TwinTrack development guidelines
 
