@@ -210,7 +210,7 @@ Nobody is given a password. New people, and people whose password is reset, are 
 
 ### `POST /users/:id/impersonate`
 
-**Access:** `signed`, super admins only, and only with `IMPERSONATION_ENABLED=true`, which production refuses.
+**Access:** `signed`, super admins only, and only with `IMPERSONATION_ENABLED=true`, which production refuses unless `IMPERSONATION_ALLOWED_IN_PRODUCTION=true` is also set.
 
 **Returns:** `accessToken`, `expiresIn`, `user` (`id`, `name`). A session as that person that lasts one access token and can't be refreshed, so the super admin's own session is untouched. Logged as `auth.impersonation_started`. While it lasts, changing their name or password, making API tokens and approving OAuth apps are refused with `403 impersonating`.
 

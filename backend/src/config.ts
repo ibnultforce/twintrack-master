@@ -65,6 +65,7 @@ const envSchema = z
     PORTAL_URL: z.string().refine(isWebOrigin, 'must be an address such as https://twintrack.com').optional(),
     PASSWORD_LINK_TTL_HOURS: positiveInteger(24),
     IMPERSONATION_ENABLED: z.enum(['true', 'false']).default('false'),
+    IMPERSONATION_ALLOWED_IN_PRODUCTION: z.enum(['true', 'false']).default('false'),
     PUBLIC_API_URL: z.string().refine(isWebOrigin, 'must be an address such as https://api.twintrack.com').optional(),
     ENCRYPTION_KEY: z.string().trim().regex(ENCRYPTION_KEY_PATTERN, 'must be 64 hexadecimal characters').optional(),
     R2_ACCOUNT_ID: z.string().trim().optional(),
@@ -95,8 +96,9 @@ const envSchema = z
     if (env.NODE_ENV === 'production' && env.TEST_PAGE_ENABLED === 'true') {
       context.addIssue({ code: 'custom', path: ['TEST_PAGE_ENABLED'], message: 'must not be true in production' });
     }
-    if (env.NODE_ENV === 'production' && env.IMPERSONATION_ENABLED === 'true') {
-      context.addIssue({ code: 'custom', path: ['IMPERSONATION_ENABLED'], message: 'must not be true in production' });
+    // A demo server runs in production mode but may need it, so production needs a second, explicit setting.
+    if (env.NODE_ENV === 'production' && env.IMPERSONATION_ENABLED === 'true' && env.IMPERSONATION_ALLOWED_IN_PRODUCTION !== 'true') {
+      context.addIssue({ code: 'custom', path: ['IMPERSONATION_ENABLED'], message: 'must not be true in production unless IMPERSONATION_ALLOWED_IN_PRODUCTION is true' });
     }
     // Without a key, emails are written to the log, which would leak set-password links in production.
     if (env.NODE_ENV === 'production' && !env.RESEND_API_KEY) {
@@ -134,7 +136,7 @@ export interface AuthSettings {
   isRefreshCookieSecure: boolean;
   loginMaxFailedAttempts: number;
   loginRateWindowMinutes: number;
-  /** Lets a super admin sign in as someone else, to see what they see. Never allowed in production. */
+  /** Lets a super admin sign in as someone else, to see what they see. In production only with IMPERSONATION_ALLOWED_IN_PRODUCTION. */
   isImpersonationEnabled: boolean;
 }
 

@@ -84,10 +84,11 @@ describe('environment validation', () => {
     });
   });
 
-  it('keeps impersonation off unless asked for, and never allows it in production', () => {
+  it('keeps impersonation off unless asked for, and allows it in production only when explicitly allowed there', () => {
     expect(loadConfig(validEnv).auth.isImpersonationEnabled).toBe(false);
     expect(loadConfig({ ...validEnv, IMPERSONATION_ENABLED: 'true' }).auth.isImpersonationEnabled).toBe(true);
     expect(() => loadConfig({ ...productionEnv, IMPERSONATION_ENABLED: 'true' })).toThrow(/IMPERSONATION_ENABLED/);
+    expect(loadConfig({ ...productionEnv, IMPERSONATION_ENABLED: 'true', IMPERSONATION_ALLOWED_IN_PRODUCTION: 'true' }).auth.isImpersonationEnabled).toBe(true);
   });
 
   it('reads module frontend addresses', () => {

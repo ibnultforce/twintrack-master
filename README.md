@@ -157,7 +157,7 @@ Services enforce these rules, because they depend on the data being changed:
 - **Password links:** nobody is given a password. New people and password resets get a one-time link by email, sent through Resend (`RESEND_API_KEY`). Only a hash of the link is stored, a newer link replaces an older one, and using it signs the person out everywhere. Without a key, which only development allows, emails go to the backend log.
 - **Deleting:** only someone who never signed in can be deleted, and only while no module's records name them. Each module lists what names a person in its `*UserReferences.ts`, and the app passes those checks to Master.
 - **Online status** shows only where the viewer's `presence.read` scope reaches.
-- **Impersonation** is for development: it needs `IMPERSONATION_ENABLED=true`, which production refuses, and is logged.
+- **Impersonation** is for development: it needs `IMPERSONATION_ENABLED=true`, which production refuses unless `IMPERSONATION_ALLOWED_IN_PRODUCTION=true` is also set (the demo sets both), and is logged.
 - **Deactivating and resetting** end all the person's sessions, so reactivating someone can't bring an old session back.
 - **Modules:** Master is core and can't be replaced or removed through the API. Profiles keep their part for a removed module, which grants nothing unless the module is imported again.
 - **Test page:** with it on, sign-in also accepts a request from the address the API is being reached on, so a tunnel link works without changing `ALLOWED_ORIGINS`. Browsers set `Origin` themselves, so another site can't claim that address.
