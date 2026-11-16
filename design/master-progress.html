@@ -411,7 +411,7 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
         <li>The <code>api-test</code> module is removed: its manifest, routes, Postman folder, <code>/try</code> scenarios, docs and handoff pack.</li>
         <li>New <code>new-test</code> module, "New test" (manifest 1.0.0), with <code>GET /new-test/test</code> (needs <code>test.read</code>) and the public <code>GET /new-test/health</code>. Only the super admin holds <code>test.read</code> until a profile grants it.</li>
         <li>Its dev frontend address, port 3500, replaces API Test's in <code>.env.example</code>. The handoff pack is in <code>module-packs/new-test/</code>.</li>
-        <li>On a database that already loaded API Test, the super admin deletes it with <code>DELETE /modules/api-test</code> (or the Modules screen): the deploy loads manifests but never removes a module.</li>
+        <li>On a database that already loaded API Test, <code>npm run seed:modules</code> now removes it (see the entry above). The demo's deploy did this on 16 November.</li>
       </ul>
     </div>
     <div class="log-entry">
