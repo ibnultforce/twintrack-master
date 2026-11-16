@@ -14,6 +14,12 @@ Each person holds one **profile**, and it is where all of their permissions in e
 
 **Returns:** `200` with `{ "status": "ok", "database": "connected" }`, or `503` with `"unavailable"` and `"disconnected"`.
 
+### `GET /api-check`
+
+**Access:** `public`
+
+**Returns:** `200` with `{ "status": "ok", "module": "master", "time": "<ISO timestamp>" }`. It does not touch the database, so it answers even while `/health` reports `503`.
+
 ## Sign-in
 
 Login, refresh and logout refuse a missing or unlisted `Origin` header with `403 origin_not_allowed`.
