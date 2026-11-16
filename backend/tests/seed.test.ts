@@ -88,7 +88,7 @@ describe('seedDatabase', () => {
 
   it('loads Master, HR, Tasks, Accounts and the 12-person team', async () => {
     const result = await seed();
-    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr', 'projects', 'accounts', 'test']);
+    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr', 'projects', 'accounts']);
     expect(result.usersCreated).toBe(12);
 
     expect((await Module.findOne({ key: 'master' }).lean())?.core).toBe(true);

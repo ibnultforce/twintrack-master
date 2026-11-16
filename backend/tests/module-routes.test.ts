@@ -6,7 +6,6 @@ import { createAccountsRoutes } from '../src/modules/accounts/accounts.routes.js
 import { hrRoutes } from '../src/modules/hr/hr.routes.js';
 import { validateManifest, type ManifestRoute } from '../src/modules/master/moduleRegistry/manifest.js';
 import { createProjectsRoutes } from '../src/modules/projects/projects.routes.js';
-import { testRoutes } from '../src/modules/test/test.routes.js';
 import { createTestConfig } from './helpers/testConfig.js';
 
 // Master has its own check in routes.test.ts. Every other module's route list must match its manifest too,
@@ -17,7 +16,6 @@ const moduleRouteLists: Record<string, ApiRoute[]> = {
   hr: hrRoutes,
   projects: createProjectsRoutes(config, dependencies),
   accounts: createAccountsRoutes(config, dependencies),
-  test: testRoutes,
 };
 
 function loadManifest(moduleKey: string) {
