@@ -11,6 +11,7 @@ import { exportModuleManifest, importModuleFromRequest, listRegisteredModules, r
 import type { AllowedOrigins } from './allowedOrigins.js';
 import { MAX_ALLOWED_ORIGINS, MAX_REDIRECT_URLS, saveFrontendSettings } from './frontendSettings.service.js';
 import { listModulePackFiles, readModulePackFile } from './modulePacks.service.js';
+import { getModuleSchema, importModuleSchema } from './moduleSchema.service.js';
 import { removeResource, saveResource } from './permissionRules.service.js';
 import { changeRouteAccess } from './routeAccess.service.js';
 
@@ -48,6 +49,11 @@ const importModuleBodySchema = z.strictObject({
   manifest: z.unknown(),
 });
 
+// The schema itself is checked by the service, against the data model rules.
+const importSchemaBodySchema = z.strictObject({
+  schema: z.unknown(),
+});
+
 const packFileQuerySchema = z.object({
   path: z.string().trim().min(1, 'is required').max(MAX_PACK_PATH_LENGTH),
 });
@@ -67,6 +73,15 @@ export function createModuleRegistryRoutes(config: Config, allowedOrigins: Allow
 
   const handleExportModule: RequestHandler = async (req, res) => {
     res.json(await exportModuleManifest(String(req.params.key)));
+  };
+
+  const handleGetSchema: RequestHandler = async (req, res) => {
+    res.json(await getModuleSchema(String(req.params.key)));
+  };
+
+  const handleImportSchema: RequestHandler = async (req, res) => {
+    const { schema } = parseRequestBody(importSchemaBodySchema, req.body);
+    res.json(await importModuleSchema(getActor(req), String(req.params.key), schema));
   };
 
   const handleListPackFiles: RequestHandler = async (req, res) => {
@@ -118,7 +133,9 @@ export function createModuleRegistryRoutes(config: Config, allowedOrigins: Allow
       bodySchema: importModuleBodySchema, handler: handleImportModule,
     },
     { method: 'GET', path: '/modules/:key/export', access: 'private', permission: 'module.read', handler: handleExportModule },
-    { method: 'GET', path: '/modules/:key/pack', access: 'private', permission: 'module.read', handler: handleListPackFiles },
+    { method: 'GET', path: '/modules/:key/schema', access: 'private', permission: 'module.read', handler: handleGetSchema },
+    { method: 'PUT', path: '/modules/:key/schema', access: 'private', permission: 'module.update', bodySchema: importSchemaBodySchema, handler: handleImportSchema },
+    { method: 'GET', path: '/modules/:key/pack',access: 'private', permission: 'module.read', handler: handleListPackFiles },
     { method: 'GET', path: '/modules/:key/pack/file', access: 'private', permission: 'module.read', handler: handleDownloadPackFile },
     // Only a super admin may, which the service checks: whoever controls a redirect address receives people's sign-ins.
     { method: 'PUT', path: '/modules/:key/frontend', access: 'private', permission: 'module.update', bodySchema: frontendSettingsBodySchema, handler: handleSaveFrontendSettings },

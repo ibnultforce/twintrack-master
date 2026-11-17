@@ -1,5 +1,5 @@
 import { apiBlob, apiRequest } from './http';
-import type { AccessProfile, FrontendSettings, ApiAccessRule, AuditEntry, Grants, ModuleApiRoute, OrgRole, RegisteredModule, ResourceAction } from './types';
+import type { AccessProfile, FrontendSettings, ApiAccessRule, AuditEntry, Grants, ModuleApiRoute, ModuleSchema, OrgRole, RegisteredModule, ResourceAction } from './types';
 
 const segment = encodeURIComponent;
 const resourcePath = (moduleKey: string, resourceKey: string) => `/modules/${segment(moduleKey)}/resources/${segment(resourceKey)}`;
@@ -13,6 +13,12 @@ export const importModule = (manifest: unknown, password: string) =>
   apiRequest<{ key: string; created: boolean }>('/modules/import', { method: 'POST', body: { manifest, password } });
 
 export const exportModule = (moduleKey: string) => apiRequest<unknown>(`/modules/${segment(moduleKey)}/export`);
+
+/** The module's data model as JSON Schema, as loaded in the database. */
+export const getModuleSchema = (moduleKey: string) => apiRequest<ModuleSchema>(`/modules/${segment(moduleKey)}/schema`);
+
+export const importModuleSchema = (moduleKey: string, schema: unknown) =>
+  apiRequest<{ key: string; definitions: number }>(`/modules/${segment(moduleKey)}/schema`, { method: 'PUT', body: { schema } });
 
 export const removeModule = (moduleKey: string) => apiRequest(`/modules/${segment(moduleKey)}`, { method: 'DELETE' });
 

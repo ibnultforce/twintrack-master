@@ -85,6 +85,20 @@ export const grantsSchema = z
   })
   .transform((value) => value as '*' | z.infer<typeof grantsRecordSchema>);
 
+const DEFINITION_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
+
+/**
+ * A module's data model as JSON Schema: each record the API returns is one entry in `$defs`. It's documentation for
+ * frontend developers, so only its outline is checked; `x-fieldAccess` on a property marks field security.
+ */
+export const dataModelSchema = z.looseObject({
+  $schema: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  $defs: z.record(z.string().regex(DEFINITION_NAME, 'must be a definition name such as Project'), z.looseObject({})),
+});
+export type DataModel = z.infer<typeof dataModelSchema>;
+
 const manifestSchema = z.looseObject({
   manifestVersion: z.literal(1),
   module: z.object({
@@ -98,6 +112,8 @@ const manifestSchema = z.looseObject({
   }),
   resources: z.array(resourceSchema),
   routes: z.array(routeSchema).default([]),
+  /** Optional. When left out, an import keeps the data model the module already has. */
+  schema: dataModelSchema.optional(),
 });
 
 export type Manifest = z.infer<typeof manifestSchema>;

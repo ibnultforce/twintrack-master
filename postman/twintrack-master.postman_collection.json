@@ -412,6 +412,10 @@
     {
       "key": "demoToken",
       "value": ""
+    },
+    {
+      "key": "schemaModuleKey",
+      "value": "demo"
     }
   ],
   "item": [
@@ -4033,6 +4037,86 @@
                 "exec": [
                   "pm.test('returns 200', () => pm.response.to.have.status(200));",
                   "pm.test('is a manifest', () => pm.expect(pm.response.json().manifestVersion).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Downloads a module's schema",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{packModuleKey}}/schema",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{packModuleKey}}",
+                "schema"
+              ]
+            },
+            "description": "Needs module.read. The module's data model as JSON Schema, from the database. Empty $defs until a schema is loaded."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has definitions', () => pm.expect(pm.response.json()).to.have.property('$defs'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replaces a module's schema",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schema\": {\n    \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n    \"title\": \"TwinTrack Demo API\",\n    \"$defs\": {\n      \"Note\": {\n        \"type\": \"object\",\n        \"required\": [\n          \"id\",\n          \"title\"\n        ],\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"title\": {\n            \"type\": \"string\"\n          },\n          \"status\": {\n            \"enum\": [\n              \"open\",\n              \"done\"\n            ]\n          }\n        }\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{schemaModuleKey}}/schema",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{schemaModuleKey}}",
+                "schema"
+              ]
+            },
+            "description": "Needs module.update. Replaces the module's data model; resources, routes and access don't change."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('counts the definitions', () => pm.expect(pm.response.json().definitions).to.eql(1));"
                 ]
               }
             }

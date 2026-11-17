@@ -352,7 +352,7 @@ Master can't be replaced or removed through the API.
 
 **Access:** `private`, needs `module.create`
 
-**Body:** `password` (your own, to confirm it's you) and `manifest` (the whole module manifest)
+**Body:** `password` (your own, to confirm it's you) and `manifest` (the whole module manifest). The manifest may carry the module's data model as `schema` (JSON Schema with `$defs`, as `GET /modules/:key/schema` returns); without one, the module keeps the schema it has.
 
 **Returns:** `201` for a new module or `200` for a replacement, with `key`, `version`, `created`.
 
@@ -364,7 +364,7 @@ Replacing a module whose resources were edited in the app also needs `module.upd
 
 **Access:** `private`, needs `module.read`
 
-**Returns:** the module's manifest as it stands, including resources and custom objects changed in the app. It can be sent back as `manifest` to `POST /modules/import`.
+**Returns:** the module's manifest as it stands, including resources and custom objects changed in the app, and its data model as `schema` when it has one. It can be sent back as `manifest` to `POST /modules/import`.
 
 **Errors:** `404 unknown_module`
 
@@ -384,13 +384,31 @@ Production accepts plain `http` only for addresses on the same computer (`localh
 
 **Errors:** `403 super_admin_only`, `404 unknown_module`, `422 validation_failed` (each bad address named in `fields`)
 
+### `GET /modules/:key/schema`
+
+**Access:** `private`, needs `module.read`
+
+**Returns:** the module's data model as JSON Schema: each record its API returns is an entry in `$defs`, and `x-fieldAccess` on a property marks field security (`controlled`, `protected`). It's loaded from `manifests/<key>.schema.json` by the seed, from a manifest's `schema` by `POST /modules/import`, or by `PUT /modules/:key/schema`. A module with none returns an outline with empty `$defs`. `GET /modules` returns the same as each module's `schema`.
+
+**Errors:** `404 unknown_module`
+
+### `PUT /modules/:key/schema`
+
+**Access:** `private`, needs `module.update`
+
+**Body:** `schema`: a JSON Schema object with `$defs`, each definition named like `Project` and an object. Other keys (`$schema`, `title`, `description`, definitions' contents) are kept as sent.
+
+**Returns:** `key`, `definitions` (how many). Replaces the module's data model, which the Modules screen, the pack's `schema.json` and `GET /modules/:key/export` then show. Resources, routes and access don't change. Recorded in the activity log as `module.schemaImported`.
+
+**Errors:** `404 unknown_module`, `422 validation_failed`
+
 ### `GET /modules/:key/pack`
 
 **Access:** `private`, needs `module.read`
 
-**Returns:** `files`, each with `path` (relative to the pack, such as `api/manifest.json`) and `size` in bytes. These are the module's frontend handoff pack, from `module-packs/<key>/` in the deployed code, made by `npm run export:module-pack`. Give them to Claude Code with the module starter to build the module's frontend.
+**Returns:** `files`, each with `path` (relative to the pack, such as `api/manifest.json`) and `size` in bytes. These are the module's frontend handoff pack. Every loaded module has one: `api/manifest.json` and `schema.json` are built from the database on each request, so they include edits made in the app, and the other files (instructions, data model notes, API doc, Postman, `design.css`) come from `module-packs/<key>/` in the deployed code, made by `npm run export:module-pack`. Give them to Claude Code with the module starter to build the module's frontend.
 
-**Errors:** `404 unknown_module`, `404 no_module_pack`
+**Errors:** `404 unknown_module`
 
 ### `GET /modules/:key/pack/file`
 
@@ -400,7 +418,7 @@ Production accepts plain `http` only for addresses on the same computer (`localh
 
 **Returns:** the file as a download. Any other path, including one that tries to leave the pack, is refused.
 
-**Errors:** `404 unknown_module`, `404 no_module_pack`, `404 unknown_pack_file`, `422 validation_failed`
+**Errors:** `404 unknown_module`, `404 unknown_pack_file`, `422 validation_failed`
 
 ### `DELETE /modules/:key`
 

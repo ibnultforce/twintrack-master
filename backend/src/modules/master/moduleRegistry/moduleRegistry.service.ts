@@ -9,6 +9,7 @@ import { resolveFrontendUrl, toFrontendSettingsView } from './frontendSettings.s
 import { countUsersWithProfiles } from '../users/users.repository.js';
 import { validateManifest, type Manifest } from './manifest.js';
 import { deleteModule, findAllModules, findModuleByKey, saveModule } from './moduleRegistry.repository.js';
+import { describeModuleSchema } from './moduleSchema.service.js';
 import { listModuleRoutes, listPermissionApis, listPermissionUsers } from './grantEditing.js';
 
 export class CoreModuleError extends ApiError {
@@ -83,6 +84,7 @@ export async function listRegisteredModules(frontendUrls: Map<string, string>) {
     ...toRegisteredModule(module, frontendUrls),
     frontendSettings: toFrontendSettingsView(module, frontendUrls),
     resources: module.resources,
+    schema: describeModuleSchema(module),
     apis: listPermissionApis(module),
     routes: listModuleRoutes(module),
     usedBy: listPermissionUsers(module, profiles),
@@ -124,12 +126,13 @@ export async function importModuleFromRequest(
 export async function exportModuleManifest(key: string) {
   const module = await findModuleByKey(key);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
-  const { name, version, description, repository, baseUrl, core, resources, routes } = module;
+  const { name, version, description, repository, baseUrl, core, resources, routes, schema } = module;
   return {
     manifestVersion: 1,
     module: { key, name, version, description, repository, baseUrl, ...(core && { core }) },
     resources,
     routes,
+    ...(schema && { schema }),
   };
 }
 

@@ -1,5 +1,5 @@
 import { Schema, model } from 'mongoose';
-import type { ManifestResource, ManifestRoute } from '../moduleRegistry/manifest.js';
+import type { DataModel, ManifestResource, ManifestRoute } from '../moduleRegistry/manifest.js';
 import type { RouteAccessChange } from '../moduleRegistry/routeAccess.js';
 
 export type ModuleSource = 'file' | 'app';
@@ -40,6 +40,8 @@ export interface ModuleDoc {
   /** Access rules a super admin changed in the app. An import keeps them, since they aren't in the manifest. */
   routeAccess?: RouteAccessChange[];
   frontendSettings?: ModuleFrontendSettings;
+  /** The records the API returns, as JSON Schema. From the manifest's `schema` or a schema import. */
+  schema?: DataModel;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +61,7 @@ const moduleSchema = new Schema<ModuleDoc>(
     permissionsEditedAt: Date,
     routeAccess: { type: Schema.Types.Mixed, default: undefined },
     frontendSettings: { type: Schema.Types.Mixed, default: undefined },
+    schema: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true },
 );

@@ -28,7 +28,9 @@ const valid = (raw: unknown): Manifest => {
 };
 
 describe('validateManifest', () => {
-  const manifestFiles = readdirSync(new URL('../../manifests/', import.meta.url));
+  const folderFiles = readdirSync(new URL('../../manifests/', import.meta.url));
+  const manifestFiles = folderFiles.filter((fileName) => fileName.endsWith('.manifest.json'));
+  const schemaFiles = folderFiles.filter((fileName) => fileName.endsWith('.schema.json'));
 
   it('finds one manifest for each module the seed loads', () => {
     expect(manifestFiles.sort()).toEqual(seededModules().map((module) => `${module.key}.manifest.json`).sort());
@@ -37,6 +39,21 @@ describe('validateManifest', () => {
   it.each(manifestFiles)('accepts %s, whose module key matches its file name', (fileName) => {
     const manifest = valid(readJson(`../../manifests/${fileName}`));
     expect(`${manifest.module.key}.manifest.json`).toBe(fileName);
+  });
+
+  it('finds only manifests and their schemas in the folder', () => {
+    expect([...manifestFiles, ...schemaFiles].sort()).toEqual([...folderFiles].sort());
+  });
+
+  it.each(schemaFiles)('accepts %s as the schema of a manifest beside it', (fileName) => {
+    const moduleKey = fileName.replace('.schema.json', '');
+    expect(manifestFiles).toContain(`${moduleKey}.manifest.json`);
+    const manifest = valid({ ...(readJson(`../../manifests/${moduleKey}.manifest.json`) as object), schema: readJson(`../../manifests/${fileName}`) });
+    expect(Object.keys(manifest.schema?.$defs ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it('refuses a schema without $defs', () => {
+    expect(messages({ ...(readJson('../../manifests/demo.manifest.json') as object), schema: { title: 'No definitions' } })).toMatch(/schema\.\$defs/);
   });
 
   it('reports every problem in the invalid sample at once', () => {

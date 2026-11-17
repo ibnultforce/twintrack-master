@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 export interface SeedFiles {
   manifests: unknown[];
@@ -14,13 +14,16 @@ export interface SeedFiles {
 const readJson = (relativePath: string): unknown =>
   JSON.parse(readFileSync(new URL(`../../../${relativePath}`, import.meta.url), 'utf8'));
 
-export const readManifestFiles = (): unknown[] => [
-  readJson('manifests/master.manifest.json'),
-  readJson('manifests/hr.manifest.json'),
-  readJson('manifests/projects.manifest.json'),
-  readJson('manifests/accounts.manifest.json'),
-  readJson('manifests/demo.manifest.json'),
-];
+const MANIFEST_KEYS = ['master', 'hr', 'projects', 'accounts', 'demo'];
+
+/** A module's manifest, with its data model from `manifests/<key>.schema.json` when that file exists. */
+function readManifestWithSchema(key: string): unknown {
+  const manifest = readJson(`manifests/${key}.manifest.json`) as Record<string, unknown>;
+  const schemaPath = `manifests/${key}.schema.json`;
+  return existsSync(new URL(`../../../${schemaPath}`, import.meta.url)) ? { ...manifest, schema: readJson(schemaPath) } : manifest;
+}
+
+export const readManifestFiles = (): unknown[] => MANIFEST_KEYS.map(readManifestWithSchema);
 
 export function readSeedFiles(): SeedFiles {
   return {

@@ -201,6 +201,75 @@ describe('module and activity administration', () => {
     });
   });
 
+  describe('module schemas', () => {
+    const noteSchema = { title: 'Inventory', $defs: { Item: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, cost: { type: 'number', 'x-fieldAccess': 'protected' } } } } };
+
+    it('loads each seeded module\'s schema file, and shows it on GET /modules and GET /modules/:key/schema', async () => {
+      const admin = await as('farhana');
+      const projects = (await admin.get('/modules')).body.modules.find((module: { key: string }) => module.key === 'projects');
+      expect(Object.keys(projects.schema.$defs)).toContain('Project');
+
+      const schema = await admin.get('/modules/projects/schema');
+      expect(schema.status).toBe(200);
+      expect(schema.body).toEqual(projects.schema);
+    });
+
+    it('gives a module without a schema an empty outline', async () => {
+      const admin = await as('farhana');
+      await admin.post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
+      expect((await admin.get('/modules/inventory/schema')).body).toEqual(expect.objectContaining({ title: 'TwinTrack Inventory API', $defs: {} }));
+    });
+
+    it('imports a schema alone, keeps it when the manifest is imported again without one, and exports it', async () => {
+      const admin = await as('farhana');
+      await admin.post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
+
+      const imported = await admin.put('/modules/inventory/schema', { schema: noteSchema });
+      expect(imported.body).toEqual({ key: 'inventory', definitions: 1 });
+      expect(await AuditLog.countDocuments({ action: 'module.schemaImported', targetId: 'inventory' })).toBe(1);
+
+      await admin.post('/modules/import', { manifest: inventoryManifest('1.1.0'), password: TEST_PASSWORD });
+      expect((await admin.get('/modules/inventory/schema')).body).toEqual(noteSchema);
+      expect((await admin.get('/modules/inventory/export')).body.schema).toEqual(noteSchema);
+    });
+
+    it('takes a schema inside an imported manifest', async () => {
+      const admin = await as('farhana');
+      await admin.post('/modules/import', { manifest: { ...inventoryManifest(), schema: noteSchema }, password: TEST_PASSWORD });
+      expect((await admin.get('/modules/inventory/schema')).body).toEqual(noteSchema);
+    });
+
+    it('refuses a schema without $defs, and needs module.update to import', async () => {
+      const refused = await (await as('farhana')).put('/modules/demo/schema', { schema: { title: 'x' } });
+      expect(refused.status).toBe(422);
+      expect(refused.body.error.fields).toEqual(expect.arrayContaining([expect.objectContaining({ path: '$defs' })]));
+      expect((await (await as('karim')).put('/modules/demo/schema', { schema: noteSchema })).status).toBe(403);
+    });
+  });
+
+  describe('frontend packs', () => {
+    it('builds the pack\'s manifest and schema from the database, so app edits show at once', async () => {
+      const admin = await as('farhana');
+      await admin.put('/modules/demo/schema', { schema: { $defs: { Note: { type: 'object' } } } });
+      await admin.put('/modules/demo/resources/tag', { label: 'Tags', actions: ['read'] });
+
+      const files = (await admin.get('/modules/demo/pack')).body.files.map((file: { path: string }) => file.path);
+      expect(files).toEqual(expect.arrayContaining(['INSTRUCTIONS.md', 'api/manifest.json', 'schema.json']));
+
+      const schema = await admin.get('/modules/demo/pack/file?path=schema.json').buffer(true);
+      expect(JSON.parse(schema.body.toString())).toEqual({ $defs: { Note: { type: 'object' } } });
+      const manifest = await admin.get('/modules/demo/pack/file?path=api/manifest.json').buffer(true);
+      expect(JSON.parse(manifest.body.toString()).resources.map((resource: { key: string }) => resource.key)).toContain('tag');
+    });
+
+    it('gives a module imported in the app a pack of its live files', async () => {
+      const admin = await as('farhana');
+      await admin.post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
+      const files = (await admin.get('/modules/inventory/pack')).body.files.map((file: { path: string }) => file.path);
+      expect(files).toEqual(['api/manifest.json', 'schema.json']);
+    });
+  });
+
   describe('DELETE /modules/:key', () => {
     it('removes a module, ending access from it until it is imported again', async () => {
       const admin = await as('farhana');

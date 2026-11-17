@@ -2,13 +2,14 @@
 
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { CustomObjectDialog } from '@/components/CustomObjectDialog';
+import { DataModelCard } from '@/components/DataModelCard';
 import { FrontendSettingsCard } from '@/components/FrontendSettingsCard';
 import { ModulePackDialog } from '@/components/ModulePackDialog';
 import { ModuleRoutes } from '@/components/ModuleRoutes';
 import { ConfirmDialog, Dialog } from '@/components/Dialog';
 import { Card, Loaded, Notice, PageHead, Pill, TextField } from '@/components/ui';
 import { describeError } from '@/lib/api/http';
-import { downloadModulePackFile, exportModule, importModule, listModules, removeModule, removeResource, saveResource } from '@/lib/api/modules';
+import { exportModule, getModuleSchema, importModule, importModuleSchema, listModules, removeModule, removeResource, saveResource } from '@/lib/api/modules';
 import type { ModuleResource, RegisteredModule, ResourceAction } from '@/lib/api/types';
 import { removeCustomObject } from '@/lib/api/records';
 import { humanize } from '@/lib/format';
@@ -116,6 +117,35 @@ function ImportManifestDialog({ manifest, fileName, onImported, onClose }: { man
   );
 }
 
+function ImportSchemaDialog({ module, schema, fileName, onImported, onClose }: { module: RegisteredModule; schema: unknown; fileName: string; onImported: (message: string) => void; onClose: () => void }) {
+  const [error, setError] = useState('');
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError('');
+    try {
+      const result = await importModuleSchema(module.key, schema);
+      onImported(`${module.name}'s schema was replaced: ${result.definitions} definitions.`);
+      onClose();
+    } catch (failure) {
+      setError(describeError(failure));
+    }
+  };
+
+  return (
+    <Dialog title={`Import a schema into ${module.name}?`} onClose={onClose}>
+      <form className="form" onSubmit={(event) => void submit(event)}>
+        <p><strong>{fileName}</strong> replaces {module.name}&apos;s data model, its schema.json in the frontend pack and the schema in its exported manifest. Resources, routes and access don&apos;t change.</p>
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+        <div className="dialog-actions">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn btn-primary">Import</button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
 function downloadJson(fileName: string, content: unknown): void {
   const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a');
@@ -127,6 +157,7 @@ function downloadJson(fileName: string, content: unknown): void {
 
 type ModulesDialog =
   | { kind: 'import-manifest'; manifest: unknown; fileName: string }
+  | { kind: 'import-schema'; schema: unknown; fileName: string }
   | { kind: 'remove-module' }
   | { kind: 'frontend-pack' }
   | { kind: 'add-resource' }
@@ -148,6 +179,7 @@ export default function RegisteredModulesPage() {
   const [dialog, setDialog] = useState<ModulesDialog>(null);
   const [outcome, setOutcome] = useState<{ tone: 'good' | 'danger'; text: string } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const schemaFileInput = useRef<HTMLInputElement>(null);
   const closeDialog = () => setDialog(null);
   const selectedModule = modules.data?.find((candidate) => candidate.key === chosenKey) ?? modules.data?.[0];
 
@@ -164,6 +196,19 @@ export default function RegisteredModulesPage() {
     }
   };
 
+  const importSchemaFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const schema: unknown = JSON.parse(await file.text());
+      setOutcome(null);
+      setDialog({ kind: 'import-schema', schema, fileName: file.name });
+    } catch {
+      setOutcome({ tone: 'danger', text: 'That file isn\'t valid JSON.' });
+    }
+  };
+
   const exportManifest = async (moduleKey: string) => {
     try {
       downloadJson(`${moduleKey}.manifest.json`, await exportModule(moduleKey));
@@ -174,10 +219,9 @@ export default function RegisteredModulesPage() {
 
   const downloadSchema = async (moduleKey: string) => {
     try {
-      const schema: unknown = JSON.parse(await (await downloadModulePackFile(moduleKey, 'schema.json')).text());
-      downloadJson(`${moduleKey}.schema.json`, schema);
+      downloadJson(`${moduleKey}.schema.json`, await getModuleSchema(moduleKey));
     } catch (failure) {
-      setOutcome({ tone: 'danger', text: `No schema to download: ${describeError(failure)}` });
+      setOutcome({ tone: 'danger', text: describeError(failure) });
     }
   };
 
@@ -190,6 +234,12 @@ export default function RegisteredModulesPage() {
           <>
             {selectedModule ? <button type="button" className="btn" onClick={() => setDialog({ kind: 'frontend-pack' })}>Download frontend pack</button> : null}
             {selectedModule ? <button type="button" className="btn" onClick={() => void downloadSchema(selectedModule.key)}>Download schema</button> : null}
+            {selectedModule && can('module.update') ? (
+              <>
+                <input ref={schemaFileInput} className="visually-hidden" type="file" accept=".json,application/json" tabIndex={-1} aria-label="Schema file" onChange={(event) => void importSchemaFile(event)} />
+                <button type="button" className="btn" onClick={() => schemaFileInput.current?.click()}>Import schema</button>
+              </>
+            ) : null}
             {selectedModule ? <button type="button" className="btn" onClick={() => void exportManifest(selectedModule.key)}>Export {selectedModule.name} manifest</button> : null}
             {can('module.create') ? (
               <>
@@ -202,6 +252,7 @@ export default function RegisteredModulesPage() {
       />
       {outcome ? <Notice tone={outcome.tone}>{outcome.text}</Notice> : null}
       {dialog?.kind === 'frontend-pack' && selectedModule ? <ModulePackDialog moduleKey={selectedModule.key} moduleName={selectedModule.name} onClose={closeDialog} /> : null}
+      {dialog?.kind === 'import-schema' && selectedModule ? <ImportSchemaDialog module={selectedModule} schema={dialog.schema} fileName={dialog.fileName} onImported={(text) => { setOutcome({ tone: 'good', text }); modules.reload(); }} onClose={closeDialog} /> : null}
       {dialog?.kind === 'import-manifest' ? <ImportManifestDialog manifest={dialog.manifest} fileName={dialog.fileName} onImported={(text) => { setOutcome({ tone: 'good', text }); modules.reload(); }} onClose={closeDialog} /> : null}
       <Loaded state={modules}>
         {(list) => {
@@ -255,6 +306,7 @@ export default function RegisteredModulesPage() {
                       </table>
                     </div>
                   </Card>
+                  <DataModelCard moduleName={module.name} schema={module.schema} />
                   <ModuleRoutes key={module.key} moduleKey={module.key} routes={module.routes} resources={module.resources} canChange={isSuperAdmin} onChanged={modules.reload} />
                   <Card title="Custom objects" aside={canAddResources ? <button type="button" className="link" onClick={() => setDialog({ kind: 'add-object' })}>+ New object</button> : undefined}>
                     {module.resources.filter((resource) => resource.custom).length === 0 ? <p className="empty">No custom objects in {module.name} yet. People reach their records from the Records screen.</p> : (

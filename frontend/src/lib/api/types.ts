@@ -342,12 +342,39 @@ export interface RegisteredModule {
   frontendUrl: string | null;
   frontendSettings: FrontendSettings;
   resources: ModuleResource[];
+  /** The records its API returns, as JSON Schema. Empty `$defs` until a schema is loaded. */
+  schema: ModuleSchema;
   /** Each permission and the APIs it opens, as "METHOD /path". */
   apis: Record<string, string[]>;
   /** Every built API, with who may call it. */
   routes: ModuleApiRoute[];
   /** Each permission and the APIs and profiles that rely on it. An action in use can't be removed. */
   usedBy: Record<string, string[]>;
+}
+
+/** A JSON Schema property, as far as the Modules screen reads it. */
+export interface SchemaProperty {
+  type?: string | string[];
+  $ref?: string;
+  enum?: unknown[];
+  format?: string;
+  items?: SchemaProperty;
+  description?: string;
+  /** Field security: `controlled` or `protected`. */
+  'x-fieldAccess'?: string;
+}
+
+export interface SchemaDefinition extends SchemaProperty {
+  required?: string[];
+  properties?: Record<string, SchemaProperty>;
+  allOf?: SchemaProperty[];
+}
+
+export interface ModuleSchema {
+  $schema?: string;
+  title?: string;
+  description?: string;
+  $defs: Record<string, SchemaDefinition>;
 }
 
 /** public: anyone, without signing in. signed: any signed-in person. private: needs a permission from their profile. */

@@ -305,6 +305,8 @@ dialog h2 { margin-bottom: 14px; font-size: 17px; font-weight: 600; }
 .inline-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
 .inline-form .field { flex: 1 1 200px; }
 .resource-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.data-model-definition + .data-model-definition { margin-top: 20px; }
+.data-model-definition h3 { margin: 0 0 8px; font-size: 14px; }
 .check-grid { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .nowrap { white-space: nowrap; }
 .spaced { margin-top: 12px; }

@@ -1,10 +1,13 @@
 /**
  * Makes the handoff pack for one module's frontend developer, in the same format for every module:
  *
- *   api/                          the module's API doc, the API guide, its manifest and Postman folder (always rewritten)
+ *   api/                          the module's API doc, the API guide and its Postman folder (always rewritten)
  *   design.css                    the starter's globals.css, unchanged (always rewritten)
  *   INSTRUCTIONS.md               from the starter's template, written only when missing; its FILL IN parts are written by hand
- *   DATA_MODEL.md, schema.json    outlines written only when missing, then completed by hand
+ *   DATA_MODEL.md                 an outline written only when missing, then completed by hand
+ *
+ * The pack's api/manifest.json and schema.json are not written here: the API builds them from the database on every
+ * download, so they include edits made in the app. The schema's source is manifests/<module key>.schema.json.
  *
  *   npm run export:module-pack -- <module key> [output folder]
  *
@@ -72,13 +75,9 @@ function dataModelOutline(manifest) {
     ].join('\n\n'));
   return [
     `# ${manifest.module.name}: data model`,
-    `What the ${manifest.module.name} API stores and returns. Module key: \`${manifest.module.key}\`. The same model is in \`schema.json\` as JSON Schema.`,
+    `What the ${manifest.module.name} API stores and returns. Module key: \`${manifest.module.key}\`. The same model is in \`schema.json\` as JSON Schema, from \`manifests/${manifest.module.key}.schema.json\`.`,
     ...sections,
   ].join('\n\n') + '\n';
-}
-
-function schemaOutline(manifest) {
-  return { $schema: 'https://json-schema.org/draft/2020-12/schema', title: `TwinTrack ${manifest.module.name} API`, $defs: {} };
 }
 
 /** Writes the file only when it doesn't exist, and says whether it did. */
@@ -118,7 +117,6 @@ mkdirSync(join(outputDir, 'api'), { recursive: true });
 writeFileSync(join(outputDir, 'api', apiDocFile), readFileSync(apiDocPath, 'utf8'));
 // Every module's doc points to this guide for tokens, the error format and errors any route can return.
 writeFileSync(join(outputDir, 'api', 'README.md'), readFileSync(join(MASTER_ROOT, 'docs/api/README.md'), 'utf8'));
-writeFileSync(join(outputDir, 'api', 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 writeFileSync(join(outputDir, 'api', 'postman_collection.json'), `${JSON.stringify(modulePostman(readJson(POSTMAN_COLLECTION), manifest.module.name, moduleKey), null, 2)}\n`);
 copyFileSync(SHARED_STYLESHEET, join(outputDir, 'design.css'));
 
@@ -132,11 +130,10 @@ const instructions = readFileSync(INSTRUCTIONS_TEMPLATE, 'utf8')
 const startedFiles = [
   writeIfMissing(join(outputDir, 'INSTRUCTIONS.md'), instructions) && 'INSTRUCTIONS.md',
   writeIfMissing(join(outputDir, 'DATA_MODEL.md'), dataModelOutline(manifest)) && 'DATA_MODEL.md',
-  writeIfMissing(join(outputDir, 'schema.json'), `${JSON.stringify(schemaOutline(manifest), null, 2)}\n`) && 'schema.json',
 ].filter(Boolean);
 // The one-page brief was replaced by INSTRUCTIONS.md.
 rmSync(join(outputDir, 'MODULE_BRIEF.md'), { force: true });
 
 console.log(`Pack for ${manifest.module.name} written to ${outputDir}`);
 if (startedFiles.length > 0) console.log(`Started ${startedFiles.join(', ')}: write their FILL IN parts before sending the pack.`);
-else console.log('Kept INSTRUCTIONS.md, DATA_MODEL.md and schema.json: update them by hand for this change.');
+else console.log(`Kept INSTRUCTIONS.md and DATA_MODEL.md: update them, and manifests/${moduleKey}.schema.json, by hand for this change.`);

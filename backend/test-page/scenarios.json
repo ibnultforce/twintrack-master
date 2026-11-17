@@ -3588,6 +3588,115 @@
           ]
         },
         {
+          "id": "GET /modules/:key/schema",
+          "method": "GET",
+          "path": "/modules/:key/schema",
+          "purpose": "Downloads a module's data model as JSON Schema, as loaded in the database.",
+          "input": "module key in the path",
+          "access": "Needs module.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Downloads the Project management schema",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/modules/projects/schema",
+                "as": "arif@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/modules/projects/schema"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/modules/projects/schema",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Module not loaded",
+              "expected": 404,
+              "code": "unknown_module",
+              "request": {
+                "method": "GET",
+                "path": "/modules/account/schema",
+                "as": "arif@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PUT /modules/:key/schema",
+          "method": "PUT",
+          "path": "/modules/:key/schema",
+          "purpose": "Replaces a module's data model without changing its resources, routes or access.",
+          "input": "schema in the body: JSON Schema with $defs",
+          "access": "Needs module.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Replaces the Demo schema",
+              "expected": 200,
+              "request": {
+                "method": "PUT",
+                "path": "/modules/demo/schema",
+                "as": "farhana@twintrack.test",
+                "body": "{\"schema\": {\"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"title\": \"TwinTrack Demo API\", \"$defs\": {\"Note\": {\"type\": \"object\", \"required\": [\"id\", \"title\"], \"properties\": {\"id\": {\"type\": \"string\"}, \"title\": {\"type\": \"string\"}, \"status\": {\"enum\": [\"open\", \"done\"]}}}}}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No $defs",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PUT",
+                "path": "/modules/demo/schema",
+                "as": "farhana@twintrack.test",
+                "body": "{\"schema\": {\"title\": \"No definitions\"}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PUT",
+                "path": "/modules/demo/schema",
+                "as": "karim@twintrack.test",
+                "body": "{\"schema\": {\"$defs\": {}}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Module not loaded",
+              "expected": 404,
+              "code": "unknown_module",
+              "request": {
+                "method": "PUT",
+                "path": "/modules/account/schema",
+                "as": "farhana@twintrack.test",
+                "body": "{\"schema\": {\"$defs\": {}}}"
+              }
+            }
+          ]
+        },
+        {
           "id": "GET /modules/:key/pack",
           "method": "GET",
           "path": "/modules/:key/pack",
