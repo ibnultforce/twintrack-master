@@ -5,9 +5,11 @@ import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { requireAllowedOrigin } from '../../../lib/requireAllowedOrigin.js';
 import { parseRequestBody } from '../../../lib/validation.js';
 import { getCaller } from '../access/caller.js';
+import type { AllowedOrigins } from '../moduleRegistry/allowedOrigins.js';
 import { emailField, nameField } from '../users/userFields.js';
 import { assertOwnPassword, changeOwnPassword, getProfile, updateOwnName } from './account.service.js';
 import { login, logout, refresh, SessionEndedError } from './auth.service.js';
+import { createHandoff, exchangeHandoff } from './handoff.service.js';
 import { setPasswordWithLink } from './passwordLinks.service.js';
 import { createFailedAttemptLimiter } from './failedAttemptLimiter.js';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './passwords.js';
@@ -29,6 +31,15 @@ const newPasswordField = z
   .max(MAX_PASSWORD_LENGTH);
 
 const MAX_LINK_TOKEN_LENGTH = 200;
+const MAX_URL_LENGTH = 2000;
+
+const createHandoffBodySchema = z.strictObject({
+  redirectUrl: z.string().max(MAX_URL_LENGTH).optional(),
+});
+
+const exchangeHandoffBodySchema = z.strictObject({
+  code: z.string().min(1, 'is required').max(MAX_LINK_TOKEN_LENGTH),
+});
 
 const setPasswordBodySchema = z.strictObject({
   token: z.string().min(1, 'is required').max(MAX_LINK_TOKEN_LENGTH),
@@ -54,9 +65,9 @@ function sendTokenResponse(res: Response, body: object): void {
   res.set('Cache-Control', 'no-store').json(body);
 }
 
-export function createAuthRoutes(config: Config): ApiRoute[] {
+export function createAuthRoutes(config: Config, allowedOrigins: AllowedOrigins): ApiRoute[] {
   const settings = config.auth;
-  const originCheck = requireAllowedOrigin(config.allowedOrigins, { allowSameAddress: config.isTestPageEnabled });
+  const originCheck = requireAllowedOrigin((origin) => allowedOrigins.isAllowed(origin), { allowSameAddress: config.isTestPageEnabled });
 
   const handleLogin: RequestHandler = async (req, res) => {
     const credentials = parseRequestBody(loginBodySchema, req.body);
@@ -86,6 +97,16 @@ export function createAuthRoutes(config: Config): ApiRoute[] {
     const { token, newPassword } = parseRequestBody(setPasswordBodySchema, req.body);
     await setPasswordWithLink(token, newPassword, req.ip);
     res.json({ passwordSet: true });
+  };
+
+  const handleCreateHandoff: RequestHandler = async (req, res) => {
+    const { redirectUrl } = parseRequestBody(createHandoffBodySchema, req.body ?? {});
+    sendTokenResponse(res, await createHandoff(getCaller(req), String(req.params.key), redirectUrl, req.ip));
+  };
+
+  const handleExchangeHandoff: RequestHandler = async (req, res) => {
+    const { code } = parseRequestBody(exchangeHandoffBodySchema, req.body);
+    sendTokenResponse(res, await exchangeHandoff(code, req.get('Origin'), req.ip, settings));
   };
 
   const handleGetProfile: RequestHandler = async (req, res) => {
@@ -128,6 +149,16 @@ export function createAuthRoutes(config: Config): ApiRoute[] {
       middleware: [originCheck, createFailedAttemptLimiter(settings, 'set-password')],
       bodySchema: setPasswordBodySchema, handler: handleSetPassword,
     },
+    // The page exchanging the code must be on the address the code was sent to, which the service checks.
+    {
+      method: 'POST',
+      path: '/auth/handoff',
+      access: 'public',
+      middleware: [createFailedAttemptLimiter(settings, 'handoff')],
+      bodySchema: exchangeHandoffBodySchema, handler: handleExchangeHandoff,
+    },
+    // Signed, not private: anyone with access to the module may open it. The service checks that access.
+    { method: 'POST', path: '/modules/:key/handoff', access: 'signed', bodySchema: createHandoffBodySchema, handler: handleCreateHandoff },
     { method: 'GET', path: '/auth/me', access: 'signed', handler: handleGetProfile },
     { method: 'PATCH', path: '/auth/me', access: 'signed', bodySchema: updateProfileBodySchema, handler: handleUpdateProfile },
     {

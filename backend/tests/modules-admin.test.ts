@@ -1,3 +1,4 @@
+import { seededModulesByKey } from './helpers/manifestModules.js';
 import type { Application } from 'express';
 import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -72,10 +73,12 @@ describe('module and activity administration', () => {
       const response = await (await as('alia')).get('/modules');
       expect(response.status).toBe(200);
       expect(response.body.modules).toEqual([
-        expect.objectContaining({ key: 'accounts', name: 'Accounts', core: false, frontendUrl: null }),
-        expect.objectContaining({ key: 'hr', name: 'HR', core: false, frontendUrl: HR_ORIGIN }),
-        expect.objectContaining({ key: 'master', core: true, frontendUrl: null }),
-        expect.objectContaining({ key: 'projects', name: 'Project management', core: false, frontendUrl: null }),
+        ...seededModulesByKey().map(({ key, name }) => expect.objectContaining({
+          key,
+          name,
+          core: key === 'master',
+          frontendUrl: key === 'hr' ? HR_ORIGIN : null,
+        })),
       ]);
     });
   });

@@ -40,6 +40,27 @@ curl "$API/auth/me" -H "Authorization: Bearer eyJ..."
 
 Postman users can import the two files in `postman/` instead. On the optional test page at `/try`, you can sign in as any sample account and send any route. The [main README](../../README.md) explains both.
 
+## Signing in from a module frontend
+
+A module's frontend doesn't have its own sign-in. People sign in at the portal, and the portal hands them over with a one-time code, so the module works on any address: a subdomain, another domain or `localhost`.
+
+1. **A super admin sets the module up** on the Modules screen (or `PUT /modules/:key/frontend`): its frontend address and its sign-in address, usually `<frontend address>/auth/callback`. The frontend address may then call the API.
+2. **The person clicks Open** on the portal. The portal calls `POST /modules/<key>/handoff` and sends the browser to the sign-in address with `?code=…`. The code lasts 60 seconds and works once.
+3. **The module's `/auth/callback` page** reads `code`, removes it from the address bar (`history.replaceState`), and exchanges it:
+
+   ```sh
+   curl -X POST "$API/auth/handoff"      -H "Origin: https://hr.twintrack.com"      -H "Content-Type: application/json"      -d '{"code":"…"}'
+   ```
+
+   ```json
+   { "accessToken": "eyJ...", "expiresIn": 900, "module": "hr" }
+   ```
+
+   Keep the token in memory only, never in `localStorage`, and send it as `Authorization: Bearer …`.
+4. **When a call answers `401`**, or the token is about to expire, send the browser to `<portal>/open/<module key>`. While the person's portal session lasts, this comes straight back to `/auth/callback` with a new code, without asking for a password. Otherwise they sign in first. Signing out of the portal ends the module's access too.
+
+A module on a subdomain of the portal's own site may instead use `POST /auth/refresh` with the shared cookie, as the portal does.
+
 ## Who can call what
 
 Each route declares one of three access levels:

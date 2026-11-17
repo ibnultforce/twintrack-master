@@ -11,6 +11,7 @@ import { createRequestLogger } from './lib/requestLogger.js';
 import { serveTestPage } from './lib/testPage.js';
 import { ACCOUNTS_MODULE_KEY, createAccountsRoutes } from './modules/accounts/accounts.routes.js';
 import { accountsUserReferenceChecks } from './modules/accounts/accountsUserReferences.js';
+import { DEMO_MODULE_KEY, demoRoutes } from './modules/demo/demo.routes.js';
 import { HR_MODULE_KEY, hrRoutes } from './modules/hr/hr.routes.js';
 import { hrUserReferenceChecks } from './modules/hr/hrUserReferences.js';
 import { createProjectsRoutes, PROJECTS_MODULE_KEY } from './modules/projects/projects.routes.js';
@@ -34,7 +35,13 @@ export function createApp(config: Config, dependencyOverrides: Partial<AppDepend
   app.set('trust proxy', config.trustProxyHops);
   app.use(createRequestLogger(config.logLevel));
   app.use(helmet());
-  const portalCors = cors({ origin: config.allowedOrigins, credentials: true });
+  const portalCors = cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, false);
+      dependencies.allowedOrigins.isAllowed(origin).then((isAllowed) => callback(null, isAllowed), (error: Error) => callback(error));
+    },
+    credentials: true,
+  });
   const appProtocolCors = cors({ exposedHeaders: ['WWW-Authenticate', 'Mcp-Session-Id'] });
   app.use((req, res, next) => (isAppProtocolPath(req.path) ? appProtocolCors : portalCors)(req, res, next));
   const parseJson = express.json({ limit: '256kb' });
@@ -47,6 +54,7 @@ export function createApp(config: Config, dependencyOverrides: Partial<AppDepend
   const masterExtensions = { userReferenceChecks: [...hrUserReferenceChecks, ...projectsUserReferenceChecks, ...accountsUserReferenceChecks], mcpToolProviders: [projectsMcpTools] };
   registerRoutes(app, createMasterRoutes(config, dependencies, masterExtensions), createAccessMiddleware(config.auth, MASTER_MODULE_KEY));
   registerRoutes(app, hrRoutes, createAccessMiddleware(config.auth, HR_MODULE_KEY));
+  registerRoutes(app, demoRoutes, createAccessMiddleware(config.auth, DEMO_MODULE_KEY));
   registerRoutes(app, createProjectsRoutes(config, dependencies), createAccessMiddleware(config.auth, PROJECTS_MODULE_KEY));
   registerRoutes(app, createAccountsRoutes(config, dependencies), createAccessMiddleware(config.auth, ACCOUNTS_MODULE_KEY));
 

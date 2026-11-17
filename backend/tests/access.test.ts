@@ -1,3 +1,4 @@
+import { seededModulesByKey } from './helpers/manifestModules.js';
 import { hash } from '@node-rs/argon2';
 import express, { type Application } from 'express';
 import { SignJWT } from 'jose';
@@ -318,9 +319,9 @@ describe('access checks', () => {
       const response = await getAs(await signIn('rahim@twintrack.test'), '/me/modules');
       expect(response.status).toBe(200);
       expect(response.body.modules).toEqual([
-        { key: 'hr', name: 'HR', description: expect.any(String) as string, frontendUrl: HR_ORIGIN, profileName: 'Engineering lead' },
-        { key: 'master', name: 'Master', description: expect.any(String) as string, frontendUrl: null, profileName: 'Engineering lead' },
-        { key: 'projects', name: 'Project management', description: expect.any(String) as string, frontendUrl: null, profileName: 'Engineering lead' },
+        { key: 'hr', name: 'HR', description: expect.any(String) as string, frontendUrl: HR_ORIGIN, signsInWithCode: false, profileName: 'Engineering lead' },
+        { key: 'master', name: 'Master', description: expect.any(String) as string, frontendUrl: null, signsInWithCode: false, profileName: 'Engineering lead' },
+        { key: 'projects', name: 'Project management', description: expect.any(String) as string, frontendUrl: null, signsInWithCode: false, profileName: 'Engineering lead' },
       ]);
     });
 
@@ -335,7 +336,7 @@ describe('access checks', () => {
 
     it('lists every loaded module for a super admin, with no address when none is set', async () => {
       const { body } = await getAs(await signIn('farhana@twintrack.test'), '/me/modules');
-      expect(moduleKeys(body)).toEqual(['accounts', 'hr', 'master', 'projects']);
+      expect(moduleKeys(body)).toEqual(seededModulesByKey().map((module) => module.key));
       expect((body as { modules: { key: string; frontendUrl: string | null }[] }).modules.find((module) => module.key === 'master')?.frontendUrl).toBeNull();
     });
 

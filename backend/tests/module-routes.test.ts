@@ -1,3 +1,4 @@
+import { demoRoutes } from '../src/modules/demo/demo.routes.js';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { resolveDependencies } from '../src/appDependencies.js';
@@ -14,6 +15,7 @@ const config = createTestConfig();
 const dependencies = resolveDependencies(config);
 const moduleRouteLists: Record<string, ApiRoute[]> = {
   hr: hrRoutes,
+  demo: demoRoutes,
   projects: createProjectsRoutes(config, dependencies),
   accounts: createAccountsRoutes(config, dependencies),
 };

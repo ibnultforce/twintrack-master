@@ -3,7 +3,7 @@
   "module": {
     "key": "master",
     "name": "Master",
-    "version": "3.10.0",
+    "version": "3.12.0",
     "description": "Login, users, permissions and the API behind every module.",
     "repository": "twintrack-master",
     "baseUrl": "/",
@@ -140,6 +140,16 @@
       "method": "POST",
       "path": "/auth/set-password",
       "access": "public"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/handoff",
+      "access": "public"
+    },
+    {
+      "method": "POST",
+      "path": "/modules/:key/handoff",
+      "access": "signed"
     },
     {
       "method": "GET",
@@ -370,6 +380,24 @@
       "path": "/modules/:key/export",
       "access": "private",
       "permission": "module.read"
+    },
+    {
+      "method": "GET",
+      "path": "/modules/:key/pack",
+      "access": "private",
+      "permission": "module.read"
+    },
+    {
+      "method": "GET",
+      "path": "/modules/:key/pack/file",
+      "access": "private",
+      "permission": "module.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/modules/:key/frontend",
+      "access": "private",
+      "permission": "module.update"
     },
     {
       "method": "DELETE",

@@ -3,6 +3,7 @@ import { ApiToken } from './apiToken.js';
 import { AuditLog } from './auditLog.js';
 import { Client } from './client.js';
 import { Counter } from './counter.js';
+import { HandoffCode } from './handoffCode.js';
 import { CustomRecord } from './customRecord.js';
 import { Module } from './module.js';
 import { OAuthAuthorizationRequest, OAuthClient, OAuthGrant } from './oauth.js';
@@ -15,4 +16,4 @@ import { Session } from './session.js';
 import { User } from './user.js';
 import { UserPhoto } from './userPhoto.js';
 
-export const masterModels = [User, Session, Module, AuditLog, RateLimitCounter, OrgRole, AccessProfile, RecordHistory, RecordShare, CustomRecord, PasswordLink, Counter, UserPhoto, Client, ApiToken, OAuthClient, OAuthAuthorizationRequest, OAuthGrant];
+export const masterModels = [User, Session, Module, AuditLog, RateLimitCounter, OrgRole, AccessProfile, RecordHistory, RecordShare, CustomRecord, PasswordLink, HandoffCode, Counter, UserPhoto, Client, ApiToken, OAuthClient, OAuthAuthorizationRequest, OAuthGrant];

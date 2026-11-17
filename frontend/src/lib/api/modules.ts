@@ -1,5 +1,5 @@
-import { apiRequest } from './http';
-import type { AccessProfile, ApiAccessRule, AuditEntry, Grants, ModuleApiRoute, OrgRole, RegisteredModule, ResourceAction } from './types';
+import { apiBlob, apiRequest } from './http';
+import type { AccessProfile, FrontendSettings, ApiAccessRule, AuditEntry, Grants, ModuleApiRoute, OrgRole, RegisteredModule, ResourceAction } from './types';
 
 const segment = encodeURIComponent;
 const resourcePath = (moduleKey: string, resourceKey: string) => `/modules/${segment(moduleKey)}/resources/${segment(resourceKey)}`;
@@ -77,3 +77,31 @@ export const removeOrgRole = (orgRoleId: string) => apiRequest(`/org-roles/${seg
 
 export const listActivity = (query: { page: number; pageSize: number; actionPrefix?: string }) =>
   apiRequest<{ total: number; entries: AuditEntry[] }>('/audit', { query: { ...query } });
+
+export interface ModulePackFile {
+  /** Relative to the pack, such as `api/manifest.json`. */
+  path: string;
+  size: number;
+}
+
+/** The module's frontend handoff pack: what Claude Code or a developer needs to build its frontend. */
+export async function listModulePackFiles(moduleKey: string): Promise<ModulePackFile[]> {
+  return (await apiRequest<{ files: ModulePackFile[] }>(`/modules/${segment(moduleKey)}/pack`)).files;
+}
+
+export const downloadModulePackFile = (moduleKey: string, path: string) =>
+  apiBlob(`/modules/${segment(moduleKey)}/pack/file?path=${segment(path)}`);
+
+export interface FrontendSettingsChange {
+  frontendUrl: string | null;
+  redirectUrls: string[];
+  allowedOrigins: string[];
+}
+
+/** Super admins only: where a module's frontend lives, where sign-in codes may go, and which addresses may call the API. */
+export const saveFrontendSettings = (moduleKey: string, change: FrontendSettingsChange) =>
+  apiRequest<{ frontendSettings: FrontendSettings }>(`/modules/${segment(moduleKey)}/frontend`, { method: 'PUT', body: change });
+
+/** A one-time code for opening a module's frontend, already added to the address to send the browser to. */
+export const createHandoff = (moduleKey: string) =>
+  apiRequest<{ redirectTo: string; expiresIn: number }>(`/modules/${segment(moduleKey)}/handoff`, { method: 'POST', body: {} });

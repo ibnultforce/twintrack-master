@@ -2,6 +2,8 @@
 
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { CustomObjectDialog } from '@/components/CustomObjectDialog';
+import { FrontendSettingsCard } from '@/components/FrontendSettingsCard';
+import { ModulePackDialog } from '@/components/ModulePackDialog';
 import { ModuleRoutes } from '@/components/ModuleRoutes';
 import { ConfirmDialog, Dialog } from '@/components/Dialog';
 import { Card, Loaded, Notice, PageHead, Pill, TextField } from '@/components/ui';
@@ -126,6 +128,7 @@ function downloadJson(fileName: string, content: unknown): void {
 type ModulesDialog =
   | { kind: 'import-manifest'; manifest: unknown; fileName: string }
   | { kind: 'remove-module' }
+  | { kind: 'frontend-pack' }
   | { kind: 'add-resource' }
   | { kind: 'edit-resource' | 'remove-resource' | 'edit-object' | 'remove-object'; resource: ModuleResource }
   | { kind: 'add-object' }
@@ -176,6 +179,7 @@ export default function RegisteredModulesPage() {
         subtitle="The modules loaded into Master"
         actions={(
           <>
+            {selectedModule ? <button type="button" className="btn" onClick={() => setDialog({ kind: 'frontend-pack' })}>Download frontend pack</button> : null}
             {selectedModule ? <button type="button" className="btn" onClick={() => void exportManifest(selectedModule.key)}>Export {selectedModule.name} manifest</button> : null}
             {can('module.create') ? (
               <>
@@ -187,6 +191,7 @@ export default function RegisteredModulesPage() {
         )}
       />
       {outcome ? <Notice tone={outcome.tone}>{outcome.text}</Notice> : null}
+      {dialog?.kind === 'frontend-pack' && selectedModule ? <ModulePackDialog moduleKey={selectedModule.key} moduleName={selectedModule.name} onClose={closeDialog} /> : null}
       {dialog?.kind === 'import-manifest' ? <ImportManifestDialog manifest={dialog.manifest} fileName={dialog.fileName} onImported={(text) => { setOutcome({ tone: 'good', text }); modules.reload(); }} onClose={closeDialog} /> : null}
       <Loaded state={modules}>
         {(list) => {
@@ -213,6 +218,7 @@ export default function RegisteredModulesPage() {
                     </div>
                     <div className="role-meta">{module.core ? <Pill tone="accent">Core</Pill> : <Pill tone="neutral">Add-on</Pill>}<span>Frontend: {module.frontendUrl ?? 'not set'}</span></div>
                   </section>
+                  <FrontendSettingsCard key={`sign-in-${module.key}`} moduleKey={module.key} moduleName={module.name} settings={module.frontendSettings} canChange={isSuperAdmin} onChanged={modules.reload} />
                   <Card title="Permissions" aside={canAddResources ? <button type="button" className="link" onClick={() => setDialog({ kind: 'add-resource' })}>+ Add resource</button> : <span className="note">{permissionTotal(module)} total</span>}>
                     <div className="table-box">
                       <table>

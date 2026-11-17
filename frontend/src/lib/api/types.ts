@@ -32,6 +32,8 @@ export interface MyModule {
   name: string;
   description?: string;
   frontendUrl: string | null;
+  /** True when the module takes a one-time sign-in code, so the portal opens it through /open/<key>. */
+  signsInWithCode: boolean;
   profileName: string | null;
 }
 
@@ -321,6 +323,16 @@ export interface HistoryEntry {
   actorName: string;
 }
 
+/** Where a module's frontend lives and what may sign in to it. Only a super admin changes it. */
+export interface FrontendSettings {
+  frontendUrl: string | null;
+  /** `app` when saved on the Modules screen, `environment` when from MODULE_FRONTEND_URLS. */
+  frontendUrlSource: 'app' | 'environment' | null;
+  redirectUrls: string[];
+  allowedOrigins: string[];
+  changedAt: string | null;
+}
+
 export interface RegisteredModule {
   key: string;
   name: string;
@@ -328,6 +340,7 @@ export interface RegisteredModule {
   description?: string;
   core: boolean;
   frontendUrl: string | null;
+  frontendSettings: FrontendSettings;
   resources: ModuleResource[];
   /** Each permission and the APIs it opens, as "METHOD /path". */
   apis: Record<string, string[]>;

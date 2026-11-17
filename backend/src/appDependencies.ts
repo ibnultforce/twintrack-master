@@ -3,6 +3,7 @@ import { createEmailSender, type EmailSender } from './lib/email/emailSender.js'
 import type { FileStorage } from './lib/storage/fileStorage.js';
 import { createLocalStorage, type LocalStorage } from './lib/storage/localStorage.js';
 import { createR2Storage } from './lib/storage/r2Storage.js';
+import { createAllowedOrigins, type AllowedOrigins } from './modules/master/moduleRegistry/allowedOrigins.js';
 
 /** Outside services the app talks to. Tests pass their own, so nothing real is called. */
 export interface AppDependencies {
@@ -10,6 +11,8 @@ export interface AppDependencies {
   fileStorage: FileStorage;
   /** Set when files are on the local disk, which serves its own upload and download addresses. */
   localStorage?: LocalStorage;
+  /** ALLOWED_ORIGINS plus the origins a super admin saved on modules. */
+  allowedOrigins: AllowedOrigins;
 }
 
 function resolveStorage(config: Config): Pick<AppDependencies, 'fileStorage' | 'localStorage'> {
@@ -20,5 +23,9 @@ function resolveStorage(config: Config): Pick<AppDependencies, 'fileStorage' | '
 
 export function resolveDependencies(config: Config, overrides: Partial<AppDependencies> = {}): AppDependencies {
   const storage = overrides.fileStorage ? { fileStorage: overrides.fileStorage, localStorage: overrides.localStorage } : resolveStorage(config);
-  return { emailSender: overrides.emailSender ?? createEmailSender(config.email, config.logLevel), ...storage };
+  return {
+    emailSender: overrides.emailSender ?? createEmailSender(config.email, config.logLevel),
+    allowedOrigins: overrides.allowedOrigins ?? createAllowedOrigins(config.allowedOrigins),
+    ...storage,
+  };
 }

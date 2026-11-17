@@ -174,6 +174,8 @@ describe('test page', () => {
     // GET and DELETE /mcp only ever answer 405, because the endpoint is stateless.
     const SUCCESS_COVERED_ELSEWHERE = [
       'POST /auth/set-password',
+      // The code arrives inside a redirect address and must be sent from that address's origin: tests/module-sign-in.test.ts.
+      'POST /auth/handoff',
       'GET /oauth/requests/:id',
       'POST /oauth/requests/:id/decision',
       'POST /me/connected-apps/:id/revoke',

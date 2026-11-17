@@ -1,3 +1,4 @@
+import { seededModules } from './helpers/manifestModules.js';
 import { readFileSync } from 'node:fs';
 import { verify } from '@node-rs/argon2';
 import { describe, expect, it } from 'vitest';
@@ -86,9 +87,9 @@ describe('what the product ships', () => {
 describe('seedDatabase', () => {
   useTestDatabase();
 
-  it('loads Master, HR, Tasks, Accounts and the 12-person team', async () => {
+  it('loads every manifest and the 12-person team', async () => {
     const result = await seed();
-    expect(result.modules.map((module) => module.key)).toEqual(['master', 'hr', 'projects', 'accounts']);
+    expect(result.modules.map((module) => module.key)).toEqual(seededModules().map((module) => module.key));
     expect(result.usersCreated).toBe(12);
 
     expect((await Module.findOne({ key: 'master' }).lean())?.core).toBe(true);

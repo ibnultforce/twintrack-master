@@ -1,3 +1,4 @@
+import { seededModules } from './helpers/manifestModules.js';
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Module } from '../src/modules/master/models/module.js';
@@ -29,13 +30,8 @@ const valid = (raw: unknown): Manifest => {
 describe('validateManifest', () => {
   const manifestFiles = readdirSync(new URL('../../manifests/', import.meta.url));
 
-  it('finds one manifest for each module', () => {
-    expect(manifestFiles.sort()).toEqual([
-      'accounts.manifest.json',
-      'hr.manifest.json',
-      'master.manifest.json',
-      'projects.manifest.json',
-    ]);
+  it('finds one manifest for each module the seed loads', () => {
+    expect(manifestFiles.sort()).toEqual(seededModules().map((module) => `${module.key}.manifest.json`).sort());
   });
 
   it.each(manifestFiles)('accepts %s, whose module key matches its file name', (fileName) => {

@@ -5,6 +5,7 @@ import type { UserDoc } from '../models/user.js';
 import type { Actor } from './caller.js';
 import type { Grantee } from './permissions.js';
 import { listPermissionApis } from '../moduleRegistry/grantEditing.js';
+import { resolveFrontendUrl } from '../moduleRegistry/frontendSettings.service.js';
 import { findAllModules, findModuleByKey } from '../moduleRegistry/moduleRegistry.repository.js';
 import { fillGuidesFromDatabase, type ReferenceOption } from './apiSamples.service.js';
 import { resolveModuleAccess, type ModuleAccess, type PermissionMap } from './permissions.js';
@@ -13,8 +14,10 @@ export interface AccessibleModule {
   key: string;
   name: string;
   description?: string;
-  /** Where the portal sends people to open this module. Null until MODULE_FRONTEND_URLS has it. */
+  /** Where the portal sends people to open this module: saved on the Modules screen, or from MODULE_FRONTEND_URLS. */
   frontendUrl: string | null;
+  /** True when the module takes a one-time sign-in code, so the portal opens it through POST /modules/:key/handoff. */
+  signsInWithCode: boolean;
   profileName: string | null;
 }
 
@@ -28,7 +31,8 @@ export async function listModulesForUser(grantee: Grantee, frontendUrls: Map<str
         key: module.key,
         name: module.name,
         description: module.description,
-        frontendUrl: frontendUrls.get(module.key) ?? null,
+        frontendUrl: resolveFrontendUrl(module, frontendUrls),
+        signsInWithCode: (module.frontendSettings?.redirectUrls.length ?? 0) > 0,
         profileName: access.profileName,
       },
     ];

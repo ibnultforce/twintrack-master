@@ -54,7 +54,7 @@ export function createMasterRoutes(
   const mcpToolProviders = [createMasterMcpTools(config.moduleFrontendUrls), ...extensions.mcpToolProviders];
   return [
     ...createHealthRoutes(config),
-    ...createAuthRoutes(config),
+    ...createAuthRoutes(config, dependencies.allowedOrigins),
     ...createImpersonationRoutes(config.auth),
     ...createAccessRoutes(config),
     ...createUsersRoutes(mailer, extensions.userReferenceChecks),
@@ -62,13 +62,13 @@ export function createMasterRoutes(
     ...directoryRoutes,
     ...orgRolesRoutes,
     ...accessProfilesRoutes,
-    ...createModuleRegistryRoutes(config),
+    ...createModuleRegistryRoutes(config, dependencies.allowedOrigins),
     ...auditRoutes,
     ...customObjectsRoutes,
     ...clientsRoutes,
     ...apiTokensRoutes,
     ...oauthRoutes,
     ...createMcpRoutes(oauthSettingsFrom(config), mcpToolProviders),
-    ...createStorageRoutes(dependencies.localStorage, config.allowedOrigins),
+    ...createStorageRoutes(dependencies.localStorage, dependencies.allowedOrigins),
   ];
 }

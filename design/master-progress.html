@@ -394,6 +394,30 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>17 November 2026: Demo module for testing</h3>
+      <ul>
+        <li>New <code>demo</code> module, "Demo" (manifest 1.0.0, base <code>/demo</code>), with one scoped resource <code>note</code> (read, create, update, delete) and five routes: <code>GET /demo/notes</code>, <code>GET /demo/notes/:id</code>, <code>POST /demo/notes</code>, <code>PATCH /demo/notes/:id</code>, <code>DELETE /demo/notes/:id</code>. Only the super admin holds <code>note.*</code> until a profile grants it.</li>
+        <li>Described in Postman (folder "Demo"), the <code>/try</code> scenarios, <code>docs/api/demo.md</code> and a frontend pack in <code>module-packs/demo/</code> whose instructions use the new one-time code sign-in.</li>
+        <li>Tests that listed the modules by hand now read them from the manifests. Checks: 1,444 tests pass; Postman 687 of 688, the same older failure as before.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>17 November 2026: module frontends sign in with a one-time code</h3>
+      <ul>
+        <li>New routes (Master manifest 3.12.0): <code>PUT /modules/:key/frontend</code> (super admin, <code>module.update</code>) saves a module's frontend address, redirect URLs and allowed origins; <code>POST /modules/:key/handoff</code> (signed, with access to the module) makes a 60-second, single-use code sent to a saved redirect URL; <code>POST /auth/handoff</code> (public) exchanges it for an access token on the person's Master session, only from that URL's origin.</li>
+        <li>Allowed origins are now dynamic: <code>ALLOWED_ORIGINS</code> plus every module's saved origins and frontend address, cached for 30 seconds and refreshed at once on the server that saved them. CORS, the sign-in routes and file uploads all use it.</li>
+        <li>Modules screen: a Sign-in card with Edit for super admins. Open on Your modules goes through the new <code>/open/&lt;key&gt;</code> page for modules with a redirect URL, which a module also uses to get a fresh token.</li>
+        <li>The API guide in every pack explains the <code>/auth/callback</code> flow. Checks: 1,430 tests pass, typecheck and lint pass; Postman 678 of 679, the one failure being an older request that runs after its token is signed out.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>17 November 2026: download a module's frontend pack</h3>
+      <ul>
+        <li>New routes <code>GET /modules/:key/pack</code> and <code>GET /modules/:key/pack/file?path=</code> (Master manifest 3.11.0), for <code>module.read</code>. They list and serve the committed <code>module-packs/&lt;key&gt;/</code> files; only paths the list names are served.</li>
+        <li>Modules screen: "Download frontend pack" opens a dialog listing each file with its size, a Download link per file, and "Download all (.zip)", which keeps the <code>api/</code> folder.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>16 November 2026: who holds each profile, with Remove</h3>
       <ul>
         <li>New route <code>GET /access-profiles/:id/people</code> (Master manifest 3.10.0), for <code>user.read</code> or <code>userProfile.update</code>, as <code>GET /modules/:key/people</code>. Each holder comes with <code>canRemove</code>, worked out with the same rules <code>PUT /users/:id/profile</code> applies: in your scope, not yourself, and the profile within your own access. No new permission.</li>

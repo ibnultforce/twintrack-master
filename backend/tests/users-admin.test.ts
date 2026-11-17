@@ -1,3 +1,4 @@
+import { seededModulesByKey } from './helpers/manifestModules.js';
 import type { Application } from 'express';
 import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -214,17 +215,12 @@ describe('user administration', () => {
     it('is not mistaken for a person called access-options', async () => {
       const response = await (await as('alia')).get('/users/access-options');
       expect(response.status).toBe(200);
-      expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(['accounts', 'hr', 'master', 'projects']);
+      expect(response.body.modules.map((module: { key: string }) => module.key)).toEqual(seededModulesByKey().map((module) => module.key));
     });
 
     it('lists every module to someone who reads people or gives profiles, and to nobody else', async () => {
       for (const id of ['alia', 'sabbir', 'rumana']) {
-        expect((await (await as(id)).get('/users/access-options')).body.modules).toEqual([
-          { key: 'accounts', name: 'Accounts' },
-          { key: 'hr', name: 'HR' },
-          { key: 'master', name: 'Master' },
-          { key: 'projects', name: 'Project management' },
-        ]);
+        expect((await (await as(id)).get('/users/access-options')).body.modules).toEqual(seededModulesByKey());
       }
     });
 

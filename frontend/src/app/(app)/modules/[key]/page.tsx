@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { OpenAppLink } from '@/components/OpenAppLink';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { ApiTryDialog, type TryTarget } from '@/components/ApiTryDialog';
@@ -198,7 +199,7 @@ export default function ModuleApiExplorerPage() {
               title={`${module?.name ?? moduleKey} APIs`}
               subtitle={`Every private API in this module, ${apiCount} in all: the ones a profile permission opens. Choose who to test as, then select Try on any API.`}
               actions={<>
-                {module?.frontendUrl ? <a className="btn" href={module.frontendUrl}>Open app</a> : null}
+                {module ? <OpenAppLink module={module} label="Open app" /> : null}
                 <Link className="btn" href="/modules">Back to modules</Link>
               </>}
             />

@@ -1,0 +1,56 @@
+{
+  "manifestVersion": 1,
+  "module": {
+    "key": "demo",
+    "name": "Demo",
+    "version": "1.0.0",
+    "description": "Notes, for trying a module's APIs, permissions and scopes.",
+    "repository": "twintrack-demo",
+    "baseUrl": "/demo"
+  },
+  "resources": [
+    {
+      "key": "note",
+      "label": "Notes",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "delete"
+      ],
+      "scoped": true
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/notes",
+      "access": "private",
+      "permission": "note.read"
+    },
+    {
+      "method": "GET",
+      "path": "/notes/:id",
+      "access": "private",
+      "permission": "note.read"
+    },
+    {
+      "method": "POST",
+      "path": "/notes",
+      "access": "private",
+      "permission": "note.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/notes/:id",
+      "access": "private",
+      "permission": "note.update"
+    },
+    {
+      "method": "DELETE",
+      "path": "/notes/:id",
+      "access": "private",
+      "permission": "note.delete"
+    }
+  ]
+}

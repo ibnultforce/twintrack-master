@@ -2,16 +2,30 @@ import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import type { Config } from '../../../config.js';
 import type { ApiRoute } from '../../../lib/apiRoute.js';
-import { parseRequestBody } from '../../../lib/validation.js';
+import { parseRequestBody, parseRequestQuery } from '../../../lib/validation.js';
 import { getActor } from '../access/caller.js';
 import { assertOwnPassword } from '../auth/account.service.js';
 import { createFailedAttemptLimiter } from '../auth/failedAttemptLimiter.js';
 import { MAX_PASSWORD_LENGTH } from '../auth/passwords.js';
 import { exportModuleManifest, importModuleFromRequest, listRegisteredModules, removeModule } from './moduleRegistry.service.js';
+import type { AllowedOrigins } from './allowedOrigins.js';
+import { MAX_ALLOWED_ORIGINS, MAX_REDIRECT_URLS, saveFrontendSettings } from './frontendSettings.service.js';
+import { listModulePackFiles, readModulePackFile } from './modulePacks.service.js';
 import { removeResource, saveResource } from './permissionRules.service.js';
 import { changeRouteAccess } from './routeAccess.service.js';
 
 const MAX_NAME_LENGTH = 100;
+const MAX_PACK_PATH_LENGTH = 200;
+const MAX_URL_LENGTH = 2000;
+
+const urlField = z.string().trim().min(1, 'is required').max(MAX_URL_LENGTH);
+
+// The addresses are checked by the service, which gives a message for each one.
+const frontendSettingsBodySchema = z.strictObject({
+  frontendUrl: urlField.nullable(),
+  redirectUrls: z.array(urlField).max(MAX_REDIRECT_URLS),
+  allowedOrigins: z.array(urlField).max(MAX_ALLOWED_ORIGINS),
+});
 
 const nameField = z.string().trim().min(1, 'is required').max(MAX_NAME_LENGTH);
 
@@ -34,7 +48,11 @@ const importModuleBodySchema = z.strictObject({
   manifest: z.unknown(),
 });
 
-export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
+const packFileQuerySchema = z.object({
+  path: z.string().trim().min(1, 'is required').max(MAX_PACK_PATH_LENGTH),
+});
+
+export function createModuleRegistryRoutes(config: Config, allowedOrigins: AllowedOrigins): ApiRoute[] {
   const handleListModules: RequestHandler = async (_req, res) => {
     res.json({ modules: await listRegisteredModules(config.moduleFrontendUrls) });
   };
@@ -49,6 +67,24 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
 
   const handleExportModule: RequestHandler = async (req, res) => {
     res.json(await exportModuleManifest(String(req.params.key)));
+  };
+
+  const handleListPackFiles: RequestHandler = async (req, res) => {
+    res.json({ files: await listModulePackFiles(String(req.params.key)) });
+  };
+
+  const handleDownloadPackFile: RequestHandler = async (req, res) => {
+    const { path } = parseRequestQuery(packFileQuerySchema, req.query);
+    const file = await readModulePackFile(String(req.params.key), path);
+    res.attachment(file.path.split('/').pop()).type('application/octet-stream').send(file.content);
+  };
+
+  const handleSaveFrontendSettings: RequestHandler = async (req, res) => {
+    const request = parseRequestBody(frontendSettingsBodySchema, req.body);
+    const options = { isProduction: config.nodeEnv === 'production', environmentUrls: config.moduleFrontendUrls };
+    const saved = await saveFrontendSettings(getActor(req), String(req.params.key), request, options);
+    allowedOrigins.forget();
+    res.json({ frontendSettings: saved });
   };
 
   const handleRemoveModule: RequestHandler = async (req, res) => {
@@ -82,6 +118,10 @@ export function createModuleRegistryRoutes(config: Config): ApiRoute[] {
       bodySchema: importModuleBodySchema, handler: handleImportModule,
     },
     { method: 'GET', path: '/modules/:key/export', access: 'private', permission: 'module.read', handler: handleExportModule },
+    { method: 'GET', path: '/modules/:key/pack', access: 'private', permission: 'module.read', handler: handleListPackFiles },
+    { method: 'GET', path: '/modules/:key/pack/file', access: 'private', permission: 'module.read', handler: handleDownloadPackFile },
+    // Only a super admin may, which the service checks: whoever controls a redirect address receives people's sign-ins.
+    { method: 'PUT', path: '/modules/:key/frontend', access: 'private', permission: 'module.update', bodySchema: frontendSettingsBodySchema, handler: handleSaveFrontendSettings },
     { method: 'DELETE', path: '/modules/:key', access: 'private', permission: 'module.delete', handler: handleRemoveModule },
     // One route both adds and changes a resource. The service picks the permission once it knows whether the resource exists.
     { method: 'PUT', path: '/modules/:key/resources/:resource', access: 'private', anyPermission: ['module.create', 'module.update'], bodySchema: saveResourceBodySchema, handler: handleSaveResource },

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { firstConsoleHref } from '@/components/AppShell';
+import { OpenAppLink } from '@/components/OpenAppLink';
 import { Loaded, PageHead, Pill } from '@/components/ui';
 import { getMyModules } from '@/lib/api/account';
 import type { MyModule } from '@/lib/api/types';
@@ -23,13 +24,13 @@ export default function YourModulesPage() {
       return (
         <>
           <Link className="btn btn-primary" href={`/modules/${encodeURIComponent(module.key)}`}>Explore APIs</Link>
-          {module.frontendUrl ? <a className="btn" href={module.frontendUrl}>Open app</a> : null}
+          <OpenAppLink module={module} label="Open app" />
         </>
       );
     }
     if (module.key === MASTER_MODULE_KEY) return consoleHref ? <Link className="btn btn-primary" href={consoleHref}>Open</Link> : null;
-    if (!module.frontendUrl) return <button type="button" className="btn" disabled>Not available yet</button>;
-    return <a className="btn btn-primary" href={module.frontendUrl}>Open</a>;
+    if (!module.frontendUrl && !module.signsInWithCode) return <button type="button" className="btn" disabled>Not available yet</button>;
+    return <OpenAppLink module={module} label="Open" isPrimary />;
   };
 
   return (

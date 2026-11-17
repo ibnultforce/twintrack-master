@@ -155,7 +155,7 @@ export function Loaded<Data>({ state, children }: { state: LoadState<Data>; chil
   return <section className="card"><p className="loading" role="status">Loading…</p></section>;
 }
 
-export function TextField({ id, label, value, onChange, type = 'text', autoComplete = 'off', hint, required }: {
+export function TextField({ id, label, value, onChange, type = 'text', autoComplete = 'off', hint, placeholder, required }: {
   id: string;
   label: string;
   value: string;
@@ -163,12 +163,13 @@ export function TextField({ id, label, value, onChange, type = 'text', autoCompl
   type?: string;
   autoComplete?: string;
   hint?: string;
+  placeholder?: string;
   required?: boolean;
 }) {
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      <input className="input" id={id} type={type} value={value} autoComplete={autoComplete} required={required} onChange={(event) => onChange(event.target.value)} />
+      <input className="input" id={id} type={type} value={value} autoComplete={autoComplete} placeholder={placeholder} required={required} onChange={(event) => onChange(event.target.value)} />
       {hint ? <span className="hint">{hint}</span> : null}
     </div>
   );

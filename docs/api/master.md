@@ -60,6 +60,26 @@ Login, refresh and logout refuse a missing or unlisted `Origin` header with `403
 
 Links are sent by [`POST /users`](#post-users) and [`POST /users/password-links`](#post-userspassword-links) through Resend. They point at `PORTAL_URL/set-password?token=…` and last `PASSWORD_LINK_TTL_HOURS` (24 by default). Only a hash of each token is stored. Without `RESEND_API_KEY`, which production requires, emails are written to the backend log instead.
 
+### `POST /modules/:key/handoff`
+
+**Access:** `signed`, and the caller must have access to the module (any permission in it, or super admin). Refused while signed in as someone else.
+
+**Body:** optional `redirectUrl`, which must be exactly one of the module's saved sign-in addresses. Leave it out for the first one.
+
+**Returns:** `redirectTo`, the sign-in address with `?code=…` added, and `expiresIn` (60 seconds). The portal sends the browser there. The code works once; only its hash is stored.
+
+**Errors:** `403 forbidden` (no access to the module), `403 impersonating`, `404 unknown_module`, `409 no_redirect_url` (a super admin hasn't saved one), `422 unknown_redirect_url`
+
+### `POST /auth/handoff`
+
+**Access:** `public`. The code is the credential, so wrong codes count as failed attempts. The request's `Origin` must be the origin of the address the code was sent to.
+
+**Body:** `code`
+
+**Returns:** `accessToken`, `expiresIn` and `module`. The token belongs to the person's Master session, so signing out of Master, or being deactivated, ends it too. There is no refresh cookie: when the token expires, the module sends the person back to the portal's `/open/<module key>` page, which signs them in again without a password while their Master session lasts. See [signing in from a module frontend](README.md#signing-in-from-a-module-frontend).
+
+**Errors:** `400 invalid_code` (unknown, used or expired), `401 session_revoked`, `403 origin_not_allowed`, `422 validation_failed`, `429 too_many_attempts`
+
 ## My account
 
 ### `GET /auth/me`
@@ -347,6 +367,40 @@ Replacing a module whose resources were edited in the app also needs `module.upd
 **Returns:** the module's manifest as it stands, including resources and custom objects changed in the app. It can be sent back as `manifest` to `POST /modules/import`.
 
 **Errors:** `404 unknown_module`
+
+### `PUT /modules/:key/frontend`
+
+**Access:** `private`, needs `module.update`, and only a super admin may (`403 super_admin_only`): whoever controls a redirect address receives people's sign-ins.
+
+**Body:** the whole setting, replacing what was saved:
+
+- `frontendUrl`: the module's frontend address, such as `https://hr.twintrack.com`, or `null` to fall back to `MODULE_FRONTEND_URLS`.
+- `redirectUrls`: up to 10 full addresses where [`POST /modules/:key/handoff`](#post-moduleskeyhandoff) may send one-time codes. The first is the default. Each must be on the frontend address or an allowed origin, with no `#fragment`.
+- `allowedOrigins`: up to 20 addresses whose pages may call the API, on top of `ALLOWED_ORIGINS`. The frontend address is allowed without being listed.
+
+Production accepts plain `http` only for addresses on the same computer (`localhost`, `*.localhost`, `127.0.0.1`).
+
+**Returns:** `frontendSettings`: `frontendUrl`, `frontendUrlSource` (`app`, `environment` or `null`), `redirectUrls`, `allowedOrigins`, `changedAt`. `GET /modules` returns the same for each module. An import keeps it, since it isn't in the manifest. A change applies at once on this server and within 30 seconds on any other.
+
+**Errors:** `403 super_admin_only`, `404 unknown_module`, `422 validation_failed` (each bad address named in `fields`)
+
+### `GET /modules/:key/pack`
+
+**Access:** `private`, needs `module.read`
+
+**Returns:** `files`, each with `path` (relative to the pack, such as `api/manifest.json`) and `size` in bytes. These are the module's frontend handoff pack, from `module-packs/<key>/` in the deployed code, made by `npm run export:module-pack`. Give them to Claude Code with the module starter to build the module's frontend.
+
+**Errors:** `404 unknown_module`, `404 no_module_pack`
+
+### `GET /modules/:key/pack/file`
+
+**Access:** `private`, needs `module.read`
+
+**Query:** `path`, one of the paths `GET /modules/:key/pack` lists.
+
+**Returns:** the file as a download. Any other path, including one that tries to leave the pack, is refused.
+
+**Errors:** `404 unknown_module`, `404 no_module_pack`, `404 unknown_pack_file`, `422 validation_failed`
 
 ### `DELETE /modules/:key`
 

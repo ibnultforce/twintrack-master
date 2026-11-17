@@ -3,6 +3,7 @@ import type { RequestHandler } from 'express';
 import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { ApiError } from '../../../lib/errors.js';
 import { contentDisposition } from '../../../lib/storage/fileStorage.js';
+import type { AllowedOrigins } from '../moduleRegistry/allowedOrigins.js';
 import { LOCAL_CONTENT_PATH, LOCAL_PART_PATH, UploadClosedError, type LocalStorage } from '../../../lib/storage/localStorage.js';
 
 const invalidLink = () => new ApiError(403, 'invalid_file_link', 'This file link is invalid or has expired.');
@@ -11,9 +12,15 @@ const invalidLink = () => new ApiError(403, 'invalid_file_link', 'This file link
  * Stand-ins for R2's signed addresses when files are on the local disk, in development. The signed token in the
  * address is the credential, as with R2, so these are public. With R2 in use, they answer 404.
  */
-export function createStorageRoutes(localStorage: LocalStorage | undefined, allowedOrigins: string[]): ApiRoute[] {
+export function createStorageRoutes(localStorage: LocalStorage | undefined, allowedOrigins: AllowedOrigins): ApiRoute[] {
   // The browser reads the ETag of each part, which CORS hides unless it is listed.
-  const exposeEtag = cors({ origin: allowedOrigins, exposedHeaders: ['ETag'] });
+  const exposeEtag = cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, false);
+      allowedOrigins.isAllowed(origin).then((isAllowed) => callback(null, isAllowed), (error: Error) => callback(error));
+    },
+    exposedHeaders: ['ETag'],
+  });
 
   const readGrant = (token: unknown) => {
     if (!localStorage) throw new ApiError(404, 'no_route', 'No such route.');

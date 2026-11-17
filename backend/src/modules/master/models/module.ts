@@ -4,6 +4,21 @@ import type { RouteAccessChange } from '../moduleRegistry/routeAccess.js';
 
 export type ModuleSource = 'file' | 'app';
 
+/**
+ * Where a module's frontend lives and what may sign in to it, set by a super admin in the app. An import keeps it,
+ * since it isn't in the manifest.
+ */
+export interface ModuleFrontendSettings {
+  /** Overrides MODULE_FRONTEND_URLS for this module. */
+  frontendUrl?: string;
+  /** Where Master may send a one-time sign-in code. The first is the default. */
+  redirectUrls: string[];
+  /** Addresses whose pages may call the API, on top of ALLOWED_ORIGINS. */
+  allowedOrigins: string[];
+  changedBy: string;
+  changedAt: Date;
+}
+
 /** An imported module manifest, with any resources and custom objects changed in the app. */
 export interface ModuleDoc {
   key: string;
@@ -24,6 +39,7 @@ export interface ModuleDoc {
   permissionsEditedAt?: Date;
   /** Access rules a super admin changed in the app. An import keeps them, since they aren't in the manifest. */
   routeAccess?: RouteAccessChange[];
+  frontendSettings?: ModuleFrontendSettings;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +58,7 @@ const moduleSchema = new Schema<ModuleDoc>(
     routes: { type: Schema.Types.Mixed, default: [] },
     permissionsEditedAt: Date,
     routeAccess: { type: Schema.Types.Mixed, default: undefined },
+    frontendSettings: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true },
 );

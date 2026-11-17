@@ -396,6 +396,22 @@
     {
       "key": "holderProfileId",
       "value": "ap_developer"
+    },
+    {
+      "key": "packModuleKey",
+      "value": "projects"
+    },
+    {
+      "key": "handoffCode",
+      "value": ""
+    },
+    {
+      "key": "demoNoteId",
+      "value": ""
+    },
+    {
+      "key": "demoToken",
+      "value": ""
     }
   ],
   "item": [
@@ -4017,6 +4033,222 @@
                 "exec": [
                   "pm.test('returns 200', () => pm.response.to.have.status(200));",
                   "pm.test('is a manifest', () => pm.expect(pm.response.json().manifestVersion).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lists a module's frontend pack files",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{packModuleKey}}/pack",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{packModuleKey}}",
+                "pack"
+              ]
+            },
+            "description": "Needs module.read. The module's frontend pack, from module-packs/<key>/ in the deployed repo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists the instructions', () => {",
+                  "  pm.expect(pm.response.json().files.map((file) => file.path)).to.include('INSTRUCTIONS.md');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Downloads one frontend pack file",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{packModuleKey}}/pack/file?path=api/manifest.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{packModuleKey}}",
+                "pack",
+                "file"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "api/manifest.json"
+                }
+              ]
+            },
+            "description": "Needs module.read. The module's frontend pack, from module-packs/<key>/ in the deployed repo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is an attachment', () => pm.expect(pm.response.headers.get('Content-Disposition')).to.include('manifest.json'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Saves where a module signs people in",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{packModuleKey}}/frontend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{packModuleKey}}",
+                "frontend"
+              ]
+            },
+            "description": "Super admin only. Sets the module's frontend address, where one-time sign-in codes may be sent, and extra origins that may call the API.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"frontendUrl\": \"http://projects.postman.localhost:3300\",\n  \"redirectUrls\": [\n    \"http://projects.postman.localhost:3300/auth/callback\"\n  ],\n  \"allowedOrigins\": []\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('saves the redirect address', () => {",
+                  "  pm.expect(pm.response.json().frontendSettings.redirectUrls).to.eql(['http://projects.postman.localhost:3300/auth/callback']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Makes a one-time sign-in code for a module",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{packModuleKey}}/handoff",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{packModuleKey}}",
+                "handoff"
+              ]
+            },
+            "description": "Signed in, with access to the module. Returns the module's sign-in address with a code that lasts a minute.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "const redirectTo = pm.response.json().redirectTo;",
+                  "pm.test('sends a code to the saved address', () => pm.expect(redirectTo).to.include('/auth/callback?code='));",
+                  "pm.collectionVariables.set('handoffCode', redirectTo.split('code=')[1]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exchanges a sign-in code for an access token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://projects.postman.localhost:3300"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/handoff",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "handoff"
+              ]
+            },
+            "description": "Public. Called by the module's frontend from the address the code was sent to. Works once.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{handoffCode}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('returns an access token', () => pm.expect(pm.response.json().accessToken).to.be.a('string'));"
                 ]
               }
             }
@@ -16733,6 +16965,243 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('returns 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Demo",
+      "description": "The Demo module: notes, for trying a module's APIs. Needs note.* permissions; scoped by who wrote each note.",
+      "item": [
+        {
+          "name": "Sign in as a super admin for Demo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{adminEmail}}\",\"password\":\"{{password}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('demoToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demoToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/demo/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "demo",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Try the Demo module\",\n  \"body\": \"Written from Postman.\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('demoNoteId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demoToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/demo/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "demo",
+                "notes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists the new note', () => pm.expect(pm.response.json().notes.map((note) => note.id)).to.include(pm.collectionVariables.get('demoNoteId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get a note",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demoToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/demo/notes/{{demoNoteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "demo",
+                "notes",
+                "{{demoNoteId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is the note', () => pm.expect(pm.response.json().title).to.eql('Try the Demo module'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark a note done",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demoToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/demo/notes/{{demoNoteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "demo",
+                "notes",
+                "{{demoNoteId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"done\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is done', () => pm.expect(pm.response.json().status).to.eql('done'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete a note",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{demoToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/demo/notes/{{demoNoteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "demo",
+                "notes",
+                "{{demoNoteId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is deleted', () => pm.expect(pm.response.json().deleted).to.eql(true));"
                 ]
               }
             }

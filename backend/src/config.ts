@@ -13,7 +13,7 @@ const ENCRYPTION_KEY_BYTES = 32;
 
 const positiveInteger = (defaultValue: number) => z.coerce.number().int().positive().default(defaultValue);
 
-function isWebOrigin(value: string | undefined): value is string {
+export function isWebOrigin(value: string | undefined): value is string {
   if (!value || !URL.canParse(value)) return false;
   const url = new URL(value);
   return (url.protocol === 'http:' || url.protocol === 'https:') && url.origin === value;

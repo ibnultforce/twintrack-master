@@ -4,7 +4,8 @@ import { ApiError } from '../../../lib/errors.js';
 import { actorFields, type Actor } from '../access/caller.js';
 import { findAllProfiles, findProfileIdsGranting } from '../accessProfiles/accessProfiles.repository.js';
 import { recordAudit } from '../audit/audit.repository.js';
-import type { ModuleDoc, ModuleSource } from '../models/module.js';
+import type { ModuleDoc, ModuleFrontendSettings, ModuleSource } from '../models/module.js';
+import { resolveFrontendUrl, toFrontendSettingsView } from './frontendSettings.service.js';
 import { countUsersWithProfiles } from '../users/users.repository.js';
 import { validateManifest, type Manifest } from './manifest.js';
 import { deleteModule, findAllModules, findModuleByKey, saveModule } from './moduleRegistry.repository.js';
@@ -63,7 +64,7 @@ export async function importManifest(
 }
 
 function toRegisteredModule(
-  module: Pick<RegisteredModule, 'key' | 'name' | 'version' | 'description'> & { core?: boolean },
+  module: Pick<RegisteredModule, 'key' | 'name' | 'version' | 'description'> & { core?: boolean; frontendSettings?: ModuleFrontendSettings },
   frontendUrls: Map<string, string>,
 ): RegisteredModule {
   return {
@@ -72,7 +73,7 @@ function toRegisteredModule(
     version: module.version,
     description: module.description,
     core: module.core ?? false,
-    frontendUrl: frontendUrls.get(module.key) ?? null,
+    frontendUrl: resolveFrontendUrl(module, frontendUrls),
   };
 }
 
@@ -80,6 +81,7 @@ export async function listRegisteredModules(frontendUrls: Map<string, string>) {
   const [modules, profiles] = await Promise.all([findAllModules(), findAllProfiles()]);
   return modules.map((module) => ({
     ...toRegisteredModule(module, frontendUrls),
+    frontendSettings: toFrontendSettingsView(module, frontendUrls),
     resources: module.resources,
     apis: listPermissionApis(module),
     routes: listModuleRoutes(module),
