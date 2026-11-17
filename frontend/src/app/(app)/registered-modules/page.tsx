@@ -8,7 +8,7 @@ import { ModuleRoutes } from '@/components/ModuleRoutes';
 import { ConfirmDialog, Dialog } from '@/components/Dialog';
 import { Card, Loaded, Notice, PageHead, Pill, TextField } from '@/components/ui';
 import { describeError } from '@/lib/api/http';
-import { exportModule, importModule, listModules, removeModule, removeResource, saveResource } from '@/lib/api/modules';
+import { downloadModulePackFile, exportModule, importModule, listModules, removeModule, removeResource, saveResource } from '@/lib/api/modules';
 import type { ModuleResource, RegisteredModule, ResourceAction } from '@/lib/api/types';
 import { removeCustomObject } from '@/lib/api/records';
 import { humanize } from '@/lib/format';
@@ -172,6 +172,15 @@ export default function RegisteredModulesPage() {
     }
   };
 
+  const downloadSchema = async (moduleKey: string) => {
+    try {
+      const schema: unknown = JSON.parse(await (await downloadModulePackFile(moduleKey, 'schema.json')).text());
+      downloadJson(`${moduleKey}.schema.json`, schema);
+    } catch (failure) {
+      setOutcome({ tone: 'danger', text: `No schema to download: ${describeError(failure)}` });
+    }
+  };
+
   return (
     <>
       <PageHead
@@ -180,6 +189,7 @@ export default function RegisteredModulesPage() {
         actions={(
           <>
             {selectedModule ? <button type="button" className="btn" onClick={() => setDialog({ kind: 'frontend-pack' })}>Download frontend pack</button> : null}
+            {selectedModule ? <button type="button" className="btn" onClick={() => void downloadSchema(selectedModule.key)}>Download schema</button> : null}
             {selectedModule ? <button type="button" className="btn" onClick={() => void exportManifest(selectedModule.key)}>Export {selectedModule.name} manifest</button> : null}
             {can('module.create') ? (
               <>
