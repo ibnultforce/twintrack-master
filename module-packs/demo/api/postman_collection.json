@@ -10,15 +10,403 @@
       "value": ""
     },
     {
-      "key": "adminEmail",
-      "value": ""
+      "key": "webOrigin",
+      "value": "http://twintrack.localhost:3100"
+    },
+    {
+      "key": "email",
+      "value": "rahim@twintrack.test"
     },
     {
       "key": "password",
       "value": ""
     },
     {
-      "key": "webOrigin",
+      "key": "moduleKey",
+      "value": "demo"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "currentName",
+      "value": ""
+    },
+    {
+      "key": "adminEmail",
+      "value": "farhana@twintrack.test"
+    },
+    {
+      "key": "hrManagerEmail",
+      "value": "sabbir@twintrack.test"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "hrManagerToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": "u_04"
+    },
+    {
+      "key": "createdUserId",
+      "value": ""
+    },
+    {
+      "key": "createdUserEmail",
+      "value": ""
+    },
+    {
+      "key": "importedModuleKey",
+      "value": "postman-test"
+    },
+    {
+      "key": "newPassword",
+      "value": ""
+    },
+    {
+      "key": "superAdminId",
+      "value": "u_01"
+    },
+    {
+      "key": "inactiveEmail",
+      "value": "jahid@twintrack.test"
+    },
+    {
+      "key": "accessAdminToken",
+      "value": ""
+    },
+    {
+      "key": "noRoleToken",
+      "value": ""
+    },
+    {
+      "key": "importedRoleKey",
+      "value": "reader"
+    },
+    {
+      "key": "importedResourceKey",
+      "value": "thing"
+    },
+    {
+      "key": "moduleRoleKey",
+      "value": "manager"
+    },
+    {
+      "key": "moduleResourceKey",
+      "value": "salary"
+    },
+    {
+      "key": "newRoleKey",
+      "value": "postman-role"
+    },
+    {
+      "key": "newResourceKey",
+      "value": "extras"
+    },
+    {
+      "key": "hrAdminEmail",
+      "value": "kamrul@twintrack.test"
+    },
+    {
+      "key": "hrAdminToken",
+      "value": ""
+    },
+    {
+      "key": "hrTeamMemberId",
+      "value": "u_08"
+    },
+    {
+      "key": "hrStaffId",
+      "value": "u_03"
+    },
+    {
+      "key": "noAccessId",
+      "value": "u_09"
+    },
+    {
+      "key": "salaryId",
+      "value": "s_07"
+    },
+    {
+      "key": "jasminToken",
+      "value": ""
+    },
+    {
+      "key": "jackToken",
+      "value": ""
+    },
+    {
+      "key": "jackId",
+      "value": "u_13"
+    },
+    {
+      "key": "addableModuleKey",
+      "value": "hr"
+    },
+    {
+      "key": "orgRoleId",
+      "value": ""
+    },
+    {
+      "key": "accessProfileId",
+      "value": ""
+    },
+    {
+      "key": "shareId",
+      "value": ""
+    },
+    {
+      "key": "customRecordId",
+      "value": ""
+    },
+    {
+      "key": "customShareId",
+      "value": ""
+    },
+    {
+      "key": "customModuleKey",
+      "value": "hr"
+    },
+    {
+      "key": "customObjectKey",
+      "value": "postmanTask"
+    },
+    {
+      "key": "tasksLeadToken",
+      "value": ""
+    },
+    {
+      "key": "tasksDevToken",
+      "value": ""
+    },
+    {
+      "key": "tasksQaToken",
+      "value": ""
+    },
+    {
+      "key": "taskProjectId",
+      "value": ""
+    },
+    {
+      "key": "taskId",
+      "value": ""
+    },
+    {
+      "key": "otherTaskId",
+      "value": ""
+    },
+    {
+      "key": "accessAdminId",
+      "value": "u_10"
+    },
+    {
+      "key": "accessAdminEmail",
+      "value": "sumaiya@twintrack.test"
+    },
+    {
+      "key": "deletableUserId",
+      "value": ""
+    },
+    {
+      "key": "clientId",
+      "value": ""
+    },
+    {
+      "key": "impersonationToken",
+      "value": ""
+    },
+    {
+      "key": "apiToken",
+      "value": ""
+    },
+    {
+      "key": "apiTokenId",
+      "value": ""
+    },
+    {
+      "key": "oauthClientId",
+      "value": ""
+    },
+    {
+      "key": "oauthClientSecret",
+      "value": ""
+    },
+    {
+      "key": "oauthRequestId",
+      "value": ""
+    },
+    {
+      "key": "oauthCode",
+      "value": ""
+    },
+    {
+      "key": "oauthAccessToken",
+      "value": ""
+    },
+    {
+      "key": "connectedAppId",
+      "value": ""
+    },
+    {
+      "key": "pkceVerifier",
+      "value": ""
+    },
+    {
+      "key": "pkceChallenge",
+      "value": ""
+    },
+    {
+      "key": "oauthRedirectUri",
+      "value": "https://claude.ai/api/mcp/auth_callback"
+    },
+    {
+      "key": "qaTaskId",
+      "value": ""
+    },
+    {
+      "key": "credentialId",
+      "value": ""
+    },
+    {
+      "key": "attachmentId",
+      "value": ""
+    },
+    {
+      "key": "partToken",
+      "value": ""
+    },
+    {
+      "key": "partEtag",
+      "value": ""
+    },
+    {
+      "key": "contentToken",
+      "value": ""
+    },
+    {
+      "key": "tasksLeadId",
+      "value": "u_04"
+    },
+    {
+      "key": "tasksDevId",
+      "value": "u_07"
+    },
+    {
+      "key": "tasksQaId",
+      "value": "u_09"
+    },
+    {
+      "key": "accountsToken",
+      "value": ""
+    },
+    {
+      "key": "financeToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "vendorId",
+      "value": ""
+    },
+    {
+      "key": "bankAccountId",
+      "value": ""
+    },
+    {
+      "key": "usdBankId",
+      "value": ""
+    },
+    {
+      "key": "billId",
+      "value": ""
+    },
+    {
+      "key": "draftBillId",
+      "value": ""
+    },
+    {
+      "key": "deleteBillId",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "documentId",
+      "value": ""
+    },
+    {
+      "key": "accountsPartToken",
+      "value": ""
+    },
+    {
+      "key": "accountsPartEtag",
+      "value": ""
+    },
+    {
+      "key": "accountsClientId",
+      "value": ""
+    },
+    {
+      "key": "accountsProjectId",
+      "value": ""
+    },
+    {
+      "key": "invoiceId",
+      "value": ""
+    },
+    {
+      "key": "invoiceLineId",
+      "value": ""
+    },
+    {
+      "key": "receiptId",
+      "value": ""
+    },
+    {
+      "key": "allocationId",
+      "value": ""
+    },
+    {
+      "key": "draftInvoiceId",
+      "value": ""
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "runItemId",
+      "value": ""
+    },
+    {
+      "key": "draftRunId",
+      "value": ""
+    },
+    {
+      "key": "holderProfileId",
+      "value": "ap_developer"
+    },
+    {
+      "key": "packModuleKey",
+      "value": "projects"
+    },
+    {
+      "key": "handoffCode",
+      "value": ""
+    },
+    {
+      "key": "demoNoteId",
       "value": ""
     },
     {
@@ -26,8 +414,8 @@
       "value": ""
     },
     {
-      "key": "demoNoteId",
-      "value": ""
+      "key": "schemaModuleKey",
+      "value": "demo"
     }
   ],
   "item": [
@@ -189,7 +577,7 @@
           ]
         },
         {
-          "name": "Mark a note done",
+          "name": "Change a note",
           "request": {
             "method": "PATCH",
             "header": [
@@ -215,7 +603,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"done\"\n}"
+              "raw": "{\n  \"body\": \"Changed from Postman.\"\n}"
             }
           },
           "event": [

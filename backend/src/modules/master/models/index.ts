@@ -6,6 +6,7 @@ import { Counter } from './counter.js';
 import { HandoffCode } from './handoffCode.js';
 import { CustomRecord } from './customRecord.js';
 import { Module } from './module.js';
+import { ModuleChange } from './moduleChange.js';
 import { OAuthAuthorizationRequest, OAuthClient, OAuthGrant } from './oauth.js';
 import { OrgRole } from './orgRole.js';
 import { PasswordLink } from './passwordLink.js';
@@ -16,4 +17,4 @@ import { Session } from './session.js';
 import { User } from './user.js';
 import { UserPhoto } from './userPhoto.js';
 
-export const masterModels = [User, Session, Module, AuditLog, RateLimitCounter, OrgRole, AccessProfile, RecordHistory, RecordShare, CustomRecord, PasswordLink, HandoffCode, Counter, UserPhoto, Client, ApiToken, OAuthClient, OAuthAuthorizationRequest, OAuthGrant];
+export const masterModels = [User, Session, Module, ModuleChange, AuditLog, RateLimitCounter, OrgRole, AccessProfile, RecordHistory, RecordShare, CustomRecord, PasswordLink, HandoffCode, Counter, UserPhoto, Client, ApiToken, OAuthClient, OAuthAuthorizationRequest, OAuthGrant];

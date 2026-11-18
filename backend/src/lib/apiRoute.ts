@@ -17,6 +17,12 @@ const bodySchemas = new Map<string, ZodType>();
 /** The body schema of a registered API, as "METHOD /path", if it takes a body. */
 export const findBodySchema = (api: string): ZodType | undefined => bodySchemas.get(api);
 
+// Every registered API as "METHOD /path", so a manifest's routes can be checked against what the backend serves.
+const registeredApis = new Set<string>();
+
+/** Whether the backend serves this API, given as "METHOD /path" with the module's base path included. */
+export const isApiRegistered = (api: string): boolean => registeredApis.has(api);
+
 /** Turns a route's declared access into the middleware that enforces it. */
 export type AccessMiddlewareFor = (route: ApiRoute) => RequestHandler[];
 
@@ -27,6 +33,7 @@ export type AccessMiddlewareFor = (route: ApiRoute) => RequestHandler[];
 export function registerRoutes(app: Application, routes: ApiRoute[], accessMiddlewareFor: AccessMiddlewareFor): void {
   for (const route of routes) {
     const httpVerb = route.method.toLowerCase() as Lowercase<ApiRoute['method']>;
+    registeredApis.add(`${route.method} ${route.path}`);
     if (route.bodySchema) bodySchemas.set(`${route.method} ${route.path}`, route.bodySchema);
     app.route(route.path)[httpVerb]([...accessMiddlewareFor(route), ...(route.middleware ?? []), route.handler]);
   }

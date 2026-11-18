@@ -213,6 +213,10 @@ tbody tr:last-child td { border-bottom: 0; }
 .pane-top { display: grid; gap: 10px; }
 .pane-row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
 .pane-row h2 { font-size: 18px; font-weight: 700; }
+.change-list { display: grid; gap: 16px; }
+.change-entry { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.change-items { display: grid; gap: 10px; margin: 0; padding-left: 0; list-style: none; overflow-wrap: anywhere; }
+.change-items .meta { margin: 4px 0 0; padding-left: 20px; }
 .role-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--ink-muted); font-size: 13px; }
 .avatars { display: inline-flex; }
 .avatars .avatar { margin-left: -6px; box-shadow: 0 0 0 2px var(--surface); }
@@ -305,8 +309,25 @@ dialog h2 { margin-bottom: 14px; font-size: 17px; font-weight: 600; }
 .inline-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
 .inline-form .field { flex: 1 1 200px; }
 .resource-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.data-model-definition + .data-model-definition { margin-top: 20px; }
-.data-model-definition h3 { margin: 0 0 8px; font-size: 14px; }
+/* Data model: one panel per definition, each table the same fixed height, scrolling under a sticky header. */
+.data-model-grid { display: grid; gap: 16px; }
+.data-model-definition { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.data-model-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; padding: 10px 14px; background: var(--surface-muted); border-bottom: 1px solid var(--border); }
+.data-model-head h3 { margin: 0; font-size: 14px; }
+.data-model-description { margin: 0; padding: 8px 14px 0; }
+.data-model-table { height: 260px; overflow: auto; overscroll-behavior: contain; }
+.data-model-table table { table-layout: fixed; min-width: 560px; }
+.data-model-table th { position: sticky; top: 0; z-index: 1; background: var(--surface); box-shadow: inset 0 -1px 0 var(--border-strong); }
+.data-model-table th, .data-model-table td { padding-left: 14px; padding-right: 14px; }
+.data-model-table tr:last-child td { border-bottom: 0; }
+.data-model-table .col-field { width: 34%; }
+.data-model-table .col-type { width: 30%; }
+.data-model-table .col-always { width: 14%; }
+.data-model-table .col-access { width: 22%; }
+.data-model-field { font: 600 13px var(--font-mono); overflow-wrap: anywhere; }
+.data-model-type { font: 13px var(--font-mono); color: var(--ink-muted); overflow-wrap: anywhere; }
+.data-model-empty { margin: 0; padding: 14px; height: 260px; color: var(--ink-muted); font: 13px var(--font-mono); }
+@media (min-width: 1280px) { .data-model-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .check-grid { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .nowrap { white-space: nowrap; }
 .spaced { margin-top: 12px; }

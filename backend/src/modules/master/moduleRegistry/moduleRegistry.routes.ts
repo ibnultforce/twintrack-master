@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import type { Config } from '../../../config.js';
 import type { ApiRoute } from '../../../lib/apiRoute.js';
+import { paginationQueryFields } from '../../../lib/query.js';
 import { parseRequestBody, parseRequestQuery } from '../../../lib/validation.js';
 import { getActor } from '../access/caller.js';
 import { assertOwnPassword } from '../auth/account.service.js';
@@ -9,7 +10,9 @@ import { createFailedAttemptLimiter } from '../auth/failedAttemptLimiter.js';
 import { MAX_PASSWORD_LENGTH } from '../auth/passwords.js';
 import { exportModuleManifest, importModuleFromRequest, listRegisteredModules, removeModule } from './moduleRegistry.service.js';
 import type { AllowedOrigins } from './allowedOrigins.js';
+import type { ModuleFiles } from './moduleFiles.js';
 import { MAX_ALLOWED_ORIGINS, MAX_REDIRECT_URLS, saveFrontendSettings } from './frontendSettings.service.js';
+import { listModuleChanges, markModuleChangeDone, MODULE_CHANGE_STATUSES } from './moduleChanges.service.js';
 import { listModulePackFiles, readModulePackFile } from './modulePacks.service.js';
 import { getModuleSchema, importModuleSchema } from './moduleSchema.service.js';
 import { removeResource, saveResource } from './permissionRules.service.js';
@@ -54,11 +57,13 @@ const importSchemaBodySchema = z.strictObject({
   schema: z.unknown(),
 });
 
+const changesQuerySchema = z.object({ ...paginationQueryFields, status: z.enum(MODULE_CHANGE_STATUSES).optional() });
+
 const packFileQuerySchema = z.object({
   path: z.string().trim().min(1, 'is required').max(MAX_PACK_PATH_LENGTH),
 });
 
-export function createModuleRegistryRoutes(config: Config, allowedOrigins: AllowedOrigins): ApiRoute[] {
+export function createModuleRegistryRoutes(config: Config, allowedOrigins: AllowedOrigins, moduleFiles: ModuleFiles): ApiRoute[] {
   const handleListModules: RequestHandler = async (_req, res) => {
     res.json({ modules: await listRegisteredModules(config.moduleFrontendUrls) });
   };
@@ -67,7 +72,7 @@ export function createModuleRegistryRoutes(config: Config, allowedOrigins: Allow
     const { password, manifest } = parseRequestBody(importModuleBodySchema, req.body);
     const actor = getActor(req);
     await assertOwnPassword(actor.user._id, password);
-    const imported = await importModuleFromRequest(actor, manifest, config.moduleFrontendUrls);
+    const imported = await importModuleFromRequest(actor, manifest, config.moduleFrontendUrls, moduleFiles);
     res.status(imported.created ? 201 : 200).json(imported);
   };
 
@@ -81,7 +86,15 @@ export function createModuleRegistryRoutes(config: Config, allowedOrigins: Allow
 
   const handleImportSchema: RequestHandler = async (req, res) => {
     const { schema } = parseRequestBody(importSchemaBodySchema, req.body);
-    res.json(await importModuleSchema(getActor(req), String(req.params.key), schema));
+    res.json(await importModuleSchema(getActor(req), String(req.params.key), schema, moduleFiles));
+  };
+
+  const handleListChanges: RequestHandler = async (req, res) => {
+    res.json(await listModuleChanges(String(req.params.key), parseRequestQuery(changesQuerySchema, req.query)));
+  };
+
+  const handleMarkChangeDone: RequestHandler = async (req, res) => {
+    res.json(await markModuleChangeDone(getActor(req), String(req.params.key), String(req.params.changeId), moduleFiles));
   };
 
   const handleListPackFiles: RequestHandler = async (req, res) => {
@@ -103,7 +116,7 @@ export function createModuleRegistryRoutes(config: Config, allowedOrigins: Allow
   };
 
   const handleRemoveModule: RequestHandler = async (req, res) => {
-    res.json(await removeModule(getActor(req), String(req.params.key)));
+    res.json(await removeModule(getActor(req), String(req.params.key), moduleFiles));
   };
 
 
@@ -135,6 +148,8 @@ export function createModuleRegistryRoutes(config: Config, allowedOrigins: Allow
     { method: 'GET', path: '/modules/:key/export', access: 'private', permission: 'module.read', handler: handleExportModule },
     { method: 'GET', path: '/modules/:key/schema', access: 'private', permission: 'module.read', handler: handleGetSchema },
     { method: 'PUT', path: '/modules/:key/schema', access: 'private', permission: 'module.update', bodySchema: importSchemaBodySchema, handler: handleImportSchema },
+    { method: 'GET', path: '/modules/:key/changes', access: 'private', permission: 'module.read', handler: handleListChanges },
+    { method: 'POST', path: '/modules/:key/changes/:changeId/done', access: 'private', permission: 'module.update', handler: handleMarkChangeDone },
     { method: 'GET', path: '/modules/:key/pack',access: 'private', permission: 'module.read', handler: handleListPackFiles },
     { method: 'GET', path: '/modules/:key/pack/file', access: 'private', permission: 'module.read', handler: handleDownloadPackFile },
     // Only a super admin may, which the service checks: whoever controls a redirect address receives people's sign-ins.

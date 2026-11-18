@@ -2,7 +2,7 @@
 
 ## 1. What you're building
 
-A small app for the TwinTrack **Demo** module (key `demo`): a list of notes people can write, mark done, edit and delete. It exists for trying how module frontends sign in and follow permissions, so keep it simple.
+A small app for the TwinTrack **Demo** module (key `demo`): a list of notes people can write, edit and delete. It exists for trying how module frontends sign in and follow permissions, so keep it simple.
 
 ## 2. Stack and setup
 
@@ -26,22 +26,22 @@ Read `GET /me/permissions/demo` once after signing in, and show only what the pe
 |---|---|
 | `note.read` | The notes list and note page |
 | `note.create` | "New note" button |
-| `note.update` | Edit, and Mark done / Reopen |
+| `note.update` | Edit |
 | `note.delete` | Delete, after a confirmation |
 
 Without `note.read`, show "You don't have access to notes yet."
 
 ## 5. Screens
 
-- **Notes** (`/`): a filters card (All, Open, Done), then a table of title, status pill, written and changed dates, 25 per page with pagination, and an empty state. Select a row to open it.
-- **Note** (`/notes/[id]`): title, status, body, dates, and the actions in section 4.
+- **Notes** (`/`): a table of title, written and changed dates, 25 per page with pagination, and an empty state. Select a row to open it.
+- **Note** (`/notes/[id]`): title, body, dates, and the actions in section 4.
 - **New note / Edit note**: a dialog with title (required) and body.
 
 Every route is in `api/demo.md`; the shapes are in `DATA_MODEL.md` and `schema.json`.
 
 ## 6. Look and feel
 
-Only the classes in `design.css` (`card`, `btn`, `btn-primary`, `pill`, `table-box`, `field`, `input`, `dialog-actions`). No new colours, fonts or inline styles.
+Only the classes in `design.css` (`card`, `btn`, `btn-primary`, `table-box`, `field`, `input`, `dialog-actions`). No new colours, fonts or inline styles.
 
 ## 7. Words
 

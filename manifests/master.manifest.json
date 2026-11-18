@@ -3,7 +3,7 @@
   "module": {
     "key": "master",
     "name": "Master",
-    "version": "3.13.0",
+    "version": "3.15.0",
     "description": "Login, users, permissions and the API behind every module.",
     "repository": "twintrack-master",
     "baseUrl": "/",
@@ -390,6 +390,18 @@
     {
       "method": "PUT",
       "path": "/modules/:key/schema",
+      "access": "private",
+      "permission": "module.update"
+    },
+    {
+      "method": "GET",
+      "path": "/modules/:key/changes",
+      "access": "private",
+      "permission": "module.read"
+    },
+    {
+      "method": "POST",
+      "path": "/modules/:key/changes/:changeId/done",
       "access": "private",
       "permission": "module.update"
     },

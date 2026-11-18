@@ -60,6 +60,7 @@ const envSchema = z
     LOGIN_MAX_FAILED_ATTEMPTS: positiveInteger(10),
     LOGIN_RATE_WINDOW_MINUTES: positiveInteger(15),
     TEST_PAGE_ENABLED: z.enum(['true', 'false']).default('false'),
+    MODULE_FILE_SYNC_ENABLED: z.enum(['true', 'false']).optional(),
     RESEND_API_KEY: z.string().trim().optional(),
     EMAIL_FROM: z.string().trim().min(1).default('TwinTrack <no-reply@twintrack.com>'),
     PORTAL_URL: z.string().refine(isWebOrigin, 'must be an address such as https://twintrack.com').optional(),
@@ -96,6 +97,10 @@ const envSchema = z
     }
     if (env.NODE_ENV === 'production' && env.TEST_PAGE_ENABLED === 'true') {
       context.addIssue({ code: 'custom', path: ['TEST_PAGE_ENABLED'], message: 'must not be true in production' });
+    }
+    // A deployed server's repo files are replaced by every deploy, so writing them there would only hide changes.
+    if (env.NODE_ENV === 'production' && env.MODULE_FILE_SYNC_ENABLED === 'true') {
+      context.addIssue({ code: 'custom', path: ['MODULE_FILE_SYNC_ENABLED'], message: 'must not be true in production' });
     }
     // A demo server runs in production mode but may need it, so production needs a second, explicit setting.
     if (env.NODE_ENV === 'production' && env.IMPERSONATION_ENABLED === 'true' && env.IMPERSONATION_ALLOWED_IN_PRODUCTION !== 'true') {
@@ -175,6 +180,11 @@ export interface Config {
   trustProxyHops: number;
   /** Serves the browser test page at /try. Never allowed in production. */
   isTestPageEnabled: boolean;
+  /**
+   * Module imports and removals also write manifests/<key>.manifest.json and .schema.json and rebuild the module's
+   * pack, so the repo keeps what the database has. On by default in development only; never allowed in production.
+   */
+  isModuleFileSyncEnabled: boolean;
   /** The git commit the server runs, set by scripts/deploy-server.sh. Absent in local development. */
   deployedCommit?: string;
   /** This API's own public address. OAuth and the MCP endpoint name it to the apps that connect. */
@@ -221,6 +231,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     logLevel: values.LOG_LEVEL,
     trustProxyHops: values.TRUST_PROXY_HOPS,
     isTestPageEnabled: values.TEST_PAGE_ENABLED === 'true',
+    isModuleFileSyncEnabled: values.MODULE_FILE_SYNC_ENABLED
+      ? values.MODULE_FILE_SYNC_ENABLED === 'true'
+      : values.NODE_ENV === 'development',
     deployedCommit: values.DEPLOYED_COMMIT,
     publicApiUrl: values.PUBLIC_API_URL ?? DEFAULT_PUBLIC_API_URL,
     encryptionKey: values.ENCRYPTION_KEY ? Buffer.from(values.ENCRYPTION_KEY, 'hex') : randomBytes(ENCRYPTION_KEY_BYTES),

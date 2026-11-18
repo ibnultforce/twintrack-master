@@ -9,14 +9,14 @@ A backend change is finished only when every place that describes it agrees with
 
 ## 1. Classify the change
 
-Read the diff (`git diff` and `git status` in `twintrack-master/`, plus the files changed this session). Pick every row that applies:
+Read the diff (`git diff` and `git status` in `twintrack-master/`, plus the files changed this session), and any `manifests/changes/<key>.md`: each lists what an import in the app changed in a module's manifest or schema, and where to work. When the code matches one, mark it done on the Modules screen or with `POST /modules/<key>/changes/<id>/done` (the id is in the file); don't edit the file by hand. Pick every row that applies:
 
 | Change | Do |
 |---|---|
 | New module | [references/new-module.md](references/new-module.md), then "New route" for each of its routes |
 | New route | Steps 2 to 8 |
 | Changed route (path, method, access, permission, body, response, errors) | Steps 2 to 8. Change the existing docs, Postman and scenario entries; don't add duplicates |
-| Removed module | Delete its code, its registration in `app.ts`, its manifest file, its entry in `seedFiles.ts`, its Postman folder, scenarios, `docs/api/<key>.md` and `module-packs/<key>/`. Then `npm run seed:modules`, which removes the module from the database because its file is gone; on the demo the deploy runs it. Say which profiles held its permissions |
+| Removed module | Delete its code, its registration in `app.ts`, its manifest and schema files (the seed loads every `manifests/*.manifest.json`), its Postman folder, scenarios, `docs/api/<key>.md` and `module-packs/<key>/`. Then `npm run seed:modules`, which removes the module from the database because its file is gone; on the demo the deploy runs it. Say which profiles held its permissions |
 | Removed route | Steps 2 to 8, removing it everywhere. Remove an action or resource only when no other route or service uses it, and say which profiles held it |
 | New or changed resource, action, field, `recordFields`, `protectedFields`, `trackedFields`, `sharingModel` | Steps 2, 5, 6, 7, 8 |
 | Model or response shape change, no route change | Steps 5 (data model and `schema.json`), 6, 7, 8 |

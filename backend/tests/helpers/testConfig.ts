@@ -12,6 +12,8 @@ export const TEST_ENV = {
   JWT_ACCESS_SECRET: 'test-secret-that-is-long-enough-for-validation',
   // Uploads in tests go to a temporary folder, never the repository.
   STORAGE_DIR: join(tmpdir(), 'twintrack-test-uploads'),
+  // Module imports in tests must never rewrite the repo's manifests. Tests that check the files pass their own folder.
+  MODULE_FILE_SYNC_ENABLED: 'false',
 };
 
 export const createTestConfig = (overrides: Record<string, string> = {}): Config =>

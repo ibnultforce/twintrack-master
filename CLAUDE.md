@@ -81,6 +81,8 @@ Nobody is given a password: new people and resets get a one-time link emailed th
 
 ## Changing a route
 
+Imports on the Modules screen change only the manifest and schema. Each one that changes something is listed in `manifests/changes/<key>.md` and under "Changes to build" on the screen, with where the code needs work; build those, then mark the import done there.
+
 The full checklist and rules are in `docs/adding-an-api.md`. Keep these in step in the same change. The tests catch 1, 2 and 4:
 
 1. **Route table and manifest, in both places:** every new or changed API goes into its module's manifest file (`manifests/<module>.manifest.json`): the route, its access rule, any new resource or action, and a raised module version. Then load it into the database with `npm run seed:modules`, which keeps people, profiles and custom objects made in the app, so the running backend's copy matches the file. A file the database hasn't loaded grants nothing, and the Modules and Profiles screens won't show it. `tests/routes.test.ts` fails if built Master routes or their access rules disagree with the Master manifest. `tests/module-routes.test.ts` does the same for every other module. Claude Code sessions run the `twintrack-sync` skill (`.claude/skills/`) for this whole checklist; hooks in `.claude/settings.json` remind it and stop it finishing a backend change that touched nothing describing it.

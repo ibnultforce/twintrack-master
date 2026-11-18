@@ -4,12 +4,11 @@ import { pageOffset, type PageRequest } from '../../../lib/query.js';
 import type { Actor } from '../../master/access/caller.js';
 import { peopleInScope } from '../../master/access/scope.js';
 import type { Scope } from '../../master/moduleRegistry/manifest.js';
-import { DemoNote, type NoteDoc, type NoteStatus } from '../models/note.js';
+import { DemoNote, type NoteDoc } from '../models/note.js';
 
 export interface NoteChanges {
   title?: string;
   body?: string;
-  status?: NoteStatus;
 }
 
 const noteNotFound = () => new ApiError(404, 'note_not_found', 'No such note, or it is beyond your reach.');
@@ -24,8 +23,8 @@ function toNote({ _id, ...fields }: NoteDoc) {
   return { id: _id, ...fields };
 }
 
-export async function listNotes(actor: Actor, scope: Scope, page: PageRequest & { status?: NoteStatus }) {
-  const filter = { ...(await scopeFilter(actor, scope)), ...(page.status && { status: page.status }) };
+export async function listNotes(actor: Actor, scope: Scope, page: PageRequest) {
+  const filter = await scopeFilter(actor, scope);
   const [notes, total] = await Promise.all([
     DemoNote.find(filter).sort({ createdAt: -1, _id: 1 }).skip(pageOffset(page)).limit(page.pageSize).lean(),
     DemoNote.countDocuments(filter),

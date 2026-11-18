@@ -29,6 +29,8 @@ const config = loadConfig({
   IMPERSONATION_ENABLED: 'true',
   // Files the collection uploads go to a temporary folder, never the repository.
   STORAGE_DIR: join(tmpdir(), 'twintrack-postman-uploads'),
+  // The collection imports and removes modules, which must never rewrite the repo's manifests.
+  MODULE_FILE_SYNC_ENABLED: 'false',
 });
 
 const uri = new URL(config.mongodbUri);

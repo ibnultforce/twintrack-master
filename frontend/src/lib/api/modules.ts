@@ -9,8 +9,63 @@ export async function listModules(): Promise<RegisteredModule[]> {
   return (await apiRequest<{ modules: RegisteredModule[] }>('/modules')).modules;
 }
 
+/** What an import or removal did to the repo's manifests/ and module pack. Only a local development server writes them. */
+export interface ModuleFilesReport {
+  synced: boolean;
+  written: string[];
+  removed: string[];
+  unchanged: string[];
+  pack: { rebuilt: boolean; message?: string };
+  /** Routes the manifest lists that the backend doesn't serve yet. */
+  routesWithoutCode: string[];
+  warning?: string;
+}
+
+export type ModuleChangeKind = 'added' | 'removed' | 'changed';
+
+/** One thing an import changed, and where the code and docs need work to match it. */
+export interface ModuleChangeItem {
+  kind: ModuleChangeKind;
+  subject: string;
+  detail?: string;
+  where: string[];
+}
+
+/** What one manifest or schema import changed. Pending until a developer marks it done. */
+export interface ModuleChange {
+  id: string;
+  module: string;
+  moduleName: string;
+  source: 'manifest' | 'schema';
+  versionBefore: string | null;
+  versionAfter: string;
+  items: ModuleChangeItem[];
+  changedAt: string;
+  changedByName?: string;
+  status: 'pending' | 'done';
+  doneAt?: string;
+  doneByName?: string;
+}
+
+/** Where a local development server wrote the module's list of changes still to build. */
+export interface ChangeLogReport {
+  path: string;
+  outcome: 'written' | 'removed' | 'unchanged' | 'failed';
+}
+
+interface ImportChanges {
+  change: ModuleChange | null;
+  changeLog: ChangeLogReport | null;
+}
+
 export const importModule = (manifest: unknown, password: string) =>
-  apiRequest<{ key: string; created: boolean }>('/modules/import', { method: 'POST', body: { manifest, password } });
+  apiRequest<{ key: string; created: boolean; files: ModuleFilesReport } & ImportChanges>('/modules/import', { method: 'POST', body: { manifest, password } });
+
+export const listModuleChanges = (moduleKey: string, status: 'pending' | 'done') =>
+  apiRequest<{ changes: ModuleChange[]; total: number; pending: number }>(`/modules/${segment(moduleKey)}/changes`, { query: { status, pageSize: 50 } });
+
+export const markModuleChangeDone = (moduleKey: string, changeId: string) =>
+  apiRequest<{ change: ModuleChange; changeLog: ChangeLogReport | null }>(`/modules/${segment(moduleKey)}/changes/${segment(changeId)}/done`, { method: 'POST' });
 
 export const exportModule = (moduleKey: string) => apiRequest<unknown>(`/modules/${segment(moduleKey)}/export`);
 
@@ -18,9 +73,42 @@ export const exportModule = (moduleKey: string) => apiRequest<unknown>(`/modules
 export const getModuleSchema = (moduleKey: string) => apiRequest<ModuleSchema>(`/modules/${segment(moduleKey)}/schema`);
 
 export const importModuleSchema = (moduleKey: string, schema: unknown) =>
-  apiRequest<{ key: string; definitions: number }>(`/modules/${segment(moduleKey)}/schema`, { method: 'PUT', body: { schema } });
+  apiRequest<{ key: string; definitions: number; files: ModuleFilesReport } & ImportChanges>(`/modules/${segment(moduleKey)}/schema`, { method: 'PUT', body: { schema } });
 
-export const removeModule = (moduleKey: string) => apiRequest(`/modules/${segment(moduleKey)}`, { method: 'DELETE' });
+export const removeModule = (moduleKey: string) =>
+  apiRequest<{ removed: true; key: string; affectedUsers: number; files: ModuleFilesReport }>(`/modules/${segment(moduleKey)}`, { method: 'DELETE' });
+
+const listPaths = (paths: string[]) => paths.join(', ');
+
+/** Plain sentences saying where a module change went, and what still needs doing by hand. */
+export function describeModuleFiles(report: ModuleFilesReport): { tone: 'good' | 'warning'; text: string }[] {
+  const notes: { tone: 'good' | 'warning'; text: string }[] = [];
+  if (report.synced) {
+    const parts = [
+      report.written.length > 0 ? `Saved to ${listPaths(report.written)}.` : '',
+      report.removed.length > 0 ? `Deleted ${listPaths(report.removed)}.` : '',
+      report.unchanged.length > 0 ? `${listPaths(report.unchanged)} already matched.` : '',
+      report.pack.rebuilt ? 'The frontend pack was rebuilt.' : '',
+    ].filter(Boolean);
+    if (report.written.length + report.removed.length > 0) parts.push('Commit these files in twintrack-master.');
+    if (parts.length > 0) notes.push({ tone: 'good', text: parts.join(' ') });
+    if (!report.pack.rebuilt && report.written.length > 0 && report.pack.message) notes.push({ tone: 'warning', text: `The frontend pack was not rebuilt: ${report.pack.message}` });
+  }
+  if (report.warning) notes.push({ tone: 'warning', text: report.warning });
+  if (report.routesWithoutCode.length > 0) {
+    notes.push({ tone: 'warning', text: `These routes have no backend code yet, so they answer 404 until it's built: ${listPaths(report.routesWithoutCode)}.` });
+  }
+  return notes;
+}
+
+/** A sentence about the changes an import recorded for developers to build, or null when it changed nothing. */
+export function describeImportChanges({ change, changeLog }: ImportChanges): { tone: 'good' | 'warning'; text: string } | null {
+  if (!change) return null;
+  const count = `${change.items.length} change${change.items.length === 1 ? '' : 's'}`;
+  const file = changeLog?.outcome === 'written' || changeLog?.outcome === 'unchanged' ? ` and in ${changeLog.path}` : '';
+  const failed = changeLog?.outcome === 'failed' ? ` ${changeLog.path} could not be written.` : '';
+  return { tone: 'warning', text: `${count} to build are listed under "Changes to build"${file}.${failed}` };
+}
 
 export interface ResourceDetails {
   label: string;

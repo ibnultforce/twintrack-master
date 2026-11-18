@@ -10,6 +10,9 @@ import { countUsersWithProfiles } from '../users/users.repository.js';
 import { validateManifest, type Manifest } from './manifest.js';
 import { deleteModule, findAllModules, findModuleByKey, saveModule } from './moduleRegistry.repository.js';
 import { describeModuleSchema } from './moduleSchema.service.js';
+import type { ChangeLogReport, ModuleFiles, ModuleFilesReport } from './moduleFiles.js';
+import { diffModule } from './moduleChanges.js';
+import { recordModuleChange, writeChangeLog, type ModuleChangeView } from './moduleChanges.service.js';
 import { listModuleRoutes, listPermissionApis, listPermissionUsers } from './grantEditing.js';
 
 export class CoreModuleError extends ApiError {
@@ -96,13 +99,15 @@ export async function importModuleFromRequest(
   actor: Actor,
   rawManifest: unknown,
   frontendUrls: Map<string, string>,
-): Promise<RegisteredModule & ImportResult> {
+  moduleFiles: ModuleFiles,
+): Promise<RegisteredModule & ImportResult & { files: ModuleFilesReport; change: ModuleChangeView | null; changeLog: ChangeLogReport | null }> {
   const validated = validateManifest(rawManifest);
   if (!validated.ok) throw new ApiError(422, 'validation_failed', 'That manifest is invalid.', validated.errors);
   const manifest = validated.value;
 
-  const result = await runInTransaction(async (session) => {
-    const previousVersion = (await findModuleByKey(manifest.module.key, session))?.version ?? null;
+  const { imported, change } = await runInTransaction(async (session) => {
+    const previous = await findModuleByKey(manifest.module.key, session);
+    const previousVersion = previous?.version ?? null;
     const imported = await importManifest(manifest, { assertMayReplace: (existing) => assertMayReplaceEdits(actor, existing), session });
     await recordAudit(
       {
@@ -117,9 +122,24 @@ export async function importModuleFromRequest(
       },
       session,
     );
-    return imported;
+    const change = await recordModuleChange(
+      actor,
+      {
+        module: imported.key,
+        moduleName: manifest.module.name,
+        source: 'manifest',
+        versionBefore: previousVersion,
+        versionAfter: imported.version,
+        items: diffModule(imported.key, previous, manifest),
+      },
+      session,
+    );
+    return { imported, change };
   });
-  return { ...toRegisteredModule(manifest.module, frontendUrls), ...result };
+  // Only after the transaction commits, so a refused import never touches the repo.
+  const files = await moduleFiles.saveManifest(manifest);
+  const changeLog = change ? await writeChangeLog(imported.key, moduleFiles) : null;
+  return { ...toRegisteredModule(manifest.module, frontendUrls), ...imported, files, change, changeLog };
 }
 
 /** A manifest of the module as it stands, including edits made in the app, in the form an import accepts. */
@@ -137,7 +157,11 @@ export async function exportModuleManifest(key: string) {
 }
 
 /** Profiles keep their part for a removed module, which grants nothing unless it's imported again. Counts the people whose profile covers it. */
-export async function removeModule(actor: Actor, key: string): Promise<{ removed: true; key: string; affectedUsers: number }> {
+export async function removeModule(
+  actor: Actor,
+  key: string,
+  moduleFiles: ModuleFiles,
+): Promise<{ removed: true; key: string; affectedUsers: number; files: ModuleFilesReport }> {
   const module = await findModuleByKey(key);
   if (!module) throw new ApiError(404, 'unknown_module', 'No such module.');
   if (module.core) throw new CoreModuleError(key, 'removed');
@@ -160,5 +184,5 @@ export async function removeModule(actor: Actor, key: string): Promise<{ removed
     );
     return countUsersWithProfiles(profileIds, session);
   });
-  return { removed: true, key, affectedUsers };
+  return { removed: true, key, affectedUsers, files: await moduleFiles.removeModule(key) };
 }

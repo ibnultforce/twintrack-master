@@ -3,7 +3,7 @@
   "module": {
     "key": "demo",
     "name": "Demo",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "description": "Notes, for trying a module's APIs, permissions and scopes.",
     "repository": "twintrack-demo",
     "baseUrl": "/demo"

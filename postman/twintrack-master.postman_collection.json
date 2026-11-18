@@ -416,6 +416,10 @@
     {
       "key": "schemaModuleKey",
       "value": "demo"
+    },
+    {
+      "key": "moduleChangeId",
+      "value": ""
     }
   ],
   "item": [
@@ -4116,7 +4120,132 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('returns 200', () => pm.response.to.have.status(200));",
-                  "pm.test('counts the definitions', () => pm.expect(pm.response.json().definitions).to.eql(1));"
+                  "pm.test('counts the definitions', () => pm.expect(pm.response.json().definitions).to.eql(1));",
+                  "pm.test('records what changed', () => pm.expect(pm.response.json().change.status).to.eql('pending'));",
+                  "pm.collectionVariables.set('moduleChangeId', pm.response.json().change.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lists a module's changes to build",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{schemaModuleKey}}/changes?status=pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{schemaModuleKey}}",
+                "changes"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            },
+            "description": "Needs module.read. What manifest and schema imports changed in the module and where the code needs work, newest first. status is pending or done."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists the schema import', () => {",
+                  "  const ids = pm.response.json().changes.map((change) => change.id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('moduleChangeId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Marks a module change done",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{schemaModuleKey}}/changes/{{moduleChangeId}}/done",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{schemaModuleKey}}",
+                "changes",
+                "{{moduleChangeId}}",
+                "done"
+              ]
+            },
+            "description": "Needs module.update. Once the code and docs match the change. A local development server rewrites manifests/changes/<key>.md."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is done', () => pm.expect(pm.response.json().change.status).to.eql('done'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Marking a module change done twice is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{schemaModuleKey}}/changes/{{moduleChangeId}}/done",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{schemaModuleKey}}",
+                "changes",
+                "{{moduleChangeId}}",
+                "done"
+              ]
+            },
+            "description": "Needs module.update. A change already marked done answers 409."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refuses with 409 already_done', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().error.code).to.eql('already_done');",
+                  "});"
                 ]
               }
             }
@@ -17214,7 +17343,7 @@
           ]
         },
         {
-          "name": "Mark a note done",
+          "name": "Change a note",
           "request": {
             "method": "PATCH",
             "header": [
@@ -17240,7 +17369,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"done\"\n}"
+              "raw": "{\n  \"body\": \"Changed from Postman.\"\n}"
             }
           },
           "event": [
@@ -17250,7 +17379,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('returns 200', () => pm.response.to.have.status(200));",
-                  "pm.test('is done', () => pm.expect(pm.response.json().status).to.eql('done'));"
+                  "pm.test('body changed', () => pm.expect(pm.response.json().body).to.eql('Changed from Postman.'));"
                 ]
               }
             }

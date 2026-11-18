@@ -3697,6 +3697,162 @@
           ]
         },
         {
+          "id": "GET /modules/:key/changes",
+          "method": "GET",
+          "path": "/modules/:key/changes",
+          "purpose": "Lists what manifest and schema imports changed in a module, and where the code and docs need work to match, newest first.",
+          "input": "module key in the path; status (pending or done), page and pageSize in the query",
+          "access": "Needs module.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists Demo's changes still to build",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/modules/demo/schema",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"schema\": {\"$defs\": {\"Note\": {\"type\": \"object\", \"required\": [\"id\"], \"properties\": {\"id\": {\"type\": \"string\"}}}}}}",
+                  "save": {
+                    "changeId": "change.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/modules/demo/changes?status=pending",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/modules/demo/changes"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/modules/demo/changes",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Module not loaded",
+              "expected": 404,
+              "code": "unknown_module",
+              "request": {
+                "method": "GET",
+                "path": "/modules/account/changes",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Unknown status",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/modules/demo/changes?status=later",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /modules/:key/changes/:changeId/done",
+          "method": "POST",
+          "path": "/modules/:key/changes/:changeId/done",
+          "purpose": "Marks one import's changes as built, once the code, docs and frontends match it. A local development server rewrites manifests/changes/<key>.md.",
+          "input": "module key and change id in the path",
+          "access": "Needs module.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Marks a schema import done",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/modules/demo/schema",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"schema\": {\"$defs\": {\"Note\": {\"type\": \"object\", \"required\": [\"id\"], \"properties\": {\"id\": {\"type\": \"string\"}}}}}}",
+                  "save": {
+                    "changeId": "change.id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/modules/demo/changes/{{changeId}}/done",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Already marked done",
+              "expected": 409,
+              "code": "already_done",
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "PUT",
+                  "path": "/modules/demo/schema",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"schema\": {\"$defs\": {\"Note\": {\"type\": \"object\", \"required\": [\"id\"], \"properties\": {\"id\": {\"type\": \"string\"}}}}}}",
+                  "save": {
+                    "changeId": "change.id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/modules/demo/changes/{{changeId}}/done",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/modules/demo/changes/{{changeId}}/done",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/modules/demo/changes/anything/done",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such change",
+              "expected": 404,
+              "code": "unknown_change",
+              "request": {
+                "method": "POST",
+                "path": "/modules/demo/changes/anything/done",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
           "id": "GET /modules/:key/pack",
           "method": "GET",
           "path": "/modules/:key/pack",
@@ -13473,7 +13629,7 @@
           "method": "GET",
           "path": "/demo/notes",
           "purpose": "Lists the notes your note.read scope reaches, newest first.",
-          "input": "page, pageSize and status (open or done) in the query",
+          "input": "page and pageSize in the query",
           "access": "Needs note.read",
           "scenarios": [
             {
@@ -13600,13 +13756,13 @@
           "id": "PATCH /demo/notes/:id",
           "method": "PATCH",
           "path": "/demo/notes/:id",
-          "purpose": "Changes a note's title, body or status.",
-          "input": "note id in the path; title, body or status (open or done)",
+          "purpose": "Changes a note's title or body.",
+          "input": "note id in the path; title or body",
           "access": "Needs note.update",
           "scenarios": [
             {
               "kind": "success",
-              "title": "Marks a note done",
+              "title": "Changes a note's body",
               "expected": 200,
               "setup": [
                 {
@@ -13623,7 +13779,7 @@
                 "method": "PATCH",
                 "path": "/demo/notes/{{noteId}}",
                 "as": "farhana@twintrack.test",
-                "body": "{\"status\": \"done\"}"
+                "body": "{\"body\": \"Changed from the test page.\"}"
               }
             },
             {

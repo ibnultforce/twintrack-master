@@ -211,7 +211,10 @@ describe('module and activity administration', () => {
 
       const schema = await admin.get('/modules/projects/schema');
       expect(schema.status).toBe(200);
-      expect(schema.body).toEqual(projects.schema);
+      const { 'x-instructions': instructions, ...downloaded } = schema.body;
+      expect(downloaded).toEqual(projects.schema);
+      expect(instructions.join(' ')).toMatch(/Import schema/);
+      expect(Object.keys(schema.body).slice(0, 2)).toEqual(['$schema', 'x-instructions']);
     });
 
     it('gives a module without a schema an empty outline', async () => {
@@ -220,23 +223,38 @@ describe('module and activity administration', () => {
       expect((await admin.get('/modules/inventory/schema')).body).toEqual(expect.objectContaining({ title: 'TwinTrack Inventory API', $defs: {} }));
     });
 
+    it('can import a downloaded schema back unchanged, without storing its instructions', async () => {
+      const admin = await as('farhana');
+      const downloaded = (await admin.get('/modules/demo/schema')).body;
+      expect((await admin.put('/modules/demo/schema', { schema: downloaded })).status).toBe(200);
+      const stored = (await Module.findOne({ key: 'demo' }).lean())?.schema;
+      expect(stored).not.toHaveProperty('x-instructions');
+      expect((await admin.get('/modules/demo/export')).body.schema).not.toHaveProperty('x-instructions');
+    });
+
     it('imports a schema alone, keeps it when the manifest is imported again without one, and exports it', async () => {
       const admin = await as('farhana');
       await admin.post('/modules/import', { manifest: inventoryManifest(), password: TEST_PASSWORD });
 
       const imported = await admin.put('/modules/inventory/schema', { schema: noteSchema });
-      expect(imported.body).toEqual({ key: 'inventory', definitions: 1 });
+      expect(imported.body).toEqual({
+        key: 'inventory',
+        definitions: 1,
+        files: expect.objectContaining({ synced: false, written: [] }),
+        change: expect.objectContaining({ source: 'schema', status: 'pending', items: [expect.objectContaining({ kind: 'added', subject: 'Definition Item' })] }),
+        changeLog: null,
+      });
       expect(await AuditLog.countDocuments({ action: 'module.schemaImported', targetId: 'inventory' })).toBe(1);
 
       await admin.post('/modules/import', { manifest: inventoryManifest('1.1.0'), password: TEST_PASSWORD });
-      expect((await admin.get('/modules/inventory/schema')).body).toEqual(noteSchema);
+      expect((await admin.get('/modules/inventory/schema')).body).toEqual(expect.objectContaining(noteSchema));
       expect((await admin.get('/modules/inventory/export')).body.schema).toEqual(noteSchema);
     });
 
     it('takes a schema inside an imported manifest', async () => {
       const admin = await as('farhana');
-      await admin.post('/modules/import', { manifest: { ...inventoryManifest(), schema: noteSchema }, password: TEST_PASSWORD });
-      expect((await admin.get('/modules/inventory/schema')).body).toEqual(noteSchema);
+      await admin.post('/modules/import', { manifest: { ...inventoryManifest(), schema: { ...noteSchema, 'x-instructions': ['old'] } }, password: TEST_PASSWORD });
+      expect((await admin.get('/modules/inventory/export')).body.schema).toEqual(noteSchema);
     });
 
     it('refuses a schema without $defs, and needs module.update to import', async () => {
@@ -279,7 +297,7 @@ describe('module and activity administration', () => {
 
       const response = await admin.delete('/modules/inventory');
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ removed: true, key: 'inventory', affectedUsers: 1 });
+      expect(response.body).toEqual({ removed: true, key: 'inventory', affectedUsers: 1, files: expect.objectContaining({ synced: false, removed: [] }) });
       expect((await karim.get('/me/modules')).body.modules).toEqual([]);
       expect(await AuditLog.countDocuments({ action: 'module.removed', targetId: 'inventory' })).toBe(1);
 

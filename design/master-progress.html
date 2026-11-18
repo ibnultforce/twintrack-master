@@ -394,6 +394,31 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>18 November 2026: imports record what's left to build</h3>
+      <ul>
+        <li>Every manifest or schema import that changes something now records what changed and where to work, in a new <code>module_changes</code> collection, in the import's transaction. Each item names its kind (added, removed, changed), what changed (a resource, action, resource setting, route and its access, schema definition or field) and the places to update: the module's code folder, models, <code>docs/api</code>, Postman, <code>/try</code>, the pack's <code>DATA_MODEL.md</code>, the module's frontend or the Profiles screen. A new route with no backend code, and a <code>required</code> field the schema doesn't define, are called out.</li>
+        <li>New routes (Master manifest 3.15.0): <code>GET /modules/:key/changes</code> (<code>module.read</code>, filter by <code>pending</code> or <code>done</code>) and <code>POST /modules/:key/changes/:changeId/done</code> (<code>module.update</code>, logged as <code>module.changeDone</code>). No new permissions.</li>
+        <li>A development server also writes the pending list to <code>manifests/changes/&lt;key&gt;.md</code>, rewritten from the database on each import and each "done", and deleted when nothing is pending or the module is removed. The Modules screen has a "Changes to build" card with Mark done and Show done, and an import's notice says how many changes it recorded. The sync skill, CLAUDE.md and README point developers and Claude sessions at the file.</li>
+        <li>Checks: typecheck, lint and 1,493 tests pass, including 6 new ones; Postman 697 of 698, the same older Admin failure as before. Not tried in a browser yet.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>18 November 2026: Demo notes lose their status</h3>
+      <ul>
+        <li>A note no longer has <code>status</code> (open or done). <code>GET /demo/notes</code> no longer filters by it, <code>PATCH /demo/notes/:id</code> takes only <code>title</code> and <code>body</code> and refuses <code>status</code> with <code>422 validation_failed</code>, and responses leave it out. Notes already stored keep the field in the database but it isn't returned. Demo manifest 2.0.0; no permissions changed.</li>
+        <li>Updated: <code>manifests/demo.schema.json</code> (also removed from <code>required</code>), <code>docs/api/demo.md</code>, Postman "Change a note", the <code>/try</code> scenario, and the Demo pack's <code>DATA_MODEL.md</code> and <code>INSTRUCTIONS.md</code> (no Done filter or Mark done).</li>
+        <li>Checks: typecheck, lint and 1,478 tests pass; Postman 691 of 692, the same older Admin failure as before.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>17 November 2026: module imports keep the repo files in step</h3>
+      <ul>
+        <li>On a development server, <code>POST /modules/import</code>, <code>PUT /modules/:key/schema</code> and <code>DELETE /modules/:key</code> also write or delete <code>manifests/&lt;key&gt;.manifest.json</code> and <code>.schema.json</code> and rebuild the module's pack, so the next <code>seed:modules</code> or deploy keeps the change. New setting <code>MODULE_FILE_SYNC_ENABLED</code>: on by default in development, refused in production.</li>
+        <li>Their responses carry <code>files</code>: what was written, removed or already matched, whether the pack was rebuilt, and <code>routesWithoutCode</code>, the manifest routes the backend doesn't serve yet. The Modules screen shows it. A file that already matches is left alone; a changed one keeps its key order and line endings.</li>
+        <li>The seed now loads every <code>manifests/*.manifest.json</code>, Master first, instead of a fixed list. A downloaded schema's <code>x-instructions</code> is dropped on import. Master manifest 3.14.0. Checks: typecheck, lint and 1,478 tests pass.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>17 November 2026: Demo module for testing</h3>
       <ul>
         <li>New <code>demo</code> module, "Demo" (manifest 1.0.0, base <code>/demo</code>), with one scoped resource <code>note</code> (read, create, update, delete) and five routes: <code>GET /demo/notes</code>, <code>GET /demo/notes/:id</code>, <code>POST /demo/notes</code>, <code>PATCH /demo/notes/:id</code>, <code>DELETE /demo/notes/:id</code>. Only the super admin holds <code>note.*</code> until a profile grants it.</li>

@@ -4,12 +4,13 @@ import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { CustomObjectDialog } from '@/components/CustomObjectDialog';
 import { DataModelCard } from '@/components/DataModelCard';
 import { FrontendSettingsCard } from '@/components/FrontendSettingsCard';
+import { ModuleChangesCard } from '@/components/ModuleChangesCard';
 import { ModulePackDialog } from '@/components/ModulePackDialog';
 import { ModuleRoutes } from '@/components/ModuleRoutes';
 import { ConfirmDialog, Dialog } from '@/components/Dialog';
 import { Card, Loaded, Notice, PageHead, Pill, TextField } from '@/components/ui';
 import { describeError } from '@/lib/api/http';
-import { exportModule, getModuleSchema, importModule, importModuleSchema, listModules, removeModule, removeResource, saveResource } from '@/lib/api/modules';
+import { describeImportChanges, describeModuleFiles, exportModule, getModuleSchema, importModule, importModuleSchema, listModules, removeModule, removeResource, saveResource, type ModuleChange, type ChangeLogReport, type ModuleFilesReport } from '@/lib/api/modules';
 import type { ModuleResource, RegisteredModule, ResourceAction } from '@/lib/api/types';
 import { removeCustomObject } from '@/lib/api/records';
 import { humanize } from '@/lib/format';
@@ -86,7 +87,15 @@ function ResourceDialog({ module, resource, onSaved, onClose }: { module: Regist
   );
 }
 
-function ImportManifestDialog({ manifest, fileName, onImported, onClose }: { manifest: unknown; fileName: string; onImported: (message: string) => void; onClose: () => void }) {
+interface ImportOutcome {
+  files: ModuleFilesReport;
+  change: ModuleChange | null;
+  changeLog: ChangeLogReport | null;
+}
+
+type ImportedHandler = (message: string, outcome: ImportOutcome) => void;
+
+function ImportManifestDialog({ manifest, fileName, onImported, onClose }: { manifest: unknown; fileName: string; onImported: ImportedHandler; onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
@@ -95,7 +104,7 @@ function ImportManifestDialog({ manifest, fileName, onImported, onClose }: { man
     setError('');
     try {
       const result = await importModule(manifest, password);
-      onImported(`${result.key} was ${result.created ? 'added' : 'replaced'}.`);
+      onImported(`${result.key} was ${result.created ? 'added' : 'replaced'}.`, result);
       onClose();
     } catch (failure) {
       setError(describeError(failure));
@@ -117,7 +126,7 @@ function ImportManifestDialog({ manifest, fileName, onImported, onClose }: { man
   );
 }
 
-function ImportSchemaDialog({ module, schema, fileName, onImported, onClose }: { module: RegisteredModule; schema: unknown; fileName: string; onImported: (message: string) => void; onClose: () => void }) {
+function ImportSchemaDialog({ module, schema, fileName, onImported, onClose }: { module: RegisteredModule; schema: unknown; fileName: string; onImported: ImportedHandler; onClose: () => void }) {
   const [error, setError] = useState('');
 
   const submit = async (event: FormEvent) => {
@@ -125,7 +134,7 @@ function ImportSchemaDialog({ module, schema, fileName, onImported, onClose }: {
     setError('');
     try {
       const result = await importModuleSchema(module.key, schema);
-      onImported(`${module.name}'s schema was replaced: ${result.definitions} definitions.`);
+      onImported(`${module.name}'s schema was replaced: ${result.definitions} definitions.`, result);
       onClose();
     } catch (failure) {
       setError(describeError(failure));
@@ -135,7 +144,7 @@ function ImportSchemaDialog({ module, schema, fileName, onImported, onClose }: {
   return (
     <Dialog title={`Import a schema into ${module.name}?`} onClose={onClose}>
       <form className="form" onSubmit={(event) => void submit(event)}>
-        <p><strong>{fileName}</strong> replaces {module.name}&apos;s data model, its schema.json in the frontend pack and the schema in its exported manifest. Resources, routes and access don&apos;t change.</p>
+        <p><strong>{fileName}</strong> replaces {module.name}&apos;s data model, its schema.json in the frontend pack and the schema in its exported manifest. Resources, routes and access don&apos;t change. A local development server also saves it to manifests/{module.key}.schema.json.</p>
         {error ? <Notice tone="danger">{error}</Notice> : null}
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
@@ -178,6 +187,17 @@ export default function RegisteredModulesPage() {
   const [chosenKey, setChosenKey] = useState('');
   const [dialog, setDialog] = useState<ModulesDialog>(null);
   const [outcome, setOutcome] = useState<{ tone: 'good' | 'danger'; text: string } | null>(null);
+  const [fileNotes, setFileNotes] = useState<{ tone: 'good' | 'warning'; text: string }[]>([]);
+  const showOutcome = (next: { tone: 'good' | 'danger'; text: string } | null, files?: ModuleFilesReport) => {
+    setOutcome(next);
+    setFileNotes(files ? describeModuleFiles(files) : []);
+  };
+  const showImported = (text: string, imported: ImportOutcome) => {
+    showOutcome({ tone: 'good', text }, imported.files);
+    const changesNote = describeImportChanges(imported);
+    if (changesNote) setFileNotes((notes) => [...notes, changesNote]);
+    modules.reload();
+  };
   const fileInput = useRef<HTMLInputElement>(null);
   const schemaFileInput = useRef<HTMLInputElement>(null);
   const closeDialog = () => setDialog(null);
@@ -189,10 +209,10 @@ export default function RegisteredModulesPage() {
     if (!file) return;
     try {
       const manifest: unknown = JSON.parse(await file.text());
-      setOutcome(null);
+      showOutcome(null);
       setDialog({ kind: 'import-manifest', manifest, fileName: file.name });
     } catch {
-      setOutcome({ tone: 'danger', text: 'That file isn\'t a valid JSON manifest.' });
+      showOutcome({ tone: 'danger', text: 'That file isn\'t a valid JSON manifest.' });
     }
   };
 
@@ -202,10 +222,10 @@ export default function RegisteredModulesPage() {
     if (!file) return;
     try {
       const schema: unknown = JSON.parse(await file.text());
-      setOutcome(null);
+      showOutcome(null);
       setDialog({ kind: 'import-schema', schema, fileName: file.name });
     } catch {
-      setOutcome({ tone: 'danger', text: 'That file isn\'t valid JSON.' });
+      showOutcome({ tone: 'danger', text: 'That file isn\'t valid JSON.' });
     }
   };
 
@@ -213,7 +233,7 @@ export default function RegisteredModulesPage() {
     try {
       downloadJson(`${moduleKey}.manifest.json`, await exportModule(moduleKey));
     } catch (failure) {
-      setOutcome({ tone: 'danger', text: describeError(failure) });
+      showOutcome({ tone: 'danger', text: describeError(failure) });
     }
   };
 
@@ -221,7 +241,7 @@ export default function RegisteredModulesPage() {
     try {
       downloadJson(`${moduleKey}.schema.json`, await getModuleSchema(moduleKey));
     } catch (failure) {
-      setOutcome({ tone: 'danger', text: describeError(failure) });
+      showOutcome({ tone: 'danger', text: describeError(failure) });
     }
   };
 
@@ -251,9 +271,10 @@ export default function RegisteredModulesPage() {
         )}
       />
       {outcome ? <Notice tone={outcome.tone}>{outcome.text}</Notice> : null}
+      {fileNotes.map((note) => <Notice key={note.text} tone={note.tone}>{note.text}</Notice>)}
       {dialog?.kind === 'frontend-pack' && selectedModule ? <ModulePackDialog moduleKey={selectedModule.key} moduleName={selectedModule.name} onClose={closeDialog} /> : null}
-      {dialog?.kind === 'import-schema' && selectedModule ? <ImportSchemaDialog module={selectedModule} schema={dialog.schema} fileName={dialog.fileName} onImported={(text) => { setOutcome({ tone: 'good', text }); modules.reload(); }} onClose={closeDialog} /> : null}
-      {dialog?.kind === 'import-manifest' ? <ImportManifestDialog manifest={dialog.manifest} fileName={dialog.fileName} onImported={(text) => { setOutcome({ tone: 'good', text }); modules.reload(); }} onClose={closeDialog} /> : null}
+      {dialog?.kind === 'import-schema' && selectedModule ? <ImportSchemaDialog module={selectedModule} schema={dialog.schema} fileName={dialog.fileName} onImported={showImported} onClose={closeDialog} /> : null}
+      {dialog?.kind === 'import-manifest' ? <ImportManifestDialog manifest={dialog.manifest} fileName={dialog.fileName} onImported={showImported} onClose={closeDialog} /> : null}
       <Loaded state={modules}>
         {(list) => {
           const module = list.find((candidate) => candidate.key === chosenKey) ?? list[0];
@@ -279,6 +300,7 @@ export default function RegisteredModulesPage() {
                     </div>
                     <div className="role-meta">{module.core ? <Pill tone="accent">Core</Pill> : <Pill tone="neutral">Add-on</Pill>}<span>Frontend: {module.frontendUrl ?? 'not set'}</span></div>
                   </section>
+                  <ModuleChangesCard key={`changes-${module.key}`} moduleKey={module.key} moduleName={module.name} canMarkDone={canEditResources} refreshKey={modules.data} />
                   <FrontendSettingsCard key={`sign-in-${module.key}`} moduleKey={module.key} moduleName={module.name} settings={module.frontendSettings} canChange={isSuperAdmin} onChanged={modules.reload} />
                   <Card title="Permissions" aside={canAddResources ? <button type="button" className="link" onClick={() => setDialog({ kind: 'add-resource' })}>+ Add resource</button> : <span className="note">{permissionTotal(module)} total</span>}>
                     <div className="table-box">
@@ -340,7 +362,7 @@ export default function RegisteredModulesPage() {
               {dialog?.kind === 'add-object' ? <CustomObjectDialog moduleKey={module.key} onSaved={modules.reload} onClose={closeDialog} /> : null}
               {dialog?.kind === 'edit-object' ? <CustomObjectDialog moduleKey={module.key} existing={dialog.resource} onSaved={modules.reload} onClose={closeDialog} /> : null}
               {dialog?.kind === 'remove-object' ? <ConfirmDialog title={`Remove ${dialog.resource.label}?`} text="It can't be removed while it has records, even in the recycle bin." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeCustomObject(module.key, dialog.resource.key); modules.reload(); }} /> : null}
-              {dialog?.kind === 'remove-module' ? <ConfirmDialog title={`Remove ${module.name}?`} text="Profiles keep their part for it, which gives nothing until it is imported again." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeModule(module.key); setChosenKey(''); modules.reload(); }} /> : null}
+              {dialog?.kind === 'remove-module' ? <ConfirmDialog title={`Remove ${module.name}?`} text="Profiles keep their part for it, which gives nothing until it is imported again." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { const removed = await removeModule(module.key); showOutcome({ tone: 'good', text: `${module.name} was removed.` }, removed.files); setChosenKey(''); modules.reload(); }} /> : null}
               {dialog?.kind === 'add-resource' ? <ResourceDialog module={module} onSaved={modules.reload} onClose={closeDialog} /> : null}
               {dialog?.kind === 'edit-resource' ? <ResourceDialog module={module} resource={dialog.resource} onSaved={modules.reload} onClose={closeDialog} /> : null}
               {dialog?.kind === 'remove-resource' ? <ConfirmDialog title={`Remove ${dialog.resource.label}?`} text="It can't be removed while a profile or route still uses it." confirmLabel="Remove" isDanger onClose={closeDialog} onConfirm={async () => { await removeResource(module.key, dialog.resource.key); modules.reload(); }} /> : null}

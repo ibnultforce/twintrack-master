@@ -8,7 +8,6 @@
         "id",
         "title",
         "body",
-        "status",
         "createdBy",
         "createdAt",
         "updatedAt"
@@ -25,12 +24,6 @@
         "body": {
           "type": "string",
           "maxLength": 5000
-        },
-        "status": {
-          "enum": [
-            "open",
-            "done"
-          ]
         },
         "createdBy": {
           "type": "string",

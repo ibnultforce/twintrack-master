@@ -354,7 +354,7 @@ Master can't be replaced or removed through the API.
 
 **Body:** `password` (your own, to confirm it's you) and `manifest` (the whole module manifest). The manifest may carry the module's data model as `schema` (JSON Schema with `$defs`, as `GET /modules/:key/schema` returns); without one, the module keeps the schema it has.
 
-**Returns:** `201` for a new module or `200` for a replacement, with `key`, `version`, `created`.
+**Returns:** `201` for a new module or `200` for a replacement, with `key`, `version`, `created`, `files`: what the change did to the repo, described under [Module files](#module-files), and `change` and `changeLog`, described under [Changes to build](#changes-to-build).
 
 Replacing a module whose resources were edited in the app also needs `module.update`, unless you're a super admin. A manifest with the old `roles`, `grantable`, `managesAccessOf` or `permissionSets` fields is refused.
 
@@ -388,7 +388,7 @@ Production accepts plain `http` only for addresses on the same computer (`localh
 
 **Access:** `private`, needs `module.read`
 
-**Returns:** the module's data model as JSON Schema: each record its API returns is an entry in `$defs`, and `x-fieldAccess` on a property marks field security (`controlled`, `protected`). It's loaded from `manifests/<key>.schema.json` by the seed, from a manifest's `schema` by `POST /modules/import`, or by `PUT /modules/:key/schema`. A module with none returns an outline with empty `$defs`. `GET /modules` returns the same as each module's `schema`.
+**Returns:** the module's data model as JSON Schema: each record its API returns is an entry in `$defs`, and `x-fieldAccess` on a property marks field security (`controlled`, `protected`). It's loaded from `manifests/<key>.schema.json` by the seed, from a manifest's `schema` by `POST /modules/import`, or by `PUT /modules/:key/schema`. A module with none returns an outline with empty `$defs`. The download starts with `x-instructions`: what the file is, how to edit it and import it back, and the rules (`$defs` required, `x-fieldAccess` must agree with the manifest). `x-instructions` is never stored: `PUT /modules/:key/schema` and `POST /modules/import` drop it, so a downloaded file can be imported back unchanged. `GET /modules` returns each module's `schema` without it.
 
 **Errors:** `404 unknown_module`
 
@@ -398,7 +398,7 @@ Production accepts plain `http` only for addresses on the same computer (`localh
 
 **Body:** `schema`: a JSON Schema object with `$defs`, each definition named like `Project` and an object. Other keys (`$schema`, `title`, `description`, definitions' contents) are kept as sent.
 
-**Returns:** `key`, `definitions` (how many). Replaces the module's data model, which the Modules screen, the pack's `schema.json` and `GET /modules/:key/export` then show. Resources, routes and access don't change. Recorded in the activity log as `module.schemaImported`.
+**Returns:** `key`, `definitions` (how many), `files`: what the change did to the repo, described under [Module files](#module-files), and `change` and `changeLog`, described under [Changes to build](#changes-to-build). Replaces the module's data model, which the Modules screen, the pack's `schema.json` and `GET /modules/:key/export` then show. Resources, routes and access don't change. Recorded in the activity log as `module.schemaImported`.
 
 **Errors:** `404 unknown_module`, `422 validation_failed`
 
@@ -424,9 +424,56 @@ Production accepts plain `http` only for addresses on the same computer (`localh
 
 **Access:** `private`, needs `module.delete`
 
-**Returns:** `removed`, `key`, `affectedUsers` (people whose profile covers the module). Profiles keep their part for it, which gives nothing until it's imported again.
+**Returns:** `removed`, `key`, `affectedUsers` (people whose profile covers the module) and `files`: what the change did to the repo, described under [Module files](#module-files). Profiles keep their part for it, which gives nothing until it's imported again.
 
 **Errors:** `403 core_module`, `404 unknown_module`, `409 permissions_edited`
+
+### Module files
+
+The seed and every deploy load modules from `manifests/<key>.manifest.json` and `manifests/<key>.schema.json`, so a change made only in the database is replaced by the next `npm run seed:modules` or deploy. When `MODULE_FILE_SYNC_ENABLED` is on (the default in development, refused in production), `POST /modules/import`, `PUT /modules/:key/schema` and `DELETE /modules/:key` also write or delete those files in the repo, after the database change is saved, and rebuild `module-packs/<key>/` with `npm run export:module-pack`. Commit the files they name.
+
+`files` in their responses holds:
+
+- `synced`: whether the repo files were written. `false` on a server that doesn't write them, or when writing failed; `warning` then says the change lasts only until the next deploy.
+- `written`, `removed`: repo paths, such as `manifests/demo.schema.json`. A manifest import writes the schema file only when the manifest carries a `schema`. Custom objects are never written: they live in the database, and an import keeps them.
+- `unchanged`: files that already held the same content. They are left alone, keeping their hand formatting. A changed file keeps its key order and line endings, so its diff shows only what changed.
+- `pack`: `rebuilt`, and a `message` saying why not, such as a new module having no `docs/api/<key>.md` yet. A removal keeps the pack folder, which holds hand-written files. The pack's `api/manifest.json` and `schema.json` are built from the database on each download either way.
+- `routesWithoutCode`: routes the manifest lists, not marked `planned`, that the backend doesn't serve, as `GET /demo/notes`. They answer `404 no_route` until their code is built and registered.
+
+A failed write never undoes the import. Only the manifest, the schema and the pack follow an import: the backend's models and validators, Postman, `docs/api/` and `/try` scenarios still change in code. [Changes to build](#changes-to-build) lists what that leaves to do.
+
+### Changes to build
+
+Every `POST /modules/import` and `PUT /modules/:key/schema` that changes something records what it changed, in the same transaction, as one pending change in `module_changes`. Each of its `items` has:
+
+- `kind`: `added`, `removed` or `changed`.
+- `subject`: what changed, such as `Route POST /demo/notes/:id/archive`, `Actions of demo.note`, `recordFields of hr.salary` or `Field Note.status`.
+- `detail`: how, when the kind alone doesn't say, such as `access private, note.read → signed`, `No backend code serves it yet` or `"required" names fields it doesn't define: status`.
+- `where`: the places to update, such as `backend/src/modules/demo/models/ (the stored record)`, `docs/api/demo.md`, `module-packs/demo/DATA_MODEL.md` or the Profiles screen.
+
+Resources, actions, their settings (`scoped`, `sharingModel`, `recordFields`, `protectedFields`, `trackedFields`), routes and their access, schema definitions and their fields are compared. Custom objects aren't: they need no code. A manifest without a `schema` compares no schema. An import that changes nothing records nothing, and `change` is `null`.
+
+The import's response carries the record as `change`, and `changeLog`: where a server with `MODULE_FILE_SYNC_ENABLED` wrote the list, as `{ "path": "manifests/changes/demo.md", "outcome": "written" }` (`written`, `removed`, `unchanged` or `failed`; `null` on a server that writes no files). That file lists every pending change of the module, oldest first, and is rewritten from the database each time, so commit it with the manifest and edit it only by marking changes done. Removing the module deletes it. The Modules screen shows the same list under "Changes to build".
+
+### `GET /modules/:key/changes`
+
+**Access:** `private`, needs `module.read`
+
+**Query:** `status` (`pending` or `done`; both when left out), `page`, `pageSize` (up to 100, 25 by default)
+
+**Returns:** `changes`, newest first, each with `id`, `module`, `moduleName`, `source` (`manifest` or `schema`), `versionBefore` (`null` for a new module), `versionAfter`, `items`, `changedAt`, `changedBy`, `changedByName`, `status`, and `doneAt`, `doneBy`, `doneByName` once done; plus `total`, `pending` (the module's pending count whatever the filter), `page` and `pageSize`.
+
+**Errors:** `404 unknown_module`, `422 validation_failed`
+
+### `POST /modules/:key/changes/:changeId/done`
+
+**Access:** `private`, needs `module.update`
+
+Marks one change as built: the code, docs and frontends match it. Recorded in the activity log as `module.changeDone`.
+
+**Returns:** `change`, now `done`, and `changeLog`, the rewritten `manifests/changes/<key>.md` (`removed` once nothing is pending).
+
+**Errors:** `404 unknown_change`, `409 already_done`
 
 ## Profiles
 

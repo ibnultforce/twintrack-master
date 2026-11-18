@@ -20,20 +20,17 @@ Notes, for trying a module's APIs, permissions and scopes. Module key `demo`, ev
   "id": "6f1c…",
   "title": "Try the Demo module",
   "body": "Written from Postman.",
-  "status": "open",
   "createdBy": "u_01",
   "createdAt": "2026-11-17T10:00:00.000Z",
   "updatedAt": "2026-11-17T10:00:00.000Z"
 }
 ```
 
-`status` is `open` or `done`.
-
 ### `GET /demo/notes`
 
 **Access:** `private`, needs `note.read`
 
-**Query:** `page`, `pageSize` (up to 100, 25 by default), `status`
+**Query:** `page`, `pageSize` (up to 100, 25 by default)
 
 **Returns:** `notes` (newest first), `total`, `page`, `pageSize`, within your scope.
 
@@ -59,7 +56,7 @@ Notes, for trying a module's APIs, permissions and scopes. Module key `demo`, ev
 
 **Access:** `private`, needs `note.update`
 
-**Body:** at least one of `title`, `body`, `status`
+**Body:** at least one of `title`, `body`
 
 **Returns:** the changed note.
 

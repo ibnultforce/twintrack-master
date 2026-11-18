@@ -4,6 +4,7 @@ import type { FileStorage } from './lib/storage/fileStorage.js';
 import { createLocalStorage, type LocalStorage } from './lib/storage/localStorage.js';
 import { createR2Storage } from './lib/storage/r2Storage.js';
 import { createAllowedOrigins, type AllowedOrigins } from './modules/master/moduleRegistry/allowedOrigins.js';
+import { createDisabledModuleFiles, createModuleFiles, MASTER_REPO_ROOT, type ModuleFiles } from './modules/master/moduleRegistry/moduleFiles.js';
 
 /** Outside services the app talks to. Tests pass their own, so nothing real is called. */
 export interface AppDependencies {
@@ -13,6 +14,8 @@ export interface AppDependencies {
   localStorage?: LocalStorage;
   /** ALLOWED_ORIGINS plus the origins a super admin saved on modules. */
   allowedOrigins: AllowedOrigins;
+  /** The repo's manifests/ and module-packs/, kept in step with module imports when MODULE_FILE_SYNC_ENABLED is on. */
+  moduleFiles: ModuleFiles;
 }
 
 function resolveStorage(config: Config): Pick<AppDependencies, 'fileStorage' | 'localStorage'> {
@@ -26,6 +29,8 @@ export function resolveDependencies(config: Config, overrides: Partial<AppDepend
   return {
     emailSender: overrides.emailSender ?? createEmailSender(config.email, config.logLevel),
     allowedOrigins: overrides.allowedOrigins ?? createAllowedOrigins(config.allowedOrigins),
+    moduleFiles: overrides.moduleFiles
+      ?? (config.isModuleFileSyncEnabled ? createModuleFiles(MASTER_REPO_ROOT, config.logLevel) : createDisabledModuleFiles()),
     ...storage,
   };
 }

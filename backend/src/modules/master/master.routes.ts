@@ -62,7 +62,7 @@ export function createMasterRoutes(
     ...directoryRoutes,
     ...orgRolesRoutes,
     ...accessProfilesRoutes,
-    ...createModuleRegistryRoutes(config, dependencies.allowedOrigins),
+    ...createModuleRegistryRoutes(config, dependencies.allowedOrigins, dependencies.moduleFiles),
     ...auditRoutes,
     ...customObjectsRoutes,
     ...clientsRoutes,

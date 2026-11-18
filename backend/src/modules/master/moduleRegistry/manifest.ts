@@ -86,17 +86,22 @@ export const grantsSchema = z
   .transform((value) => value as '*' | z.infer<typeof grantsRecordSchema>);
 
 const DEFINITION_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
+/** Editing instructions added to a downloaded schema, for a person or Claude. */
+export const INSTRUCTIONS_KEY = 'x-instructions';
 
 /**
  * A module's data model as JSON Schema: each record the API returns is one entry in `$defs`. It's documentation for
  * frontend developers, so only its outline is checked; `x-fieldAccess` on a property marks field security.
  */
-export const dataModelSchema = z.looseObject({
-  $schema: z.string().optional(),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  $defs: z.record(z.string().regex(DEFINITION_NAME, 'must be a definition name such as Project'), z.looseObject({})),
-});
+export const dataModelSchema = z
+  .looseObject({
+    $schema: z.string().optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    $defs: z.record(z.string().regex(DEFINITION_NAME, 'must be a definition name such as Project'), z.looseObject({})),
+  })
+  // The editing instructions a download adds are never stored, so they can't pile up or go stale.
+  .transform(({ [INSTRUCTIONS_KEY]: _instructions, ...schema }) => schema);
 export type DataModel = z.infer<typeof dataModelSchema>;
 
 const manifestSchema = z.looseObject({
