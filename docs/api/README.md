@@ -8,7 +8,7 @@ Every module's API is served by the one Master backend. This guide covers what a
 | HR | 4 | `/hr` | [hr.md](hr.md) |
 | Tasks | 52 | `/tasks` | [tasks.md](tasks.md) |
 | Demo | 5 | `/demo` | [demo.md](demo.md) |
-| Accounts | 1 | `/accounts` | [accounts.md](accounts.md) |
+| Accounts | 5 | `/accounts` | [accounts.md](accounts.md) |
 
 The local address is `http://api.twintrack.localhost:4100`. The examples below call it `$API`.
 

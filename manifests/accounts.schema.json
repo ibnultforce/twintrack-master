@@ -21,6 +21,80 @@
           "format": "date-time"
         }
       }
+    },
+    "LedgerAccount": {
+      "type": "object",
+      "description": "One account in the chart of accounts. Never deleted: deactivated instead.",
+      "required": [
+        "id",
+        "code",
+        "name",
+        "type",
+        "normalBalance",
+        "isActive",
+        "version",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^\\d{3,10}$",
+          "description": "Unique across the chart"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "type": {
+          "enum": [
+            "asset",
+            "liability",
+            "equity",
+            "income",
+            "expense"
+          ]
+        },
+        "normalBalance": {
+          "enum": [
+            "debit",
+            "credit"
+          ],
+          "description": "Worked out from type: debit for assets and expenses"
+        },
+        "parentId": {
+          "type": "string",
+          "description": "An active account of the same type"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedBy": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     }
   }
 }

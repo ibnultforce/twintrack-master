@@ -9536,6 +9536,203 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /accounts/ledger-accounts",
+          "method": "GET",
+          "path": "/accounts/ledger-accounts",
+          "purpose": "Lists the chart of accounts in code order.",
+          "input": "page, pageSize, type, isActive and search in the query",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists the asset accounts",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts?type=asset",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/ledger-accounts",
+          "method": "POST",
+          "path": "/accounts/ledger-accounts",
+          "purpose": "Adds an account to the chart.",
+          "input": "code, name, type, optional parentId and description",
+          "access": "Needs ledgerAccount.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Adds a bank account under Bank accounts",
+              "expected": 201,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/ledger-accounts",
+                "as": "farhana@twintrack.test",
+                "body": "{\"code\":\"1210\",\"name\":\"City Bank current account\",\"type\":\"asset\",\"parentId\":\"la_1200\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A code another account uses",
+              "expected": 409,
+              "code": "duplicate_account_code",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/ledger-accounts",
+                "as": "farhana@twintrack.test",
+                "body": "{\"code\":\"1200\",\"name\":\"Second bank group\",\"type\":\"asset\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A parent of another type",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/ledger-accounts",
+                "as": "farhana@twintrack.test",
+                "body": "{\"code\":\"5150\",\"name\":\"Overtime\",\"type\":\"expense\",\"parentId\":\"la_1000\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/ledger-accounts",
+                "as": "karim@twintrack.test",
+                "body": "{\"code\":\"1220\",\"name\":\"Another bank\",\"type\":\"asset\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/ledger-accounts/:id",
+          "method": "GET",
+          "path": "/accounts/ledger-accounts/:id",
+          "purpose": "Reads one account, with its normal balance side.",
+          "input": "The account id in the path",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Reads Bank accounts",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts/la_1200",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such account",
+              "expected": 404,
+              "code": "unknown_ledger_account",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts/la_missing",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts/la_1200",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/ledger-accounts/:id",
+          "method": "PATCH",
+          "path": "/accounts/ledger-accounts/:id",
+          "purpose": "Renames, moves, recodes, deactivates or reactivates an account.",
+          "input": "Any of code, name, type, parentId (null for top level), description, isActive, and version",
+          "access": "Needs ledgerAccount.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Changes the description",
+              "expected": 200,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/ledger-accounts/la_5900",
+                "as": "farhana@twintrack.test",
+                "body": "{\"description\":\"Costs that fit no other expense account.\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Deactivating a group that has active sub-accounts",
+              "expected": 409,
+              "code": "account_has_active_sub_accounts",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/ledger-accounts/la_1000",
+                "as": "farhana@twintrack.test",
+                "body": "{\"isActive\":false}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Moving a group under its own sub-account",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/ledger-accounts/la_1000",
+                "as": "farhana@twintrack.test",
+                "body": "{\"parentId\":\"la_1200\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/ledger-accounts/la_1200",
+                "as": "karim@twintrack.test",
+                "body": "{\"name\":\"Banks\"}"
+              }
+            }
+          ]
         }
       ]
     }

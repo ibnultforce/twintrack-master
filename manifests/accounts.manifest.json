@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.0.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Only a status check is built so far.",
+    "version": "1.1.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: a status check and the chart of accounts.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -16,6 +16,31 @@
         "read"
       ],
       "scoped": false
+    },
+    {
+      "key": "ledgerAccount",
+      "label": "Chart of accounts",
+      "actions": [
+        "read",
+        "create",
+        "update"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "code",
+        "name",
+        "type",
+        "parentId",
+        "isActive"
+      ],
+      "recordFields": [
+        "code",
+        "name",
+        "type",
+        "parentId",
+        "description",
+        "isActive"
+      ]
     }
   ],
   "routes": [
@@ -24,6 +49,30 @@
       "path": "/status",
       "access": "private",
       "permission": "setting.read"
+    },
+    {
+      "method": "GET",
+      "path": "/ledger-accounts",
+      "access": "private",
+      "permission": "ledgerAccount.read"
+    },
+    {
+      "method": "POST",
+      "path": "/ledger-accounts",
+      "access": "private",
+      "permission": "ledgerAccount.create"
+    },
+    {
+      "method": "GET",
+      "path": "/ledger-accounts/:id",
+      "access": "private",
+      "permission": "ledgerAccount.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/ledger-accounts/:id",
+      "access": "private",
+      "permission": "ledgerAccount.update"
     }
   ]
 }

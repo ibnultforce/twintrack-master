@@ -1,0 +1,237 @@
+{
+  "type": "chartOfAccounts",
+  "accounts": [
+    {
+      "id": "la_1000",
+      "code": "1000",
+      "name": "Assets",
+      "type": "asset",
+      "description": "Groups every asset account."
+    },
+    {
+      "id": "la_1100",
+      "code": "1100",
+      "name": "Cash in hand",
+      "type": "asset",
+      "parentId": "la_1000"
+    },
+    {
+      "id": "la_1200",
+      "code": "1200",
+      "name": "Bank accounts",
+      "type": "asset",
+      "parentId": "la_1000"
+    },
+    {
+      "id": "la_1300",
+      "code": "1300",
+      "name": "Accounts receivable",
+      "type": "asset",
+      "parentId": "la_1000"
+    },
+    {
+      "id": "la_1400",
+      "code": "1400",
+      "name": "Employee advances and loans",
+      "type": "asset",
+      "parentId": "la_1000"
+    },
+    {
+      "id": "la_1500",
+      "code": "1500",
+      "name": "Inventory",
+      "type": "asset",
+      "parentId": "la_1000"
+    },
+    {
+      "id": "la_1600",
+      "code": "1600",
+      "name": "Fixed assets",
+      "type": "asset",
+      "parentId": "la_1000"
+    },
+    {
+      "id": "la_1650",
+      "code": "1650",
+      "name": "Accumulated depreciation",
+      "type": "asset",
+      "parentId": "la_1000",
+      "description": "Reduces fixed assets, so its balance is a credit."
+    },
+    {
+      "id": "la_1700",
+      "code": "1700",
+      "name": "VAT and tax receivable",
+      "type": "asset",
+      "parentId": "la_1000"
+    },
+    {
+      "id": "la_2000",
+      "code": "2000",
+      "name": "Liabilities",
+      "type": "liability",
+      "description": "Groups every liability account."
+    },
+    {
+      "id": "la_2100",
+      "code": "2100",
+      "name": "Accounts payable",
+      "type": "liability",
+      "parentId": "la_2000"
+    },
+    {
+      "id": "la_2200",
+      "code": "2200",
+      "name": "Salaries payable",
+      "type": "liability",
+      "parentId": "la_2000"
+    },
+    {
+      "id": "la_2300",
+      "code": "2300",
+      "name": "VAT and tax payable",
+      "type": "liability",
+      "parentId": "la_2000"
+    },
+    {
+      "id": "la_2400",
+      "code": "2400",
+      "name": "Provident fund payable",
+      "type": "liability",
+      "parentId": "la_2000"
+    },
+    {
+      "id": "la_2500",
+      "code": "2500",
+      "name": "Gratuity payable",
+      "type": "liability",
+      "parentId": "la_2000"
+    },
+    {
+      "id": "la_3000",
+      "code": "3000",
+      "name": "Equity",
+      "type": "equity",
+      "description": "Groups every equity account."
+    },
+    {
+      "id": "la_3100",
+      "code": "3100",
+      "name": "Owner's capital",
+      "type": "equity",
+      "parentId": "la_3000"
+    },
+    {
+      "id": "la_3200",
+      "code": "3200",
+      "name": "Retained earnings",
+      "type": "equity",
+      "parentId": "la_3000"
+    },
+    {
+      "id": "la_4000",
+      "code": "4000",
+      "name": "Income",
+      "type": "income",
+      "description": "Groups every income account."
+    },
+    {
+      "id": "la_4100",
+      "code": "4100",
+      "name": "Service income",
+      "type": "income",
+      "parentId": "la_4000"
+    },
+    {
+      "id": "la_4200",
+      "code": "4200",
+      "name": "Exchange gain",
+      "type": "income",
+      "parentId": "la_4000"
+    },
+    {
+      "id": "la_4900",
+      "code": "4900",
+      "name": "Other income",
+      "type": "income",
+      "parentId": "la_4000"
+    },
+    {
+      "id": "la_5000",
+      "code": "5000",
+      "name": "Expenses",
+      "type": "expense",
+      "description": "Groups every expense account."
+    },
+    {
+      "id": "la_5100",
+      "code": "5100",
+      "name": "Salaries and wages",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5200",
+      "code": "5200",
+      "name": "Bonus and incentives",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5250",
+      "code": "5250",
+      "name": "Commission",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5300",
+      "code": "5300",
+      "name": "Office rent",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5400",
+      "code": "5400",
+      "name": "Utilities and internet",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5500",
+      "code": "5500",
+      "name": "Office expenses",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5600",
+      "code": "5600",
+      "name": "Depreciation",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5700",
+      "code": "5700",
+      "name": "Bank charges",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5800",
+      "code": "5800",
+      "name": "Exchange loss",
+      "type": "expense",
+      "parentId": "la_5000"
+    },
+    {
+      "id": "la_5900",
+      "code": "5900",
+      "name": "Other expenses",
+      "type": "expense",
+      "parentId": "la_5000"
+    }
+  ]
+}

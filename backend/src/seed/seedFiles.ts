@@ -9,6 +9,8 @@ export interface SeedFiles {
   profiles?: unknown;
   /** Sample HR salaries. Optional, so a seed can load people without them. */
   salaries?: unknown;
+  /** The starting Accounts chart of accounts. Optional; accounts already in the database are left as they are. */
+  chartOfAccounts?: unknown;
 }
 
 const readJson = (relativePath: string): unknown =>
@@ -41,5 +43,6 @@ export function readSeedFiles(): SeedFiles {
     orgRoles: readJson('seed/org-roles.json'),
     users: readJson('seed/users.json'),
     salaries: readJson('seed/salaries.json'),
+    chartOfAccounts: readJson('seed/chart-of-accounts.json'),
   };
 }
