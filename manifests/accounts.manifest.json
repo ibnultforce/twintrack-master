@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "module": {
+    "key": "accounts",
+    "name": "Accounts",
+    "version": "1.0.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Only a status check is built so far.",
+    "repository": "twintrack-accounts",
+    "baseUrl": "/accounts"
+  },
+  "resources": [
+    {
+      "key": "setting",
+      "label": "Accounts settings",
+      "actions": [
+        "read"
+      ],
+      "scoped": false
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/status",
+      "access": "private",
+      "permission": "setting.read"
+    }
+  ]
+}

@@ -55,7 +55,7 @@ The Next.js app in `frontend/` is the portal and admin console. It runs entirely
 
 ## Example data
 
-`npm run seed` loads the Master, HR, Project management and Demo modules and the 12-person example team. from `seed/`, with a sample org tree. **No profile comes ready-made:** only the super admin has access until they create profiles and give them to people. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
+`npm run seed` loads the Master, HR, Project management, Demo and Accounts modules and the 12-person example team. from `seed/`, with a sample org tree. **No profile comes ready-made:** only the super admin has access until they create profiles and give them to people. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set.
 
 - **Safe to re-run:** it updates records by id and creates no duplicates. It resets each person's profile to what the files say, and keeps passwords already set.
 - **All or nothing:** every file is checked first and all problems are listed together. If anything fails, nothing is saved.
@@ -83,7 +83,7 @@ Mongoose schemas are in the module's `models/` folder. Code shared between modul
 
 ## Manifests
 
-`manifests/` has one file per module: `master`, `hr`, `projects` and `demo`. Each lists only that module's built routes and the resources they use. Access comes from profiles, which are built in the app. They are committed, because deploys and `npm test` need them. The seed loads them, and a test checks that every file in the folder is valid.
+`manifests/` has one file per module: `master`, `hr`, `projects`, `demo` and `accounts`. Each lists only that module's built routes and the resources they use. Access comes from profiles, which are built in the app. They are committed, because deploys and `npm test` need them. The seed loads them, and a test checks that every file in the folder is valid.
 
 To load changed manifests without touching people or profiles, run `npm run seed:modules`. It takes resources and routes from the files, and keeps custom objects created in the app. A module whose manifest file was deleted is removed, unless it was imported in the app or holds custom objects (those are kept, with a warning). Profiles keep their part for a removed module, which grants nothing.
 

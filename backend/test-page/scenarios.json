@@ -9492,6 +9492,52 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Accounts",
+      "routes": [
+        {
+          "id": "GET /accounts/status",
+          "method": "GET",
+          "path": "/accounts/status",
+          "purpose": "Says the Accounts module is registered and that your profile can reach it.",
+          "input": "None",
+          "access": "Needs setting.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Answers for a super admin",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/status",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/status"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/status",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

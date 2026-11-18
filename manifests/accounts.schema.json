@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TwinTrack Accounts API",
+  "$defs": {
+    "Status": {
+      "type": "object",
+      "required": [
+        "module",
+        "status",
+        "time"
+      ],
+      "properties": {
+        "module": {
+          "const": "accounts"
+        },
+        "status": {
+          "const": "ok"
+        },
+        "time": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}
