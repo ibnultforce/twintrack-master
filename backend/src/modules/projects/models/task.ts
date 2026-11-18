@@ -45,7 +45,7 @@ export interface TaskDoc extends RecordFields {
   /** Raised for a follow-up, such as by HR, with a note saying why. Works at any status. */
   flagged: boolean;
   flagNote?: string;
-  /** The Accounts invoice that billed this task. Missing until one does. */
+  /** The invoice that billed this task, kept for a future billing module. Missing until one does. */
   invoiceId?: string;
   startedAt?: Date;
   completedAt?: Date;

@@ -1,6 +1,6 @@
 # Adding a module
 
-A module is routes in this backend plus its own frontend, never a new backend. Copy the closest of `hr`, `projects` and `accounts`. The key is short and lowercase (`inventory`); the name is plain words ("Inventory").
+A module is routes in this backend plus its own frontend, never a new backend. Copy the closest of `hr`, `projects` and `demo`. The key is short and lowercase (`inventory`); the name is plain words ("Inventory").
 
 ## Backend
 
@@ -23,7 +23,7 @@ A module is routes in this backend plus its own frontend, never a new backend. C
 
 ## Frontend
 
-11. Add the app to `../twintrack.modules.json`: `name` = key, `folder` = `twintrack-<key>`, the next free port (taken: Master 3100, HR 3200, Project management 3300, Accounts 3400; check `backend/.env.example`), `url` = `http://<key>.twintrack.localhost:<port>`. Add the address to `ALLOWED_ORIGINS` and `MODULE_FRONTEND_URLS` in `backend/.env.example` (and your `backend/.env`), or the API refuses the frontend.
+11. Add the app to `../twintrack.modules.json`: `name` = key, `folder` = `twintrack-<key>`, the next free port (taken: Master 3100, HR 3200, Project management 3300; check `backend/.env.example`), `url` = `http://<key>.twintrack.localhost:<port>`. Add the address to `ALLOWED_ORIGINS` and `MODULE_FRONTEND_URLS` in `backend/.env.example` (and your `backend/.env`), or the API refuses the frontend.
 12. Build the handoff pack in `module-packs/<key>/`: [frontend-pack.md](frontend-pack.md).
 13. Only when asked to build the frontend too: copy `../twintrack-module-starter/` to `../twintrack-<key>/`, set `src/module.config.ts`, and follow its `CLAUDE.md` and the pack's `INSTRUCTIONS.md`.
 

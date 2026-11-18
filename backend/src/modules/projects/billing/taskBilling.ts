@@ -4,9 +4,9 @@ import { Task } from '../models/task.js';
 import { formatTaskNumber } from '../task/taskLifecycle.js';
 
 /**
- * What Accounts may read and change in Project management to bill clients: finished or logged work, by project, and which invoice
+ * What a future billing module may read and change in Project management to bill clients: finished or logged work, by project, and which invoice
  * billed it. Invoices bill a task's estimate, never the hours worked, as the old app did, so a client's price doesn't
- * change with how long the work took. Nothing else in Project management is written from Accounts.
+ * change with how long the work took. Nothing else in Project management is written from billing.
  */
 
 export interface BillableTask {

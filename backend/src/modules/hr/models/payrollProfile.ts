@@ -30,7 +30,7 @@ export interface PayrollProfileDoc extends RecordFields {
   payMethod?: (typeof PAY_METHODS)[number];
   bankName?: string;
   bankBranch?: string;
-  /** Encrypted with ENCRYPTION_KEY, as Accounts stores bank numbers. */
+  /** Encrypted with ENCRYPTION_KEY. */
   bankAccountNumberEncrypted?: string;
   bankRoutingNumberEncrypted?: string;
   mobileBankingNumber?: string;

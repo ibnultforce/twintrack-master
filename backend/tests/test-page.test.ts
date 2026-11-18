@@ -6,7 +6,6 @@ import { createApp } from '../src/app.js';
 import { ConfigError, loadConfig } from '../src/config.js';
 import { hrRoutes } from '../src/modules/hr/hr.routes.js';
 import { createMasterRoutes } from '../src/modules/master/master.routes.js';
-import { createAccountsRoutes } from '../src/modules/accounts/accounts.routes.js';
 import { createProjectsRoutes } from '../src/modules/projects/projects.routes.js';
 import { seedDatabase } from '../src/seed/seedDatabase.js';
 import { readSeedFiles } from './helpers/testAccess.js';
@@ -165,8 +164,8 @@ describe('test page', () => {
   });
 
   describe('scenarios', () => {
-    const builtRouteIds = [...createMasterRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...hrRoutes, ...createProjectsRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...createAccountsRoutes(createTestConfig(), resolveDependencies(createTestConfig()))].map((route) => `${route.method} ${route.path}`);
     const routesWith = (kind: Scenario['kind']) => routes.filter((route) => route.scenarios.some((scenario) => scenario.kind === kind)).map((route) => route.id);
+    const builtRouteIds = [...createMasterRoutes(createTestConfig(), resolveDependencies(createTestConfig())), ...hrRoutes, ...createProjectsRoutes(createTestConfig(), resolveDependencies(createTestConfig()))].map((route) => `${route.method} ${route.path}`);
 
     // Succeeding on these needs something neither this replay nor someone using the page can get: a link that only
     // arrives by email, or an OAuth request an app started through /oauth/authorize, which answers with a redirect.
@@ -187,8 +186,6 @@ describe('test page', () => {
       'POST /projects/tasks/:id/attachments/:attachmentId/complete',
       'GET /projects/tasks/:id/attachments/:attachmentId/url',
       'PUT /files/parts',
-      'POST /accounts/documents/:id/complete',
-      'GET /accounts/documents/:id/url',
       'GET /files/content',
     ];
 

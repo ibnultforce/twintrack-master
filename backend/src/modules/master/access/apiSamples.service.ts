@@ -40,16 +40,6 @@ const STEP_VALUE_SOURCES: Record<string, RecordSource> = {
   otherTaskId: { model: 'Task' },
   attachmentId: { model: 'TaskAttachment' },
   credentialId: { model: 'ProjectCredential' },
-  categoryId: { model: 'AccountsCategory' },
-  vendorId: { model: 'AccountsVendor' },
-  bankAccountId: { model: 'AccountsBankAccount' },
-  usdBankId: { model: 'AccountsBankAccount' },
-  billId: { model: 'AccountsBill' },
-  paymentId: { model: 'AccountsPayment' },
-  receiptId: { model: 'AccountsReceipt' },
-  invoiceId: { model: 'AccountsInvoice' },
-  runId: { model: 'AccountsPayrollRun' },
-  documentId: { model: 'AccountsDocument' },
 };
 
 // Body fields that always name one kind of record, for fields a sample doesn't set, such as leadId on a project.

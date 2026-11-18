@@ -129,12 +129,12 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
 <header>
   <h1>TwinTrack Master Progress</h1>
   <p class="muted">What has been added to the Master module so far, and what comes next. Updated whenever the code changes.</p>
-  <p class="small muted">Last updated 16 November 2026. The redesign (phases 1 to 6), the Project management module (formerly Tasks), the Accounts API and the HR data models are not committed yet.</p>
+  <p class="small muted">Last updated 18 November 2026. The redesign (phases 1 to 6), the Project management module (formerly Tasks) and the HR data models are not committed yet.</p>
 </header>
 
 <section aria-labelledby="summary-heading">
   <h2 id="summary-heading">Where things stand</h2>
-  <p>The Master backend is finished for now. Besides signing in and managing their own account, admins can now manage people, roles, special privileges and modules, and read the activity log, all through the API. The portal and admin console now run on these routes in the browser. What remains of step 6 is turning the demo scenarios into tests and checking the cookie across real subdomains. The 7 remaining routes wait for the Employee module. A redesign on profiles, an org tree and shared records has started: all six phases are built: the org tree, profiles with permission sets, the record base, sharing, field-level security and custom objects. The Project management module (called Tasks until 13 November) is complete in the API and its own frontend, with everything from the old app: points, logins with one-time codes, files, incentives, flags, billing, health and team reports, exports and MCP tools. On 11 November, Master gained everything it owns from the old TwinTrack app: emailed set-password links through Resend in place of temporary passwords, employee numbers, profile photos, online status, a directory, clients, deleting people added by mistake, personal API tokens, OAuth for connectors, an MCP endpoint, and a development-only "Log in as". The Accounts module has its API, with no frontend yet: vendors, bills, payments, receipts, bank accounts, invoices billed from Project management work, and payroll from HR salaries. The rest of HR has its data models, ready for the old app's data; its APIs come next.</p>
+  <p>The Master backend is finished for now. Besides signing in and managing their own account, admins can now manage people, roles, special privileges and modules, and read the activity log, all through the API. The portal and admin console now run on these routes in the browser. What remains of step 6 is turning the demo scenarios into tests and checking the cookie across real subdomains. The 7 remaining routes wait for the Employee module. A redesign on profiles, an org tree and shared records has started: all six phases are built: the org tree, profiles with permission sets, the record base, sharing, field-level security and custom objects. The Project management module (called Tasks until 13 November) is complete in the API and its own frontend, with everything from the old app: points, logins with one-time codes, files, incentives, flags, billing, health and team reports, exports and MCP tools. On 11 November, Master gained everything it owns from the old TwinTrack app: emailed set-password links through Resend in place of temporary passwords, employee numbers, profile photos, online status, a directory, clients, deleting people added by mistake, personal API tokens, OAuth for connectors, an MCP endpoint, and a development-only "Log in as". The rest of HR has its data models, ready for the old app's data; its APIs come next.</p>
   <div class="tiles">
     <div class="tile"><b>5 of 6</b><span class="small muted">build steps finished</span></div>
     <div class="tile"><b>81</b><span class="small muted">Master routes built</span></div>
@@ -263,21 +263,9 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
       </ul>
     </div>
     <div class="feature-group">
-      <h3>Accounts module (API)</h3>
-      <ul>
-        <li>Categories, vendors and bank accounts, made inactive rather than deleted. Vendor and account numbers are stored encrypted and shown only where field access reaches them.</li>
-        <li>Bank balances are never typed in: the opening balance plus receipts after bank fees, less payments and paid salaries. A statement lists each movement with a running balance.</li>
-        <li>Bills go from draft to approval to paid. Whoever made a bill or payroll run can't approve it, super admins included.</li>
-        <li>Payments and receipts are never edited: a mistake gets a linked reversal dated the day it's made. Receipts are counted against invoices, never beyond either amount.</li>
-        <li>Invoices bill a client's Tasks work at its estimate, mark the tasks billed, and make an editable Word document that can be emailed with Resend.</li>
-        <li>Payroll runs pay each person's approved HR salary plus their unpaid Tasks incentive, which is marked paid when the pay goes out.</li>
-        <li>Evidence documents on bills, payments, receipts and payroll items, uploaded straight to storage like task files.</li>
-      </ul>
-    </div>
-    <div class="feature-group">
       <h3>Keeping the project consistent</h3>
       <ul>
-        <li>Manifests live in <code>twintrack-master/manifests/</code>, one per module: Master, HR, Tasks and Accounts.</li>
+        <li>Manifests live in <code>twintrack-master/manifests/</code>, one per module: Master, HR, Project management and Demo.</li>
         <li>A test fails if any module's route table and its manifest disagree about which routes are built or who can use them.</li>
         <li>A test fails if a route has no Postman request.</li>
         <li><code>npm run seed</code> now requires <code>SEED_PASSWORD</code>, in place of a password written into the code.</li>
@@ -381,7 +369,6 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
     <li>People created before the org tree have no <code>orgRoleId</code>. They see only their own records and direct reports until someone gives them a place in the tree.</li>
     <li>The admin console has no screen for the org tree yet. It is managed through the API, Postman and the test page.</li>
     <li>Anyone with <code>user.update</code> can place people below their own org role, which widens what they see. That is by design, as with assigning a manager, but the role should go only to trusted admins.</li>
-    <li>Accounts has no frontend yet, so it is used through the API, Postman, the test page and Your permissions.</li>
     <li>Payroll uses one HR salary amount per person. The old app's breakdown into basic pay and allowances waits for HR.</li>
     <li>Invoice documents carry no company logo yet.</li>
     <li>R2 storage hasn't been tried with a real bucket. The bucket needs CORS that allows PUT from the frontends and exposes <code>ETag</code>.</li>
@@ -393,6 +380,14 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
 <section aria-labelledby="log-heading">
   <h2 id="log-heading">Change log</h2>
   <div class="log">
+    <div class="log-entry">
+      <h3>18 November 2026: Accounts module removed</h3>
+      <ul>
+        <li>The Accounts module is gone: its 65 routes under <code>/accounts</code>, its code, models, tests, manifest and schema, Postman folder, <code>/try</code> scenarios, <code>docs/api/accounts.md</code> and <code>module-packs/accounts/</code>. <code>seed:modules</code> removed it from the database.</li>
+        <li>The settings <code>INVOICE_HOURLY_RATE_USD</code>, <code>INVOICE_NUMBER_PREFIX</code>, <code>COMPANY_NAME</code> and <code>COMPANY_ADDRESS</code> are gone, as is the Accounts frontend address. Project management's <code>billing/</code> and tasks' <code>invoiceId</code> stay for a future billing module.</li>
+        <li>Checks: typecheck, lint and 1,329 tests pass.</li>
+      </ul>
+    </div>
     <div class="log-entry">
       <h3>18 November 2026: imports record what's left to build</h3>
       <ul>

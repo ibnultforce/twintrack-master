@@ -75,10 +75,6 @@ const envSchema = z
     R2_BUCKET: z.string().trim().optional(),
     STORAGE_DIR: z.string().trim().min(1).default('uploads'),
     INCENTIVE_HOURLY_RATE_BDT: z.coerce.number().min(0).default(0),
-    INVOICE_HOURLY_RATE_USD: z.coerce.number().min(0).default(0),
-    INVOICE_NUMBER_PREFIX: z.string().trim().regex(/^[A-Za-z0-9]{1,10}$/, 'must be 1 to 10 letters or digits').default('INV'),
-    COMPANY_NAME: z.string().trim().min(1).default('TwinTrack'),
-    COMPANY_ADDRESS: z.string().trim().optional(),
     DEPLOYED_COMMIT: z.string().trim().regex(/^[0-9a-f]{7,40}$/i, 'must be a git commit hash').optional(),
   })
   .superRefine((env, context) => {
@@ -197,21 +193,10 @@ export interface Config {
   auth: AuthSettings;
   email: EmailSettings;
   storage: StorageSettings;
-  accounts: AccountsSettings;
   /** The hourly incentive rate, in taka, for anyone whose incentive setting doesn't name their own. */
   defaultIncentiveHourlyRate: number;
 }
 
-/** What invoices print and charge when a request doesn't say. */
-export interface AccountsSettings {
-  /** The hourly rate, in US dollars, for an invoice that names none. */
-  defaultInvoiceHourlyRate: number;
-  /** Starts every invoice number, as in INV-AC-02-10-26. */
-  invoiceNumberPrefix: string;
-  /** Printed as who to pay on invoices. */
-  companyName: string;
-  companyAddress?: string;
-}
 
 export class ConfigError extends Error {}
 
@@ -264,11 +249,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       localDirectory: values.STORAGE_DIR,
     },
     defaultIncentiveHourlyRate: values.INCENTIVE_HOURLY_RATE_BDT,
-    accounts: {
-      defaultInvoiceHourlyRate: values.INVOICE_HOURLY_RATE_USD,
-      invoiceNumberPrefix: values.INVOICE_NUMBER_PREFIX.toUpperCase(),
-      companyName: values.COMPANY_NAME,
-      companyAddress: values.COMPANY_ADDRESS || undefined,
-    },
   };
 }
