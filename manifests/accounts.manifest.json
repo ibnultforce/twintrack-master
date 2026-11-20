@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.1.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: a status check and the chart of accounts.",
+    "version": "1.5.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal vouchers with approval, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -13,9 +13,24 @@
       "key": "setting",
       "label": "Accounts settings",
       "actions": [
-        "read"
+        "read",
+        "update"
       ],
-      "scoped": false
+      "scoped": false,
+      "trackedFields": [
+        "standInApproverId",
+        "standInUntil",
+        "currencies",
+        "exchangeRates",
+        "taxRates"
+      ],
+      "recordFields": [
+        "standInApproverId",
+        "standInUntil",
+        "currencies",
+        "exchangeRates",
+        "taxRates"
+      ]
     },
     {
       "key": "ledgerAccount",
@@ -31,7 +46,8 @@
         "name",
         "type",
         "parentId",
-        "isActive"
+        "isActive",
+        "bankAccountNumber"
       ],
       "recordFields": [
         "code",
@@ -39,8 +55,44 @@
         "type",
         "parentId",
         "description",
-        "isActive"
+        "isActive",
+        "bankAccountNumber"
+      ],
+      "protectedFields": [
+        "bankAccountNumber"
       ]
+    },
+    {
+      "key": "journalVoucher",
+      "label": "Journal vouchers",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "approve"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "voucherDate",
+        "memo",
+        "lines",
+        "total",
+        "status",
+        "returnNote"
+      ],
+      "recordFields": [
+        "voucherDate",
+        "memo",
+        "lines"
+      ]
+    },
+    {
+      "key": "auditLog",
+      "label": "Accounts activity log",
+      "actions": [
+        "read"
+      ],
+      "scoped": false
     }
   ],
   "routes": [
@@ -73,6 +125,90 @@
       "path": "/ledger-accounts/:id",
       "access": "private",
       "permission": "ledgerAccount.update"
+    },
+    {
+      "method": "GET",
+      "path": "/settings",
+      "access": "private",
+      "permission": "setting.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/settings",
+      "access": "private",
+      "permission": "setting.update"
+    },
+    {
+      "method": "GET",
+      "path": "/settings/approver-candidates",
+      "access": "private",
+      "permission": "setting.update"
+    },
+    {
+      "method": "GET",
+      "path": "/ledger-accounts/:id/history",
+      "access": "private",
+      "permission": "ledgerAccount.read"
+    },
+    {
+      "method": "GET",
+      "path": "/journal-vouchers",
+      "access": "private",
+      "permission": "journalVoucher.read"
+    },
+    {
+      "method": "POST",
+      "path": "/journal-vouchers",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "GET",
+      "path": "/journal-vouchers/:id",
+      "access": "private",
+      "permission": "journalVoucher.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/journal-vouchers/:id",
+      "access": "private",
+      "permission": "journalVoucher.update"
+    },
+    {
+      "method": "POST",
+      "path": "/journal-vouchers/:id/submit",
+      "access": "private",
+      "permission": "journalVoucher.update"
+    },
+    {
+      "method": "POST",
+      "path": "/journal-vouchers/:id/approve",
+      "access": "private",
+      "permission": "journalVoucher.read"
+    },
+    {
+      "method": "POST",
+      "path": "/journal-vouchers/:id/return",
+      "access": "private",
+      "permission": "journalVoucher.read"
+    },
+    {
+      "method": "POST",
+      "path": "/journal-vouchers/:id/reverse",
+      "access": "private",
+      "permission": "journalVoucher.read"
+    },
+    {
+      "method": "GET",
+      "path": "/journal-vouchers/:id/history",
+      "access": "private",
+      "permission": "journalVoucher.read"
+    },
+    {
+      "method": "GET",
+      "path": "/audit-log",
+      "access": "private",
+      "permission": "auditLog.read"
     }
   ]
 }

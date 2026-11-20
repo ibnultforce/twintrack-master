@@ -9733,6 +9733,774 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /accounts/settings",
+          "method": "GET",
+          "path": "/accounts/settings",
+          "purpose": "Reads the Accounts settings: stand-in approver, US dollar rates and tax rates.",
+          "input": "None",
+          "access": "Needs setting.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Reads the settings",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/settings",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/settings"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/settings",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/settings",
+          "method": "PATCH",
+          "path": "/accounts/settings",
+          "purpose": "Changes the settings. Rate lists are replaced whole; null clears the stand-in.",
+          "input": "standInApproverId, standInUntil, currencies, exchangeRates, taxRates, version",
+          "access": "Needs setting.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Sets the VAT rate and the dollar rate",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/settings",
+                "as": "farhana@twintrack.test",
+                "body": "{\"currencies\":[{\"code\":\"USD\",\"name\":\"US dollar\"},{\"code\":\"EUR\",\"name\":\"Euro\"}],\"exchangeRates\":[{\"currency\":\"USD\",\"effectiveFrom\":\"2026-11-01\",\"paisaPerUnit\":12250},{\"currency\":\"EUR\",\"effectiveFrom\":\"2026-11-01\",\"paisaPerUnit\":13100}],\"taxRates\":[{\"code\":\"VAT15\",\"name\":\"VAT 15%\",\"basisPoints\":1500}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "An end date with no stand-in",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/settings",
+                "as": "farhana@twintrack.test",
+                "body": "{\"standInUntil\":\"2026-12-31\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/settings",
+                "as": "karim@twintrack.test",
+                "body": "{\"taxRates\":[]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/settings/approver-candidates",
+          "method": "GET",
+          "path": "/accounts/settings/approver-candidates",
+          "purpose": "Lists the people Settings may name as the stand-in approver.",
+          "input": "None",
+          "access": "Needs setting.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists active people who can open journal vouchers",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/settings/approver-candidates",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/settings/approver-candidates",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/ledger-accounts/:id/history",
+          "method": "GET",
+          "path": "/accounts/ledger-accounts/:id/history",
+          "purpose": "An account's change history. A bank number is hidden in it unless the grant names it.",
+          "input": "page, pageSize in the query",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Shows the history of Bank accounts",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts/la_1200/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "An account that does not exist",
+              "expected": 404,
+              "code": "unknown_ledger_account",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts/la_missing/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/ledger-accounts/la_1200/history"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/journal-vouchers",
+          "method": "GET",
+          "path": "/accounts/journal-vouchers",
+          "purpose": "Lists journal vouchers, newest date first.",
+          "input": "page, pageSize and status in the query",
+          "access": "Needs journalVoucher.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists the vouchers waiting for approval",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers?status=submitted",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/journal-vouchers",
+          "method": "POST",
+          "path": "/accounts/journal-vouchers",
+          "purpose": "Saves a balanced journal voucher as a draft, with the next JV number.",
+          "input": "voucherDate, memo, lines (accountId with debit or credit in paisa)",
+          "access": "Needs journalVoucher.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Saves November rent as a draft",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers",
+                "as": "farhana@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Debits and credits differ",
+              "expected": 422,
+              "code": "unbalanced_entry",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers",
+                "as": "farhana@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":100},{\"accountId\":\"la_1100\",\"credit\":99}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers",
+                "as": "karim@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/journal-vouchers/:id",
+          "method": "GET",
+          "path": "/accounts/journal-vouchers/:id",
+          "purpose": "One voucher, with allowedActions saying which buttons will work for you.",
+          "input": "None",
+          "access": "Needs journalVoucher.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Reads a draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A voucher that does not exist",
+              "expected": 404,
+              "code": "unknown_journal_voucher",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers/jv_missing",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/journal-vouchers/:id",
+          "method": "PATCH",
+          "path": "/accounts/journal-vouchers/:id",
+          "purpose": "Edits a draft. Submitted, recorded and reversed vouchers refuse edits.",
+          "input": "voucherDate, memo, lines, version",
+          "access": "Needs journalVoucher.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Changes the memo of a draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/journal-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"memo\":\"November office rent, receipt 4471\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A voucher already submitted",
+              "expected": 409,
+              "code": "voucher_not_draft",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/journal-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"memo\":\"Too late\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/journal-vouchers/:id/submit",
+          "method": "POST",
+          "path": "/accounts/journal-vouchers/:id/submit",
+          "purpose": "Sends a draft for approval.",
+          "input": "version (optional)",
+          "access": "Needs journalVoucher.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Submits a draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A voucher already submitted",
+              "expected": 409,
+              "code": "voucher_not_draft",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/journal-vouchers/:id/approve",
+          "method": "POST",
+          "path": "/accounts/journal-vouchers/:id/approve",
+          "purpose": "Approves a submitted voucher and records it in the ledger. Never by its maker, super admins included.",
+          "input": "version (optional)",
+          "access": "Needs journalVoucher.read, plus journalVoucher.approve or being the stand-in approver; never the maker",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Another person approves it, and it is recorded",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Voucher approver\",\"grants\":{\"accounts\":{\"journalVoucher\":{\"actions\":[\"read\",\"create\",\"update\",\"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                "as": "mehedi@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The maker approves their own voucher, as a super admin",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A draft that was never submitted",
+              "expected": 409,
+              "code": "voucher_not_submitted",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Voucher approver\",\"grants\":{\"accounts\":{\"journalVoucher\":{\"actions\":[\"read\",\"create\",\"update\",\"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                "as": "mehedi@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/journal-vouchers/:id/return",
+          "method": "POST",
+          "path": "/accounts/journal-vouchers/:id/return",
+          "purpose": "Sends a submitted voucher back to its maker as a draft, with a note.",
+          "input": "note, version (optional)",
+          "access": "As approve",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Returns it asking for the receipt number",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Voucher approver\",\"grants\":{\"accounts\":{\"journalVoucher\":{\"actions\":[\"read\",\"create\",\"update\",\"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/return",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"note\":\"Add the rent receipt number.\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The maker returns their own voucher",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{\"note\":\"Never mind\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/journal-vouchers/:id/reverse",
+          "method": "POST",
+          "path": "/accounts/journal-vouchers/:id/reverse",
+          "purpose": "Cancels a recorded voucher with a reversal in the ledger, dated today.",
+          "input": "memo (optional), version (optional)",
+          "access": "As approve",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Reverses a recorded voucher",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Voucher approver\",\"grants\":{\"accounts\":{\"journalVoucher\":{\"actions\":[\"read\",\"create\",\"update\",\"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                  "as": "mehedi@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/reverse",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"memo\":\"Paid from the bank, not cash\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A voucher that is not recorded yet",
+              "expected": 409,
+              "code": "voucher_not_recorded",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/reverse",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/journal-vouchers/:id/history",
+          "method": "GET",
+          "path": "/accounts/journal-vouchers/:id/history",
+          "purpose": "A voucher's change history: every edit and status change.",
+          "input": "page, pageSize in the query",
+          "access": "Needs journalVoucher.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Shows the history of a draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers/{{voucherId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A voucher that does not exist",
+              "expected": 404,
+              "code": "unknown_journal_voucher",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers/jv_missing/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/audit-log",
+          "method": "GET",
+          "path": "/accounts/audit-log",
+          "purpose": "The activity log, limited to what the Accounts module wrote, newest first.",
+          "input": "page, pageSize, actionPrefix in the query",
+          "access": "Needs auditLog.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists Accounts activity",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/audit-log",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/audit-log"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/audit-log",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
         }
       ]
     }

@@ -11,6 +11,8 @@ export interface SeedFiles {
   salaries?: unknown;
   /** The starting Accounts chart of accounts. Optional; accounts already in the database are left as they are. */
   chartOfAccounts?: unknown;
+  /** Dummy employees for Accounts payroll until HR is built. Optional; employees already in the database are left as they are. */
+  accountsEmployees?: unknown;
 }
 
 const readJson = (relativePath: string): unknown =>
@@ -44,5 +46,6 @@ export function readSeedFiles(): SeedFiles {
     users: readJson('seed/users.json'),
     salaries: readJson('seed/salaries.json'),
     chartOfAccounts: readJson('seed/chart-of-accounts.json'),
+    accountsEmployees: readJson('seed/accounts-employees.json'),
   };
 }

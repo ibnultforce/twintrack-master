@@ -6,6 +6,7 @@ import { runInTransaction } from '../src/db.js';
 import { validateChartOfAccountsFile } from '../src/modules/accounts/ledgerAccount/chartOfAccountsFile.js';
 import { insertMissingLedgerAccounts } from '../src/modules/accounts/ledgerAccount/ledgerAccount.repository.js';
 import { LedgerAccount } from '../src/modules/accounts/models/ledgerAccount.js';
+import { LedgerEntry } from '../src/modules/accounts/models/ledgerEntry.js';
 import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
 import { useTestDatabase } from './helpers/database.js';
@@ -14,6 +15,17 @@ import { readSeedFiles } from './helpers/testAccess.js';
 import { createTestConfig } from './helpers/testConfig.js';
 
 const BASE = '/accounts/ledger-accounts';
+
+/** Puts lines on two accounts the way postEntry would, so the chart's rules about posted accounts can be checked. */
+const postLinesTo = (debitAccountId: string, creditAccountId: string) => LedgerEntry.create({
+  _id: 'le_test',
+  entryDate: '2026-11-02',
+  memo: 'Test entry',
+  source: { type: 'journalVoucher', id: 'jv_1' },
+  lines: [{ accountId: debitAccountId, debit: 100, credit: 0 }, { accountId: creditAccountId, debit: 0, credit: 100 }],
+  total: 100,
+  createdBy: 'farhana',
+});
 
 async function loadStartingChart(): Promise<void> {
   const chart = validateChartOfAccountsFile(readSeedFiles().chartOfAccounts);
@@ -123,6 +135,60 @@ describe('chart of accounts', () => {
     });
   });
 
+  describe('bank account number', () => {
+    const CITY_BANK = { code: '1210', name: 'City Bank current account', type: 'asset', parentId: 'la_1200', bankAccountNumber: '1102-3344-5566' };
+
+    beforeEach(async () => {
+      await AccessProfile.create({
+        _id: 'ap_chart_bank_reader', name: 'Chart and bank reader',
+        grants: { accounts: { ledgerAccount: { actions: ['read'], fieldAccess: { bankAccountNumber: 'read' } } } },
+      });
+      await addPerson('bilkis', { profileId: 'ap_chart_bank_reader' });
+    });
+
+    it('is hidden in the account, the list and its history from a profile whose grant does not name it', async () => {
+      const farhana = await as('farhana');
+      const created = await farhana.post(BASE, CITY_BANK);
+      expect(created.body.bankAccountNumber).toBe('1102-3344-5566');
+      await farhana.patch(`${BASE}/${created.body.id}`, { bankAccountNumber: '9900-1122-3344' });
+
+      const rita = await as('rita');
+      expect((await rita.get(`${BASE}/${created.body.id}`)).body).not.toHaveProperty('bankAccountNumber');
+      const listed = (await rita.get(BASE).query({ search: '1210' })).body.accounts[0];
+      expect(listed).not.toHaveProperty('bankAccountNumber');
+      const history = await rita.get(`${BASE}/${created.body.id}/history`);
+      expect(history.status).toBe(200);
+      expect(JSON.stringify(history.body)).not.toContain('3344');
+    });
+
+    it('is shown to a profile whose grant names it, in the account and its history', async () => {
+      const farhana = await as('farhana');
+      const created = await farhana.post(BASE, CITY_BANK);
+      await farhana.patch(`${BASE}/${created.body.id}`, { bankAccountNumber: '9900-1122-3344' });
+
+      const bilkis = await as('bilkis');
+      expect((await bilkis.get(`${BASE}/${created.body.id}`)).body.bankAccountNumber).toBe('9900-1122-3344');
+      const change = (await bilkis.get(`${BASE}/${created.body.id}/history`)).body.entries[0].changes.find((entry: { field: string }) => entry.field === 'bankAccountNumber');
+      expect(change).toEqual({ field: 'bankAccountNumber', from: '1102-3344-5566', to: '9900-1122-3344' });
+    });
+
+    it('can only be written by a profile whose grant lets it edit the number', async () => {
+      await AccessProfile.create({ _id: 'ap_chart_editor', name: 'Chart editor', grants: { accounts: { ledgerAccount: { actions: ['read', 'create', 'update'] } } } });
+      await addPerson('tanvir', { profileId: 'ap_chart_editor' });
+      const tanvir = await as('tanvir');
+      expect((await tanvir.post(BASE, CITY_BANK)).status).toBe(403);
+      expect((await tanvir.post(BASE, { ...CITY_BANK, bankAccountNumber: undefined })).status).toBe(201);
+    });
+
+    it('refuses a number with symbols, and removes it with null', async () => {
+      const farhana = await as('farhana');
+      expect((await farhana.post(BASE, { ...CITY_BANK, bankAccountNumber: '1102/33#' })).status).toBe(422);
+      const created = await farhana.post(BASE, CITY_BANK);
+      const cleared = await farhana.patch(`${BASE}/${created.body.id}`, { bankAccountNumber: null });
+      expect(cleared.body).not.toHaveProperty('bankAccountNumber');
+    });
+  });
+
   describe('changing an account', () => {
     it('refuses to move an account under itself or its own sub-account', async () => {
       const farhana = await as('farhana');
@@ -140,6 +206,49 @@ describe('chart of accounts', () => {
       const response = await (await as('farhana')).patch(`${BASE}/la_1000`, { type: 'expense' });
       expect(response.status).toBe(409);
       expect(response.body.error.code).toBe('account_has_sub_accounts');
+    });
+
+    it('refuses to change the type of an account that has ledger lines, and allows it before', async () => {
+      const farhana = await as('farhana');
+      await farhana.post(BASE, { code: '5950', name: 'Misc', type: 'expense' });
+      const unposted = (await farhana.get(BASE).query({ search: '5950' })).body.accounts[0];
+      expect((await farhana.patch(`${BASE}/${unposted.id}`, { type: 'income' })).status).toBe(200);
+
+      await postLinesTo('la_5300', 'la_1200');
+      const refused = await farhana.patch(`${BASE}/la_5300`, { type: 'asset', parentId: null });
+      expect(refused.status).toBe(409);
+      expect(refused.body.error.code).toBe('account_has_ledger_lines');
+      expect((await LedgerAccount.findById('la_5300').lean())?.type).toBe('expense');
+    });
+
+    it('refuses to deactivate an account with a balance, and allows it once the balance is zero', async () => {
+      const farhana = await as('farhana');
+      await postLinesTo('la_5300', 'la_1100');
+      const refused = await farhana.patch(`${BASE}/la_5300`, { isActive: false });
+      expect(refused.status).toBe(409);
+      expect(refused.body.error.code).toBe('account_has_balance');
+      expect((await LedgerAccount.findById('la_5300').lean())?.isActive).toBe(true);
+
+      await LedgerEntry.create({
+        _id: 'le_test_reversal', entryDate: '2026-11-03', memo: 'Reversal of: Test entry', source: { type: 'journalVoucher', id: 'jv_1' },
+        lines: [{ accountId: 'la_5300', debit: 0, credit: 100 }, { accountId: 'la_1100', debit: 100, credit: 0 }],
+        total: 100, reversalOf: 'le_test', createdBy: 'farhana',
+      });
+      expect((await farhana.patch(`${BASE}/la_5300`, { isActive: false })).status).toBe(200);
+    });
+
+    it('refuses a parent that has ledger lines, when adding or moving an account', async () => {
+      const farhana = await as('farhana');
+      await postLinesTo('la_5300', 'la_1200');
+      const expectedField = [{ path: 'parentId', message: "has ledger lines, so it can't group other accounts" }];
+
+      const added = await farhana.post(BASE, { code: '5310', name: 'Warehouse rent', type: 'expense', parentId: 'la_5300' });
+      expect(added.status).toBe(422);
+      expect(added.body.error.fields).toEqual(expectedField);
+
+      const moved = await farhana.patch(`${BASE}/la_5400`, { parentId: 'la_5300' });
+      expect(moved.status).toBe(422);
+      expect(moved.body.error.fields).toEqual(expectedField);
     });
 
     it('refuses a type that no longer matches the parent', async () => {

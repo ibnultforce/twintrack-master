@@ -1,0 +1,133 @@
+{
+  "type": "accountsEmployees",
+  "employees": [
+    {
+      "id": "emp_01",
+      "employeeCode": "EMP-001",
+      "name": "Tanvir Ahmed",
+      "designation": "Software Engineer",
+      "department": "engineering",
+      "joinDate": "2024-02-01",
+      "monthlySalary": 8500000,
+      "bankAccountNumber": "1501-2233-0001"
+    },
+    {
+      "id": "emp_02",
+      "employeeCode": "EMP-002",
+      "name": "Nusrat Jahan",
+      "designation": "Senior Software Engineer",
+      "department": "engineering",
+      "joinDate": "2023-07-15",
+      "monthlySalary": 12000000,
+      "bankAccountNumber": "1501-2233-0002"
+    },
+    {
+      "id": "emp_03",
+      "employeeCode": "EMP-003",
+      "name": "Imran Hossain",
+      "designation": "QA Engineer",
+      "department": "engineering",
+      "joinDate": "2024-09-01",
+      "monthlySalary": 6500000,
+      "bankAccountNumber": "1501-2233-0003"
+    },
+    {
+      "id": "emp_04",
+      "employeeCode": "EMP-004",
+      "name": "Sadia Rahman",
+      "designation": "UI/UX Designer",
+      "department": "design",
+      "joinDate": "2025-01-05",
+      "monthlySalary": 7000000,
+      "bankAccountNumber": "1501-2233-0004"
+    },
+    {
+      "id": "emp_05",
+      "employeeCode": "EMP-005",
+      "name": "Rakib Hasan",
+      "designation": "DevOps Engineer",
+      "department": "engineering",
+      "joinDate": "2023-11-20",
+      "monthlySalary": 11000000
+    },
+    {
+      "id": "emp_06",
+      "employeeCode": "EMP-006",
+      "name": "Fatema Begum",
+      "designation": "HR Officer",
+      "department": "people",
+      "joinDate": "2024-04-10",
+      "monthlySalary": 5500000,
+      "bankAccountNumber": "1501-2233-0006"
+    },
+    {
+      "id": "emp_07",
+      "employeeCode": "EMP-007",
+      "name": "Shakil Mahmud",
+      "designation": "Accounts Officer",
+      "department": "finance",
+      "joinDate": "2024-06-01",
+      "monthlySalary": 6000000,
+      "bankAccountNumber": "1501-2233-0007"
+    },
+    {
+      "id": "emp_08",
+      "employeeCode": "EMP-008",
+      "name": "Mitu Akter",
+      "designation": "Office Assistant",
+      "department": "operations",
+      "joinDate": "2025-03-01",
+      "monthlySalary": 2500000
+    },
+    {
+      "id": "emp_09",
+      "employeeCode": "EMP-009",
+      "name": "Ashraful Alam",
+      "designation": "Project Manager",
+      "department": "delivery",
+      "joinDate": "2022-10-01",
+      "monthlySalary": 15000000,
+      "bankAccountNumber": "1501-2233-0009"
+    },
+    {
+      "id": "emp_10",
+      "employeeCode": "EMP-010",
+      "name": "Lamia Chowdhury",
+      "designation": "Business Analyst",
+      "department": "delivery",
+      "joinDate": "2025-05-18",
+      "monthlySalary": 7500000,
+      "bankAccountNumber": "1501-2233-0010"
+    },
+    {
+      "id": "emp_11",
+      "employeeCode": "EMP-011",
+      "name": "Habibur Rahman",
+      "designation": "Driver",
+      "department": "operations",
+      "joinDate": "2023-01-10",
+      "monthlySalary": 2200000
+    },
+    {
+      "id": "emp_12",
+      "employeeCode": "EMP-012",
+      "name": "Tasnim Ferdous",
+      "designation": "Junior Software Engineer",
+      "department": "engineering",
+      "joinDate": "2026-01-04",
+      "monthlySalary": 4500050,
+      "bankAccountNumber": "1501-2233-0012"
+    },
+    {
+      "id": "emp_13",
+      "employeeCode": "EMP-013",
+      "name": "Riyad Karim",
+      "designation": "Sales Executive (left)",
+      "department": "sales",
+      "joinDate": "2023-03-01",
+      "monthlySalary": 5000000,
+      "bankAccountNumber": "1501-2233-0013",
+      "isActive": false
+    }
+  ]
+}

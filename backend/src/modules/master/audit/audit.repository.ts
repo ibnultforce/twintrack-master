@@ -6,8 +6,17 @@ export async function recordAudit(entry: Omit<AuditLogDoc, 'at'>, session?: Clie
   await AuditLog.create([{ ...entry, at: new Date() }], { session });
 }
 
-export async function findAuditPage({ actionPrefix, ...page }: PageRequest & { actionPrefix?: string }) {
-  const filter = actionPrefix ? { action: { $regex: `^${escapeRegex(actionPrefix)}` } } : {};
+export interface AuditFilter {
+  actionPrefix?: string;
+  /** Only entries a module wrote, such as "accounts". */
+  module?: string;
+}
+
+export async function findAuditPage({ actionPrefix, module, ...page }: PageRequest & AuditFilter) {
+  const filter = {
+    ...(actionPrefix && { action: { $regex: `^${escapeRegex(actionPrefix)}` } }),
+    ...(module && { module }),
+  };
   const [entries, total] = await Promise.all([
     AuditLog.find(filter).sort({ at: -1, _id: -1 }).skip(pageOffset(page)).limit(page.pageSize).lean(),
     AuditLog.countDocuments(filter),

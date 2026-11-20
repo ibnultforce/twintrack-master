@@ -1,8 +1,8 @@
 import type { PageRequest } from '../../../lib/query.js';
-import { findAuditPage } from './audit.repository.js';
+import { findAuditPage, type AuditFilter } from './audit.repository.js';
 
 /** One page of the activity log, newest first. */
-export async function listActivity(query: PageRequest & { actionPrefix?: string }) {
+export async function listActivity(query: PageRequest & AuditFilter) {
   const { entries, total } = await findAuditPage(query);
   return {
     total,

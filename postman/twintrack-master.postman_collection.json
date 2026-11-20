@@ -428,6 +428,10 @@
     {
       "key": "ledgerAccountVersion",
       "value": ""
+    },
+    {
+      "key": "journalVoucherId",
+      "value": ""
     }
   ],
   "item": [
@@ -14239,6 +14243,525 @@
                 "exec": [
                   "pm.test('returns 200', () => pm.response.to.have.status(200));",
                   "pm.test('is inactive', () => pm.expect(pm.response.json().isActive).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the Accounts settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "settings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change the Accounts settings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currencies\": [\n    { \"code\": \"USD\", \"name\": \"US dollar\" },\n    { \"code\": \"EUR\", \"name\": \"Euro\" }\n  ],\n  \"exchangeRates\": [\n    {\n      \"currency\": \"USD\",\n      \"effectiveFrom\": \"2026-11-01\",\n      \"paisaPerUnit\": 12250\n    },\n    {\n      \"currency\": \"EUR\",\n      \"effectiveFrom\": \"2026-11-01\",\n      \"paisaPerUnit\": 13100\n    }\n  ],\n  \"taxRates\": [\n    {\n      \"code\": \"VAT15\",\n      \"name\": \"VAT 15%\",\n      \"basisPoints\": 1500\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('keeps the VAT rate', () => pm.expect(pm.response.json().taxRates[0].code).to.eql('VAT15'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List stand-in approver candidates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/settings/approver-candidates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "settings",
+                "approver-candidates"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lists people', () => pm.expect(pm.response.json().people).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read an account's history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/ledger-accounts/{{ledgerAccountId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "ledger-accounts",
+                "{{ledgerAccountId}}",
+                "history"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save a journal voucher as a draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voucherDate\": \"2026-11-02\",\n  \"memo\": \"November office rent\",\n  \"lines\": [\n    {\n      \"accountId\": \"la_5300\",\n      \"debit\": 2500000\n    },\n    {\n      \"accountId\": \"la_1100\",\n      \"credit\": 2500000\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('journalVoucherId', pm.response.json().id);",
+                  "pm.test('is a draft', () => pm.expect(pm.response.json().status).to.eql('draft'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List journal vouchers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read a journal voucher",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers/{{journalVoucherId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers",
+                "{{journalVoucherId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('says what you may do', () => pm.expect(pm.response.json().allowedActions).to.be.an('object'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit a draft journal voucher",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers/{{journalVoucherId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers",
+                "{{journalVoucherId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memo\": \"November office rent, receipt 4471\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit a journal voucher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers/{{journalVoucherId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers",
+                "{{journalVoucherId}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is submitted', () => pm.expect(pm.response.json().status).to.eql('submitted'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve your own journal voucher (refused)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers/{{journalVoucherId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers",
+                "{{journalVoucherId}}",
+                "approve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('says own_record', () => pm.expect(pm.response.json().error.code).to.eql('own_record'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Return your own journal voucher (refused)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers/{{journalVoucherId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers",
+                "{{journalVoucherId}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Add the receipt number.\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 403', () => pm.response.to.have.status(403));",
+                  "pm.test('says own_record', () => pm.expect(pm.response.json().error.code).to.eql('own_record'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reverse a voucher that is not recorded (refused)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers/{{journalVoucherId}}/reverse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers",
+                "{{journalVoucherId}}",
+                "reverse"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 409', () => pm.response.to.have.status(409));",
+                  "pm.test('says voucher_not_recorded', () => pm.expect(pm.response.json().error.code).to.eql('voucher_not_recorded'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read a journal voucher's history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/journal-vouchers/{{journalVoucherId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "journal-vouchers",
+                "{{journalVoucherId}}",
+                "history"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the Accounts activity log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/audit-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "audit-log"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('only Accounts entries', () => pm.response.json().entries.forEach((entry) => pm.expect(entry.module).to.eql('accounts')));"
                 ]
               }
             }

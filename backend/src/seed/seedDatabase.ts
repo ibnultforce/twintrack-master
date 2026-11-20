@@ -1,6 +1,8 @@
 import { hash } from '@node-rs/argon2';
 import { prepareCollections, runInTransaction } from '../db.js';
 import { ValidationFailure } from '../lib/validation.js';
+import { insertMissingEmployees } from '../modules/accounts/employee/employee.repository.js';
+import { validateEmployeesFile } from '../modules/accounts/employee/employeesFile.js';
 import { validateChartOfAccountsFile } from '../modules/accounts/ledgerAccount/chartOfAccountsFile.js';
 import { insertMissingLedgerAccounts } from '../modules/accounts/ledgerAccount/ledgerAccount.repository.js';
 import { validateSalariesFile } from '../modules/hr/salary/salariesFile.js';
@@ -58,6 +60,8 @@ export async function seedDatabase(options: {
   if (!salaries.ok) throw new ValidationFailure('Seed salaries file is invalid', salaries.errors);
   const chartOfAccounts = options.files.chartOfAccounts === undefined ? { ok: true as const, value: [] } : validateChartOfAccountsFile(options.files.chartOfAccounts);
   if (!chartOfAccounts.ok) throw new ValidationFailure('Seed chart of accounts file is invalid', chartOfAccounts.errors);
+  const accountsEmployees = options.files.accountsEmployees === undefined ? { ok: true as const, value: [] } : validateEmployeesFile(options.files.accountsEmployees);
+  if (!accountsEmployees.ok) throw new ValidationFailure('Seed Accounts employees file is invalid', accountsEmployees.errors);
 
   const passwordHash = await hash(options.password);
   await prepareCollections(appModels);
@@ -71,6 +75,7 @@ export async function seedDatabase(options: {
     const { created, updated } = await upsertUsers(users.value, passwordHash, session);
     await upsertSalaries(salaries.value, session);
     await insertMissingLedgerAccounts(chartOfAccounts.value, session);
+    await insertMissingEmployees(accountsEmployees.value, session);
     return { modules, usersCreated: created, usersUpdated: updated };
   });
 }

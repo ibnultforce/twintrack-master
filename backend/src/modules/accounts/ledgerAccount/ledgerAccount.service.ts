@@ -4,9 +4,10 @@ import { ApiError } from '../../../lib/errors.js';
 import type { PageRequest } from '../../../lib/query.js';
 import { actorFields, type Actor } from '../../master/access/caller.js';
 import { recordAudit } from '../../master/audit/audit.repository.js';
-import { assertMayWriteFields, readFieldRules, redactRecord, type FieldRules } from '../../master/records/fieldSecurity.service.js';
-import { writeRecordHistory } from '../../master/records/recordHistory.service.js';
+import { assertMayWriteFields, readFieldRules, redactHistory, redactRecord, type FieldRules } from '../../master/records/fieldSecurity.service.js';
+import { listRecordHistory, writeRecordHistory } from '../../master/records/recordHistory.service.js';
 import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
+import { accountHasLedgerLines, findAccountBalance } from '../ledger/ledger.repository.js';
 import { NORMAL_BALANCE, type LedgerAccountDoc, type LedgerAccountType } from '../models/ledgerAccount.js';
 import {
   findLedgerAccountById,
@@ -45,6 +46,7 @@ function toLedgerAccountView(account: LedgerAccountDoc, rules: FieldRules) {
     normalBalance: NORMAL_BALANCE[account.type],
     parentId: account.parentId,
     description: account.description,
+    bankAccountNumber: account.bankAccountNumber,
     isActive: account.isActive,
     version: account.version,
     createdBy: account.createdBy,
@@ -81,6 +83,8 @@ async function assertValidParent(parentId: string, type: LedgerAccountType, acco
   if (!parent) throw invalidField('parentId', 'no such account');
   if (!parent.isActive) throw invalidField('parentId', 'is inactive');
   if (parent.type !== type) throw invalidField('parentId', `has the type ${parent.type}, and a parent must have the same type`);
+  // A group holds no money itself, so an account that already has ledger lines can't become one.
+  if (await accountHasLedgerLines(parent._id)) throw invalidField('parentId', "has ledger lines, so it can't group other accounts");
 
   let ancestor: LedgerAccountDoc | null = parent;
   for (let depth = 1; ancestor; depth += 1) {
@@ -134,13 +138,23 @@ async function assertChangeKeepsChartValid(existing: LedgerAccountDoc, changes: 
   if (typeChanged && (await hasChildAccounts(existing._id))) {
     throw new ApiError(409, 'account_has_sub_accounts', 'This account has sub-accounts, so its type can only change after they are moved.');
   }
+  // Its lines would silently move to another part of the reports, such as from expenses to income.
+  if (typeChanged && (await accountHasLedgerLines(existing._id))) {
+    throw new ApiError(409, 'account_has_ledger_lines', "This account has ledger lines, so its type can't change. Open a new account instead.");
+  }
 
   const parentId = changes.parentId === undefined ? existing.parentId : (changes.parentId ?? undefined);
   const parentChanged = changes.parentId !== undefined && changes.parentId !== (existing.parentId ?? null);
   if (parentId && (parentChanged || typeChanged)) await assertValidParent(parentId, type, existing._id);
 
-  if (changes.isActive === false && existing.isActive && (await hasChildAccounts(existing._id, true))) {
-    throw new ApiError(409, 'account_has_active_sub_accounts', "Deactivate or move this account's active sub-accounts first.");
+  if (changes.isActive === false && existing.isActive) {
+    if (await hasChildAccounts(existing._id, true)) {
+      throw new ApiError(409, 'account_has_active_sub_accounts', "Deactivate or move this account's active sub-accounts first.");
+    }
+    // Nothing can post to an inactive account, so money left in it could never be moved out.
+    if ((await findAccountBalance(existing._id)) !== 0) {
+      throw new ApiError(409, 'account_has_balance', 'This account still has a balance. Move it to another account before deactivating.');
+    }
   }
 }
 
@@ -163,4 +177,11 @@ export async function updateLedgerAccount(actor: Actor, accountId: string, reque
     return result;
   }));
   return toLedgerAccountView(saved, rules);
+}
+
+/** An account's change history. A bank number is hidden in it exactly as it is on the account. */
+export async function getLedgerAccountHistory(actor: Actor, accountId: string, page: PageRequest) {
+  await requireLedgerAccount(accountId);
+  const history = await listRecordHistory(historyRef(accountId), page);
+  return { ...history, entries: redactHistory(history.entries, await fieldRulesFor(actor)) };
 }

@@ -4,8 +4,12 @@ import { escapeRegex, pageOffset, type PageRequest } from '../../../lib/query.js
 import { changeRecord } from '../../../lib/records/recordWrites.js';
 import { LedgerAccount, type LedgerAccountDoc, type LedgerAccountType } from '../models/ledgerAccount.js';
 
-export type NewLedgerAccountRecord = Pick<LedgerAccountDoc, '_id' | 'code' | 'name' | 'type' | 'parentId' | 'description'>;
-export type LedgerAccountChanges = Partial<Pick<LedgerAccountDoc, 'code' | 'name' | 'type' | 'description' | 'isActive'>> & { parentId?: string | null };
+export type NewLedgerAccountRecord = Pick<LedgerAccountDoc, '_id' | 'code' | 'name' | 'type' | 'parentId' | 'description' | 'bankAccountNumber'>;
+export type LedgerAccountChanges = Partial<Pick<LedgerAccountDoc, 'code' | 'name' | 'type' | 'description' | 'isActive'>> & {
+  parentId?: string | null;
+  /** null removes it. */
+  bankAccountNumber?: string | null;
+};
 /** A starting account from the seed file, inserted only when its id isn't there yet. */
 export type LedgerAccountSeedRow = NewLedgerAccountRecord;
 
@@ -47,15 +51,23 @@ export const ledgerAccountCodeExists = async (code: string, exceptId?: string) =
 export const hasChildAccounts = async (accountId: string, onlyActive = false) =>
   Boolean(await LedgerAccount.exists({ parentId: accountId, ...(onlyActive && { isActive: true }) }));
 
+/** Which of these accounts are the parent of at least one other account. */
+export const findAccountsWithChildren = (accountIds: string[]): Promise<string[]> =>
+  LedgerAccount.distinct('parentId', { parentId: { $in: accountIds } });
+
 export async function insertLedgerAccount(record: NewLedgerAccountRecord, createdBy: string, session: ClientSession): Promise<LedgerAccountDoc> {
   const [created] = await LedgerAccount.create([{ ...record, isActive: true, createdBy, updatedBy: createdBy }], { session });
   if (!created) throw new Error('Creating the ledger account returned nothing.');
   return created.toObject();
 }
 
-export function updateLedgerAccount(accountId: string, { parentId, ...changes }: LedgerAccountChanges, context: WriteContext) {
-  // null removes the parent, making it a top-level account; undefined leaves it as it is.
-  const update = { $set: { ...changes, ...(parentId && { parentId }) }, ...(parentId === null && { $unset: { parentId: 1 } }) };
+export function updateLedgerAccount(accountId: string, { parentId, bankAccountNumber, ...changes }: LedgerAccountChanges, context: WriteContext) {
+  // null removes the field (a parent: the account becomes top-level); undefined leaves it as it is.
+  const $unset = { ...(parentId === null && { parentId: 1 }), ...(bankAccountNumber === null && { bankAccountNumber: 1 }) };
+  const update = {
+    $set: { ...changes, ...(parentId && { parentId }), ...(bankAccountNumber && { bankAccountNumber }) },
+    ...(Object.keys($unset).length > 0 && { $unset }),
+  };
   return changeRecord(LedgerAccount, accountId, update, context, ledgerAccountNotFound);
 }
 

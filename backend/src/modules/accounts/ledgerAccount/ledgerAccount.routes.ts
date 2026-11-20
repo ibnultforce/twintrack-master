@@ -6,7 +6,7 @@ import { parseRequestBody, parseRequestQuery } from '../../../lib/validation.js'
 import { getActor } from '../../master/access/caller.js';
 import { LEDGER_ACCOUNT_TYPES } from '../models/ledgerAccount.js';
 import { ACCOUNT_CODE_MESSAGE, ACCOUNT_CODE_PATTERN } from './ledgerAccountFields.js';
-import { createLedgerAccount, getLedgerAccount, listLedgerAccounts, updateLedgerAccount } from './ledgerAccount.service.js';
+import { createLedgerAccount, getLedgerAccount, getLedgerAccountHistory, listLedgerAccounts, updateLedgerAccount } from './ledgerAccount.service.js';
 
 const MAX_ID_LENGTH = 100;
 const MAX_NAME_LENGTH = 200;
@@ -19,6 +19,8 @@ const typeField = z.enum(LEDGER_ACCOUNT_TYPES);
 const accountIdField = z.string().min(1, 'is required').max(MAX_ID_LENGTH);
 const descriptionField = z.string().trim().max(MAX_DESCRIPTION_LENGTH);
 const versionField = z.number().int().min(0);
+/** Letters, digits, spaces and hyphens, as banks print them; IBANs are at most 34 characters. */
+const bankAccountNumberField = z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9 -]{2,33}$/, 'must be 3 to 34 letters, digits, spaces or hyphens');
 
 const listQuerySchema = z.object({
   ...paginationQueryFields,
@@ -33,6 +35,7 @@ const createBodySchema = z.strictObject({
   type: typeField,
   parentId: accountIdField.optional(),
   description: descriptionField.optional(),
+  bankAccountNumber: bankAccountNumberField.optional(),
 });
 
 const updateBodySchema = z
@@ -43,6 +46,7 @@ const updateBodySchema = z
     // null makes it a top-level account.
     parentId: accountIdField.nullable().optional(),
     description: descriptionField.optional(),
+    bankAccountNumber: bankAccountNumberField.nullable().optional(),
     isActive: z.boolean().optional(),
     version: versionField.optional(),
   })
@@ -62,6 +66,10 @@ const handleCreate: RequestHandler = async (req, res) => {
   res.status(201).json(await createLedgerAccount(getActor(req), parseRequestBody(createBodySchema, req.body)));
 };
 
+const handleHistory: RequestHandler = async (req, res) => {
+  res.json(await getLedgerAccountHistory(getActor(req), accountId(req), parseRequestQuery(z.object(paginationQueryFields), req.query)));
+};
+
 const handleUpdate: RequestHandler = async (req, res) => {
   res.json(await updateLedgerAccount(getActor(req), accountId(req), parseRequestBody(updateBodySchema, req.body)));
 };
@@ -71,5 +79,6 @@ export const ledgerAccountRoutes: ApiRoute[] = [
   { method: 'GET', path: '/accounts/ledger-accounts', access: 'private', permission: 'ledgerAccount.read', handler: handleList },
   { method: 'POST', path: '/accounts/ledger-accounts', access: 'private', permission: 'ledgerAccount.create', bodySchema: createBodySchema, handler: handleCreate },
   { method: 'GET', path: '/accounts/ledger-accounts/:id', access: 'private', permission: 'ledgerAccount.read', handler: handleGet },
+  { method: 'GET', path: '/accounts/ledger-accounts/:id/history', access: 'private', permission: 'ledgerAccount.read', handler: handleHistory },
   { method: 'PATCH', path: '/accounts/ledger-accounts/:id', access: 'private', permission: 'ledgerAccount.update', bodySchema: updateBodySchema, handler: handleUpdate },
 ];

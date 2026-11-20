@@ -25,6 +25,8 @@ export interface LedgerAccountDoc extends RecordFields {
   type: LedgerAccountType;
   parentId?: string;
   description?: string;
+  /** For a box that is a real bank account. A protected field: hidden unless a profile's grant names it. */
+  bankAccountNumber?: string;
   isActive: boolean;
 }
 
@@ -36,6 +38,7 @@ const ledgerAccountSchema = new Schema<LedgerAccountDoc>(
     type: { type: String, enum: LEDGER_ACCOUNT_TYPES, required: true },
     parentId: { type: String, index: true },
     description: String,
+    bankAccountNumber: String,
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },

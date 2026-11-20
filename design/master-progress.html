@@ -129,7 +129,7 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
 <header>
   <h1>TwinTrack Master Progress</h1>
   <p class="muted">What has been added to the Master module so far, and what comes next. Updated whenever the code changes.</p>
-  <p class="small muted">Last updated 18 November 2026. The redesign (phases 1 to 6), the Project management module (formerly Tasks) and the HR data models are not committed yet.</p>
+  <p class="small muted">Last updated 19 November 2026. The redesign (phases 1 to 6), the Project management module (formerly Tasks) and the HR data models are not committed yet.</p>
 </header>
 
 <section aria-labelledby="summary-heading">
@@ -380,6 +380,50 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
 <section aria-labelledby="log-heading">
   <h2 id="log-heading">Change log</h2>
   <div class="log">
+    <div class="log-entry">
+      <h3>19 November 2026: Accounts settings fields on the Profiles screen (manifest 1.5.0)</h3>
+      <ul>
+        <li>The stand-in, currencies, exchange rates and tax rates are each a field of the Accounts <code>setting</code> resource, so a profile can hide them or make them read-only. Hidden parts are left out of <code>GET</code> and <code>PATCH /accounts/settings</code>; editing a part without edit access is refused with <code>403 field_not_editable</code>. On the Settings screen, removing a saved currency, rate or tax rate saves at once.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>19 November 2026: Accounts currencies list (manifest 1.4.0)</h3>
+      <ul>
+        <li>Settings keeps a list of <code>currencies</code> (code and name). An exchange rate must name one of them, chosen from a dropdown on the Settings screen; a currency that still has rates can't be removed.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>19 November 2026: Accounts exchange rates for any currency (manifest 1.3.0)</h3>
+      <ul>
+        <li>Settings keeps rates for several currencies instead of US dollars only: <code>usdRates</code> became <code>exchangeRates</code>, each with a 3-letter <code>currency</code>, <code>effectiveFrom</code> and <code>paisaPerUnit</code>. The books stay in taka, so BDT is refused. The Settings screen has a Currency box on each rate.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>19 November 2026: Accounts dummy employees and Day 1 checks</h3>
+      <ul>
+        <li>Accounts plan task 4. <code>npm run seed</code> adds 13 dummy employees (12 active, 1 who has left) from <code>seed/accounts-employees.json</code> for payroll until HR is built. Salaries are whole paisa; the seed never overwrites employees already there. No route yet.</li>
+        <li>Every Day 1 Accounts route has a Postman request and success and failure scenarios on the test page.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>19 November 2026: Accounts approvals, settings and activity log (manifest 1.2.0)</h3>
+      <ul>
+        <li>Accounts plan task 3. Journal vouchers (built early from Day 2, as agreed): draft, submitted, recorded, reversed. Approving records the voucher in the ledger in the same transaction. Whoever made a voucher can't approve, return or reverse it, super admins included (<code>403 own_record</code>).</li>
+        <li>Settings: a stand-in approver with an optional last day, who may decide without the approve permission; US dollar rates by date; tax rates. The Accounts activity log at <code>/accounts/audit-log</code>.</li>
+        <li>Chart of accounts boxes take a bank account number, a protected field hidden in the box, lists and history unless a grant names it. New account history route.</li>
+        <li>New resources <code>journalVoucher</code> and <code>auditLog</code>, and <code>setting.update</code>: only the super admin holds them until a profile ticks them. Frontend: Journal vouchers, Settings and Activity log screens.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>19 November 2026: Accounts ledger core</h3>
+      <ul>
+        <li>Accounts plan task 2: <code>postEntry</code> refuses unbalanced or malformed entries, <code>reverseEntry</code> writes mirror lines dated today and can run only once per entry, and <code>getTrialBalance</code> sums the ledger. Entries are never edited. No routes yet: Day 2's vouchers will post through these.</li>
+        <li>The Accounts frontend has a Chart of accounts screen: the chart as a tree, filters by type, status and search, and adding, editing, deactivating and reactivating accounts.</li>
+        <li>Review fixes: every entry must name its source record; an account with ledger lines can't change type (<code>409 account_has_ledger_lines</code>) or become a parent; a 1 paisa amount stays exact.</li>
+        <li>An account with a balance can't be deactivated (<code>409 account_has_balance</code>). The Chart of accounts screen reports saves and refusals in a toast, so a message is seen wherever the page is scrolled.</li>
+        <li>Checks: typecheck, lint and the full test suite pass.</li>
+      </ul>
+    </div>
     <div class="log-entry">
       <h3>18 November 2026: Accounts module removed</h3>
       <ul>

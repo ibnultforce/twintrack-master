@@ -93,6 +93,360 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "bankAccountNumber": {
+          "type": "string",
+          "description": "Protected field: left out unless the grant names it, in the account and its history"
+        }
+      }
+    },
+    "AccountsSettings": {
+      "type": "object",
+      "description": "One settings record for the whole module. Each part is a field a profile can hide; a hidden part is left out.",
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "standInApprover": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "May approve without the approve permission, never their own records"
+        },
+        "standInUntil": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the stand-in may approve; none means no end"
+        },
+        "isStandInActive": {
+          "type": "boolean"
+        },
+        "currencies": {
+          "type": "array",
+          "description": "Foreign currencies the company deals in, by code. Exchange rates name only these",
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "name"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z]{3,10}$",
+                "description": "ISO 4217 code such as USD, or a longer one such as USDT; never BDT"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              }
+            }
+          }
+        },
+        "exchangeRates": {
+          "type": "array",
+          "description": "Rates for currencies other than taka, by currency then newest first",
+          "items": {
+            "type": "object",
+            "required": [
+              "currency",
+              "effectiveFrom",
+              "paisaPerUnit"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3,10}$",
+                "description": "The code of one of the currencies"
+              },
+              "effectiveFrom": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "paisaPerUnit": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Taka per unit in paisa: USD 12250 is 122.50"
+              }
+            }
+          }
+        },
+        "taxRates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "name",
+              "basisPoints"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z0-9_]{1,20}$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "basisPoints": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000,
+                "description": "1500 is 15%"
+              }
+            }
+          }
+        },
+        "version": {
+          "type": "integer"
+        },
+        "updatedBy": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "JournalVoucher": {
+      "type": "object",
+      "description": "A manual journal entry that a second person approves before it reaches the ledger.",
+      "required": [
+        "id",
+        "number",
+        "voucherDate",
+        "memo",
+        "lines",
+        "total",
+        "status",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string",
+          "pattern": "^JV-\\d{4,}$"
+        },
+        "voucherDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "memo": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "accountId",
+              "debit",
+              "credit"
+            ],
+            "properties": {
+              "accountId": {
+                "type": "string"
+              },
+              "debit": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Whole paisa or cents"
+              },
+              "credit": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Whole paisa or cents"
+              },
+              "memo": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Whole paisa or cents"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "submitted",
+            "recorded",
+            "reversed"
+          ]
+        },
+        "returnNote": {
+          "type": "string",
+          "description": "Why an approver sent it back; cleared on the next submit"
+        },
+        "createdBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "submittedBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "approvedBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "reversedBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reversedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ledgerEntryId": {
+          "type": "string"
+        },
+        "reversalEntryId": {
+          "type": "string"
+        },
+        "allowedActions": {
+          "type": "object",
+          "description": "Only on GET /journal-vouchers/:id: which actions will work for the caller",
+          "properties": {
+            "edit": {
+              "type": "boolean"
+            },
+            "submit": {
+              "type": "boolean"
+            },
+            "approve": {
+              "type": "boolean"
+            },
+            "return": {
+              "type": "boolean"
+            },
+            "reverse": {
+              "type": "boolean"
+            }
+          }
+        },
+        "version": {
+          "type": "integer"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "AuditEntry": {
+      "type": "object",
+      "description": "One line of the Accounts activity log.",
+      "required": [
+        "id",
+        "at",
+        "action",
+        "module"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actorId": {
+          "type": "string"
+        },
+        "actorName": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "description": "Such as journalVoucher.approved or ledgerEntry.posted"
+        },
+        "targetType": {
+          "type": "string"
+        },
+        "targetId": {
+          "type": "string"
+        },
+        "targetName": {
+          "type": "string"
+        },
+        "module": {
+          "const": "accounts"
         }
       }
     }

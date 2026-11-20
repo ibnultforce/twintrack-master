@@ -55,7 +55,7 @@ The Next.js app in `frontend/` is the portal and admin console. It runs entirely
 
 ## Example data
 
-`npm run seed` loads the Master, HR, Project management, Demo and Accounts modules and the 12-person example team. from `seed/`, with a sample org tree. **No profile comes ready-made:** only the super admin has access until they create profiles and give them to people. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set. It also adds the starting Accounts chart of accounts from `seed/chart-of-accounts.json`, without changing accounts already there.
+`npm run seed` loads the Master, HR, Project management, Demo and Accounts modules and the 12-person example team. from `seed/`, with a sample org tree. **No profile comes ready-made:** only the super admin has access until they create profiles and give them to people. Everyone's password is `SEED_PASSWORD` from `backend/.env`, and the seed stops if that isn't set. It also adds the starting Accounts chart of accounts from `seed/chart-of-accounts.json`, without changing accounts already there, and 13 dummy employees for Accounts payroll from `seed/accounts-employees.json`, the same way.
 
 - **Safe to re-run:** it updates records by id and creates no duplicates. It resets each person's profile to what the files say, and keeps passwords already set.
 - **All or nothing:** every file is checked first and all problems are listed together. If anything fails, nothing is saved.
