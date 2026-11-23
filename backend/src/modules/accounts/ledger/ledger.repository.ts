@@ -49,3 +49,44 @@ export function sumLinesByAccount(upToDate?: string, session?: ClientSession): P
     { $sort: { accountId: 1 } },
   ]).session(session ?? null);
 }
+
+/** One account's movements around a period: its balance before the period, and its debits and credits in it. */
+export interface PeriodTotals {
+  accountId: string;
+  /** Debits minus credits on lines dated before `from`. */
+  opening: number;
+  /** Debits dated from `from` to `to`. */
+  debit: number;
+  /** Credits dated from `from` to `to`. */
+  credit: number;
+}
+
+/** Sums these accounts' lines up to `to` (YYYY-MM-DD), split into before `from` and from `from` on. */
+export function sumLinesForPeriod(accountIds: string[], from: string, to: string): Promise<PeriodTotals[]> {
+  const isBefore = { $lt: ['$entryDate', from] };
+  return LedgerEntry.aggregate<PeriodTotals>([
+    { $match: { 'lines.accountId': { $in: accountIds }, entryDate: { $lte: to } } },
+    { $unwind: '$lines' },
+    { $match: { 'lines.accountId': { $in: accountIds } } },
+    {
+      $group: {
+        _id: '$lines.accountId',
+        opening: { $sum: { $cond: [isBefore, { $subtract: ['$lines.debit', '$lines.credit'] }, 0] } },
+        debit: { $sum: { $cond: [isBefore, 0, '$lines.debit'] } },
+        credit: { $sum: { $cond: [isBefore, 0, '$lines.credit'] } },
+      },
+    },
+    { $project: { _id: 0, accountId: '$_id', opening: 1, debit: 1, credit: 1 } },
+  ]);
+}
+
+/** Debit and credit totals across the whole ledger for just these accounts. */
+export function sumLinesForAccounts(accountIds: string[]): Promise<AccountTotals[]> {
+  return LedgerEntry.aggregate<AccountTotals>([
+    { $match: { 'lines.accountId': { $in: accountIds } } },
+    { $unwind: '$lines' },
+    { $match: { 'lines.accountId': { $in: accountIds } } },
+    { $group: { _id: '$lines.accountId', debit: { $sum: '$lines.debit' }, credit: { $sum: '$lines.credit' } } },
+    { $project: { _id: 0, accountId: '$_id', debit: 1, credit: 1 } },
+  ]);
+}

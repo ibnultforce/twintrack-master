@@ -9894,11 +9894,75 @@
           ]
         },
         {
+          "id": "POST /accounts/ledger-accounts/:id/reveal-bank-number",
+          "method": "POST",
+          "path": "/accounts/ledger-accounts/:id/reveal-bank-number",
+          "purpose": "Shows a bank account number in full, which every other response masks, and writes the reveal to the activity log.",
+          "input": "None",
+          "access": "Needs ledgerAccount.read and read access to the bankAccountNumber field",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Reveals a bank account's number, and logs it",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/ledger-accounts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"code\": \"1290\", \"name\": \"City Bank, current\", \"type\": \"asset\", \"parentId\": \"la_1000\", \"cashOrBank\": \"bank\", \"bankName\": \"City Bank\", \"bankAccountNumber\": \"1102-3344-7712\"}",
+                  "save": {
+                    "accountId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/ledger-accounts/{{accountId}}/reveal-bank-number",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such account",
+              "expected": 404,
+              "code": "unknown_ledger_account",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/ledger-accounts/la_missing/reveal-bank-number",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/ledger-accounts/la_1100/reveal-bank-number"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/ledger-accounts/la_1100/reveal-bank-number",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
           "id": "GET /accounts/journal-vouchers",
           "method": "GET",
           "path": "/accounts/journal-vouchers",
           "purpose": "Lists journal vouchers, newest date first.",
-          "input": "page, pageSize and status in the query",
+          "input": "page, pageSize, status, from, to and search in the query",
           "access": "Needs journalVoucher.read",
           "scenarios": [
             {
@@ -9908,6 +9972,27 @@
               "request": {
                 "method": "GET",
                 "path": "/accounts/journal-vouchers?status=submitted",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Lists November's vouchers whose number or memo mentions rent",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers?from=2026-11-01&to=2026-11-30&search=rent",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A date range that ends before it starts",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers?from=2026-11-30&to=2026-11-01",
                 "as": "farhana@twintrack.test"
               }
             },
@@ -10457,6 +10542,581 @@
                 "method": "GET",
                 "path": "/accounts/journal-vouchers/jv_missing/history",
                 "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/cash-bank",
+          "method": "GET",
+          "path": "/accounts/cash-bank",
+          "purpose": "Each cash and bank account's opening balance, money in, money out and balance for a period, worked out from the ledger.",
+          "input": "from and to in the query; default this month so far",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "November's cash and bank balances",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/cash-bank?from=2026-11-01&to=2026-11-30",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A period that ends before it starts",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/cash-bank?from=2026-11-30&to=2026-11-01",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/cash-bank"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/cash-bank",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/update-requests",
+          "method": "GET",
+          "path": "/accounts/update-requests",
+          "purpose": "Lists update requests, newest first.",
+          "input": "page, pageSize, status (waiting, applied, rejected) and recordId in the query",
+          "access": "Needs updateRequest.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists the requests waiting for a decision",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/update-requests?status=waiting",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/update-requests"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/update-requests",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/update-requests",
+          "method": "POST",
+          "path": "/accounts/update-requests",
+          "purpose": "Asks for a recorded voucher to be corrected. Nothing changes in the books until someone else approves it.",
+          "input": "recordType (journalVoucher), recordId, reason, changes (voucherDate, memo and/or lines)",
+          "access": "Needs updateRequest.create, and journalVoucher.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Asks to correct a recorded voucher",
+              "expected": 201,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\": \"Correction approver\", \"grants\": {\"accounts\": {\"journalVoucher\": {\"actions\": [\"read\", \"create\", \"update\", \"approve\"]}, \"updateRequest\": {\"actions\": [\"read\", \"create\", \"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\": \"2026-11-02\", \"memo\": \"November office rent\", \"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1100\", \"credit\": 2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                  "as": "mehedi@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests",
+                "as": "farhana@twintrack.test",
+                "body": "{\"recordType\": \"journalVoucher\", \"recordId\": \"{{voucherId}}\", \"reason\": \"The rent was paid from the bank, not cash\", \"changes\": {\"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1200\", \"credit\": 2500000}]}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A draft voucher: drafts are edited directly",
+              "expected": 409,
+              "code": "record_not_recorded",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\": \"2026-11-02\", \"memo\": \"November office rent\", \"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1100\", \"credit\": 2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests",
+                "as": "farhana@twintrack.test",
+                "body": "{\"recordType\": \"journalVoucher\", \"recordId\": \"{{voucherId}}\", \"reason\": \"The rent was paid from the bank, not cash\", \"changes\": {\"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1200\", \"credit\": 2500000}]}}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/update-requests/:id",
+          "method": "GET",
+          "path": "/accounts/update-requests/:id",
+          "purpose": "One request, with the voucher before and after, and whether the caller may approve or reject it.",
+          "input": "None",
+          "access": "Needs updateRequest.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Reads a waiting request",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\": \"Correction approver\", \"grants\": {\"accounts\": {\"journalVoucher\": {\"actions\": [\"read\", \"create\", \"update\", \"approve\"]}, \"updateRequest\": {\"actions\": [\"read\", \"create\", \"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\": \"2026-11-02\", \"memo\": \"November office rent\", \"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1100\", \"credit\": 2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                  "as": "mehedi@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/update-requests",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"recordType\": \"journalVoucher\", \"recordId\": \"{{voucherId}}\", \"reason\": \"The rent was paid from the bank, not cash\", \"changes\": {\"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1200\", \"credit\": 2500000}]}}",
+                  "save": {
+                    "requestId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/update-requests/{{requestId}}",
+                "as": "mehedi@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such request",
+              "expected": 404,
+              "code": "unknown_update_request",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/update-requests/ur_missing",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/update-requests/ur_missing"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/update-requests/:id/approve",
+          "method": "POST",
+          "path": "/accounts/update-requests/:id/approve",
+          "purpose": "Applies a request: reverses the voucher's ledger entry and records the corrected one, in one step. Never by the requester.",
+          "input": "version (optional)",
+          "access": "Needs updateRequest.read, plus updateRequest.approve or being the stand-in approver; never the requester",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Another person approves it, and the voucher is corrected",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\": \"Correction approver\", \"grants\": {\"accounts\": {\"journalVoucher\": {\"actions\": [\"read\", \"create\", \"update\", \"approve\"]}, \"updateRequest\": {\"actions\": [\"read\", \"create\", \"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\": \"2026-11-02\", \"memo\": \"November office rent\", \"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1100\", \"credit\": 2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                  "as": "mehedi@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/update-requests",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"recordType\": \"journalVoucher\", \"recordId\": \"{{voucherId}}\", \"reason\": \"The rent was paid from the bank, not cash\", \"changes\": {\"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1200\", \"credit\": 2500000}]}}",
+                  "save": {
+                    "requestId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests/{{requestId}}/approve",
+                "as": "mehedi@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The requester approves their own request, as a super admin",
+              "expected": 403,
+              "code": "own_record",
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\": \"Correction approver\", \"grants\": {\"accounts\": {\"journalVoucher\": {\"actions\": [\"read\", \"create\", \"update\", \"approve\"]}, \"updateRequest\": {\"actions\": [\"read\", \"create\", \"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\": \"2026-11-02\", \"memo\": \"November office rent\", \"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1100\", \"credit\": 2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                  "as": "mehedi@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/update-requests",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"recordType\": \"journalVoucher\", \"recordId\": \"{{voucherId}}\", \"reason\": \"The rent was paid from the bank, not cash\", \"changes\": {\"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1200\", \"credit\": 2500000}]}}",
+                  "save": {
+                    "requestId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests/{{requestId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests/ur_missing/approve"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/update-requests/:id/reject",
+          "method": "POST",
+          "path": "/accounts/update-requests/:id/reject",
+          "purpose": "Turns a request down with a note. Nothing in the books changes.",
+          "input": "note, version (optional)",
+          "access": "As approve",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Another person rejects it with a note",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/access-profiles",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\": \"Correction approver\", \"grants\": {\"accounts\": {\"journalVoucher\": {\"actions\": [\"read\", \"create\", \"update\", \"approve\"]}, \"updateRequest\": {\"actions\": [\"read\", \"create\", \"approve\"]}}}}",
+                  "save": {
+                    "profileId": "id"
+                  }
+                },
+                {
+                  "method": "PUT",
+                  "path": "/users/u_09/profile",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"profileId\":\"{{profileId}}\"}"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\": \"2026-11-02\", \"memo\": \"November office rent\", \"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1100\", \"credit\": 2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/submit",
+                  "as": "farhana@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers/{{voucherId}}/approve",
+                  "as": "mehedi@twintrack.test"
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/update-requests",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"recordType\": \"journalVoucher\", \"recordId\": \"{{voucherId}}\", \"reason\": \"The rent was paid from the bank, not cash\", \"changes\": {\"lines\": [{\"accountId\": \"la_5300\", \"debit\": 2500000}, {\"accountId\": \"la_1200\", \"credit\": 2500000}]}}",
+                  "save": {
+                    "requestId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests/{{requestId}}/reject",
+                "as": "mehedi@twintrack.test",
+                "body": "{\"note\":\"The bank statement shows it was paid in cash\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No note",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests/ur_missing/reject",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/update-requests/ur_missing/reject"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/change-history",
+          "method": "GET",
+          "path": "/accounts/change-history",
+          "purpose": "Every correction (applied update request) and reversal of a recorded voucher, newest first.",
+          "input": "None",
+          "access": "Needs journalVoucher.read or updateRequest.read; each kind shows only with its read permission",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists corrections and reversals",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/change-history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/change-history"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/change-history",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/approvals",
+          "method": "GET",
+          "path": "/accounts/approvals",
+          "purpose": "Everything waiting for a decision that the caller may decide (never their own), and what they made that waits for someone else, oldest first.",
+          "input": "None",
+          "access": "Needs the read permission of at least one approvable record: journalVoucher.read or updateRequest.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Lists what is waiting for approval",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/approvals",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/approvals"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but can't read any approvable record",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/approvals",
+                "as": "karim@twintrack.test"
               }
             }
           ]

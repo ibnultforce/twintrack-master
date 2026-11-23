@@ -2,13 +2,17 @@ import type { ClientSession } from 'mongoose';
 import { ApiError } from '../../../lib/errors.js';
 import { escapeRegex, pageOffset, type PageRequest } from '../../../lib/query.js';
 import { changeRecord } from '../../../lib/records/recordWrites.js';
-import { LedgerAccount, type LedgerAccountDoc, type LedgerAccountType } from '../models/ledgerAccount.js';
+import { LedgerAccount, type CashOrBank, type LedgerAccountDoc, type LedgerAccountType } from '../models/ledgerAccount.js';
 
-export type NewLedgerAccountRecord = Pick<LedgerAccountDoc, '_id' | 'code' | 'name' | 'type' | 'parentId' | 'description' | 'bankAccountNumber'>;
+export type NewLedgerAccountRecord = Pick<LedgerAccountDoc, '_id' | 'code' | 'name' | 'type' | 'parentId' | 'description' | 'bankAccountNumber' | 'cashOrBank' | 'bankName'>;
 export type LedgerAccountChanges = Partial<Pick<LedgerAccountDoc, 'code' | 'name' | 'type' | 'description' | 'isActive'>> & {
   parentId?: string | null;
   /** null removes it. */
   bankAccountNumber?: string | null;
+  /** null: no longer a cash or bank account. */
+  cashOrBank?: CashOrBank | null;
+  /** null removes it. */
+  bankName?: string | null;
 };
 /** A starting account from the seed file, inserted only when its id isn't there yet. */
 export type LedgerAccountSeedRow = NewLedgerAccountRecord;
@@ -61,15 +65,19 @@ export async function insertLedgerAccount(record: NewLedgerAccountRecord, create
   return created.toObject();
 }
 
-export function updateLedgerAccount(accountId: string, { parentId, bankAccountNumber, ...changes }: LedgerAccountChanges, context: WriteContext) {
+export function updateLedgerAccount(accountId: string, { parentId, bankAccountNumber, cashOrBank, bankName, ...changes }: LedgerAccountChanges, context: WriteContext) {
   // null removes the field (a parent: the account becomes top-level); undefined leaves it as it is.
-  const $unset = { ...(parentId === null && { parentId: 1 }), ...(bankAccountNumber === null && { bankAccountNumber: 1 }) };
+  const removable = { parentId, bankAccountNumber, cashOrBank, bankName };
+  const $unset = Object.fromEntries(Object.entries(removable).filter(([, value]) => value === null).map(([field]) => [field, 1]));
   const update = {
-    $set: { ...changes, ...(parentId && { parentId }), ...(bankAccountNumber && { bankAccountNumber }) },
+    $set: { ...changes, ...Object.fromEntries(Object.entries(removable).filter(([, value]) => value)) },
     ...(Object.keys($unset).length > 0 && { $unset }),
   };
   return changeRecord(LedgerAccount, accountId, update, context, ledgerAccountNotFound);
 }
+
+/** Every account marked as cash or bank, active or not, by code. */
+export const findCashAndBankAccounts = () => LedgerAccount.find({ cashOrBank: { $exists: true } }).sort({ code: 1 }).lean();
 
 /** Adds the starting chart without touching accounts that already exist, so re-seeding never undoes edits made in the app. */
 export async function insertMissingLedgerAccounts(rows: LedgerAccountSeedRow[], session: ClientSession): Promise<void> {

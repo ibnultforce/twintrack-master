@@ -148,6 +148,27 @@ describe('journal vouchers', () => {
     });
   });
 
+  describe('listing', () => {
+    it('filters by month, by number or memo, and by status together', async () => {
+      const rahim = await as('rahim');
+      await rahim.post(BASE, { ...rentVoucher, voucherDate: '2026-10-31', memo: 'October office rent' });
+      await rahim.post(BASE, rentVoucher);
+      await rahim.post(BASE, { ...rentVoucher, voucherDate: '2026-11-30', memo: 'Internet bill' });
+      const numbersFor = async (query: string) => (await rahim.get(`${BASE}?${query}`)).body.vouchers.map((voucher: { number: string }) => voucher.number);
+
+      expect(await numbersFor('from=2026-11-01&to=2026-11-30')).toEqual(['JV-0003', 'JV-0002']);
+      expect(await numbersFor('search=office')).toEqual(['JV-0002', 'JV-0001']);
+      expect(await numbersFor('search=jv-0003')).toEqual(['JV-0003']);
+      expect(await numbersFor('search=(')).toEqual([]);
+      expect(await numbersFor('from=2026-11-01&search=rent&status=draft')).toEqual(['JV-0002']);
+    });
+
+    it('refuses a date range that ends before it starts', async () => {
+      const response = await (await as('rahim')).get(`${BASE}?from=2026-11-30&to=2026-11-01`);
+      expect(response.status).toBe(422);
+    });
+  });
+
   describe('approving', () => {
     it('records an approved voucher in the ledger, traced back to it, with every step in the activity log', async () => {
       const voucherId = await submittedVoucher('rahim');
@@ -214,7 +235,7 @@ describe('journal vouchers', () => {
 
     it('tells each person which buttons will work', async () => {
       const voucherId = await submittedVoucher('rahim');
-      expect((await (await as('rahim')).get(`${BASE}/${voucherId}`)).body.allowedActions).toEqual({ edit: false, submit: false, approve: false, return: false, reverse: false });
+      expect((await (await as('rahim')).get(`${BASE}/${voucherId}`)).body.allowedActions).toEqual({ edit: false, submit: false, approve: false, return: false, reverse: false, requestCorrection: false });
       expect((await (await as('nadia')).get(`${BASE}/${voucherId}`)).body.allowedActions).toMatchObject({ approve: true, return: true });
       expect((await (await as('rumana')).get(`${BASE}/${voucherId}`)).body.allowedActions).toMatchObject({ approve: false });
     });

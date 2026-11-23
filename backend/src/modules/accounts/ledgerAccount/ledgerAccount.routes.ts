@@ -4,9 +4,9 @@ import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { paginationQueryFields } from '../../../lib/query.js';
 import { parseRequestBody, parseRequestQuery } from '../../../lib/validation.js';
 import { getActor } from '../../master/access/caller.js';
-import { LEDGER_ACCOUNT_TYPES } from '../models/ledgerAccount.js';
+import { CASH_OR_BANK_KINDS, LEDGER_ACCOUNT_TYPES } from '../models/ledgerAccount.js';
 import { ACCOUNT_CODE_MESSAGE, ACCOUNT_CODE_PATTERN } from './ledgerAccountFields.js';
-import { createLedgerAccount, getLedgerAccount, getLedgerAccountHistory, listLedgerAccounts, updateLedgerAccount } from './ledgerAccount.service.js';
+import { createLedgerAccount, getLedgerAccount, getLedgerAccountHistory, listLedgerAccounts, revealBankAccountNumber, updateLedgerAccount } from './ledgerAccount.service.js';
 
 const MAX_ID_LENGTH = 100;
 const MAX_NAME_LENGTH = 200;
@@ -22,6 +22,9 @@ const versionField = z.number().int().min(0);
 /** Letters, digits, spaces and hyphens, as banks print them; IBANs are at most 34 characters. */
 const bankAccountNumberField = z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9 -]{2,33}$/, 'must be 3 to 34 letters, digits, spaces or hyphens');
 
+const cashOrBankField = z.enum(CASH_OR_BANK_KINDS);
+const bankNameField = z.string().trim().min(1, 'is required').max(MAX_NAME_LENGTH);
+
 const listQuerySchema = z.object({
   ...paginationQueryFields,
   type: typeField.optional(),
@@ -36,6 +39,8 @@ const createBodySchema = z.strictObject({
   parentId: accountIdField.optional(),
   description: descriptionField.optional(),
   bankAccountNumber: bankAccountNumberField.optional(),
+  cashOrBank: cashOrBankField.optional(),
+  bankName: bankNameField.optional(),
 });
 
 const updateBodySchema = z
@@ -47,6 +52,9 @@ const updateBodySchema = z
     parentId: accountIdField.nullable().optional(),
     description: descriptionField.optional(),
     bankAccountNumber: bankAccountNumberField.nullable().optional(),
+    // null: no longer a cash or bank account.
+    cashOrBank: cashOrBankField.nullable().optional(),
+    bankName: bankNameField.nullable().optional(),
     isActive: z.boolean().optional(),
     version: versionField.optional(),
   })
@@ -70,6 +78,10 @@ const handleHistory: RequestHandler = async (req, res) => {
   res.json(await getLedgerAccountHistory(getActor(req), accountId(req), parseRequestQuery(z.object(paginationQueryFields), req.query)));
 };
 
+const handleReveal: RequestHandler = async (req, res) => {
+  res.json(await revealBankAccountNumber(getActor(req), accountId(req)));
+};
+
 const handleUpdate: RequestHandler = async (req, res) => {
   res.json(await updateLedgerAccount(getActor(req), accountId(req), parseRequestBody(updateBodySchema, req.body)));
 };
@@ -81,4 +93,6 @@ export const ledgerAccountRoutes: ApiRoute[] = [
   { method: 'GET', path: '/accounts/ledger-accounts/:id', access: 'private', permission: 'ledgerAccount.read', handler: handleGet },
   { method: 'GET', path: '/accounts/ledger-accounts/:id/history', access: 'private', permission: 'ledgerAccount.read', handler: handleHistory },
   { method: 'PATCH', path: '/accounts/ledger-accounts/:id', access: 'private', permission: 'ledgerAccount.update', bodySchema: updateBodySchema, handler: handleUpdate },
+  // A POST, not a GET: each reveal is an action written to the activity log, and must never be cached.
+  { method: 'POST', path: '/accounts/ledger-accounts/:id/reveal-bank-number', access: 'private', permission: 'ledgerAccount.read', handler: handleReveal },
 ];

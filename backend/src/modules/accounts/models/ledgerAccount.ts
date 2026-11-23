@@ -4,6 +4,10 @@ import { addRecordFields, type RecordFields } from '../../../lib/records/recordF
 export const LEDGER_ACCOUNT_TYPES = ['asset', 'liability', 'equity', 'income', 'expense'] as const;
 export type LedgerAccountType = (typeof LEDGER_ACCOUNT_TYPES)[number];
 
+/** Marks an asset account that holds money: cash in hand, or an account at a bank. The Cash and bank screen lists these. */
+export const CASH_OR_BANK_KINDS = ['cash', 'bank'] as const;
+export type CashOrBank = (typeof CASH_OR_BANK_KINDS)[number];
+
 /** Which side increases an account of each type. Assets and expenses grow with debits; the rest with credits. */
 export const NORMAL_BALANCE: Record<LedgerAccountType, 'debit' | 'credit'> = {
   asset: 'debit',
@@ -27,6 +31,10 @@ export interface LedgerAccountDoc extends RecordFields {
   description?: string;
   /** For a box that is a real bank account. A protected field: hidden unless a profile's grant names it. */
   bankAccountNumber?: string;
+  /** Set on an asset account that holds money. Its balance still comes only from ledger lines. */
+  cashOrBank?: CashOrBank;
+  /** The bank's name, for a bank account, such as City Bank. */
+  bankName?: string;
   isActive: boolean;
 }
 
@@ -39,6 +47,8 @@ const ledgerAccountSchema = new Schema<LedgerAccountDoc>(
     parentId: { type: String, index: true },
     description: String,
     bankAccountNumber: String,
+    cashOrBank: { type: String, enum: CASH_OR_BANK_KINDS, index: true },
+    bankName: String,
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },

@@ -149,7 +149,7 @@ describe('chart of accounts', () => {
     it('is hidden in the account, the list and its history from a profile whose grant does not name it', async () => {
       const farhana = await as('farhana');
       const created = await farhana.post(BASE, CITY_BANK);
-      expect(created.body.bankAccountNumber).toBe('1102-3344-5566');
+      expect(created.body.bankAccountNumber).toBe('•••• 5566');
       await farhana.patch(`${BASE}/${created.body.id}`, { bankAccountNumber: '9900-1122-3344' });
 
       const rita = await as('rita');
@@ -161,15 +161,36 @@ describe('chart of accounts', () => {
       expect(JSON.stringify(history.body)).not.toContain('3344');
     });
 
-    it('is shown to a profile whose grant names it, in the account and its history', async () => {
+    it('is masked for a profile whose grant names it, in the account, the list and its history', async () => {
       const farhana = await as('farhana');
       const created = await farhana.post(BASE, CITY_BANK);
       await farhana.patch(`${BASE}/${created.body.id}`, { bankAccountNumber: '9900-1122-3344' });
 
       const bilkis = await as('bilkis');
-      expect((await bilkis.get(`${BASE}/${created.body.id}`)).body.bankAccountNumber).toBe('9900-1122-3344');
-      const change = (await bilkis.get(`${BASE}/${created.body.id}/history`)).body.entries[0].changes.find((entry: { field: string }) => entry.field === 'bankAccountNumber');
-      expect(change).toEqual({ field: 'bankAccountNumber', from: '1102-3344-5566', to: '9900-1122-3344' });
+      expect((await bilkis.get(`${BASE}/${created.body.id}`)).body.bankAccountNumber).toBe('•••• 3344');
+      expect((await bilkis.get(BASE).query({ search: '1210' })).body.accounts[0].bankAccountNumber).toBe('•••• 3344');
+      const history = (await bilkis.get(`${BASE}/${created.body.id}/history`)).body;
+      const change = history.entries[0].changes.find((entry: { field: string }) => entry.field === 'bankAccountNumber');
+      expect(change).toEqual({ field: 'bankAccountNumber', from: '•••• 5566', to: '•••• 3344' });
+      expect(JSON.stringify(history)).not.toContain('1122');
+    });
+
+    it('is revealed in full only through the reveal route, which writes the activity log', async () => {
+      const farhana = await as('farhana');
+      const created = await farhana.post(BASE, CITY_BANK);
+      const revealed = await (await as('bilkis')).post(`${BASE}/${created.body.id}/reveal-bank-number`);
+      expect(revealed.status).toBe(200);
+      expect(revealed.body).toEqual({ bankAccountNumber: '1102-3344-5566' });
+      expect(await AuditLog.countDocuments({ action: 'ledgerAccount.bankNumberRevealed', targetId: created.body.id, actorId: 'bilkis' })).toBe(1);
+
+      const refused = await (await as('rita')).post(`${BASE}/${created.body.id}/reveal-bank-number`);
+      expect(refused.status).toBe(403);
+      expect(refused.body.error.code).toBe('field_hidden');
+      expect(await AuditLog.countDocuments({ action: 'ledgerAccount.bankNumberRevealed', actorId: 'rita' })).toBe(0);
+
+      const withoutNumber = await farhana.post(BASE, { ...CITY_BANK, code: '1220', bankAccountNumber: undefined });
+      expect((await farhana.post(`${BASE}/${withoutNumber.body.id}/reveal-bank-number`)).status).toBe(404);
+      expect((await request(app).post(`${BASE}/${created.body.id}/reveal-bank-number`)).status).toBe(401);
     });
 
     it('can only be written by a profile whose grant lets it edit the number', async () => {
@@ -261,8 +282,10 @@ describe('chart of accounts', () => {
       expect(refused.status).toBe(409);
       expect(refused.body.error.code).toBe('account_has_active_sub_accounts');
 
-      await farhana.patch(`${BASE}/la_3100`, { isActive: false });
-      await farhana.patch(`${BASE}/la_3200`, { isActive: false });
+      const equityAccounts = (await LedgerAccount.find({ parentId: 'la_3000' }).lean()).map((account) => account._id);
+      for (const accountId of equityAccounts) {
+        expect((await farhana.patch(`${BASE}/${accountId}`, { isActive: false })).status).toBe(200);
+      }
       const saved = await farhana.patch(`${BASE}/la_3000`, { isActive: false });
       expect(saved.status).toBe(200);
       expect(await AuditLog.exists({ action: 'ledgerAccount.deactivated', targetId: 'la_3000' })).toBeTruthy();

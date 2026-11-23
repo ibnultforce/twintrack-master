@@ -32,7 +32,17 @@ const lineSchema = z.strictObject({
 const memoField = z.string().trim().min(1, 'is required').max(MAX_MEMO_LENGTH);
 const linesField = z.array(lineSchema).min(2, 'needs at least 2 lines').max(MAX_LINES);
 
-const listQuerySchema = z.object({ ...paginationQueryFields, status: z.enum(JOURNAL_VOUCHER_STATUSES).optional() });
+const MAX_SEARCH_LENGTH = 100;
+
+const listQuerySchema = z
+  .object({
+    ...paginationQueryFields,
+    status: z.enum(JOURNAL_VOUCHER_STATUSES).optional(),
+    from: accountingDateField.optional(),
+    to: accountingDateField.optional(),
+    search: z.string().trim().max(MAX_SEARCH_LENGTH).optional().transform((text) => text || undefined),
+  })
+  .refine(({ from, to }) => !from || !to || from <= to, { message: 'from must be on or before to', path: ['to'] });
 
 const createBodySchema = z.strictObject({ voucherDate: accountingDateField, memo: memoField, lines: linesField });
 

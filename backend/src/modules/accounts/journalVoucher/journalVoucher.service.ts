@@ -12,6 +12,8 @@ import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
 import { assertMayDecide, mayDecide } from '../approvals/approvalRules.js';
 import { checkBalancedLines, postEntry, reverseEntry, type NewLedgerLine } from '../ledger/ledger.service.js';
 import type { JournalVoucherDoc, JournalVoucherStatus } from '../models/journalVoucher.js';
+import type { LedgerLine } from '../models/ledgerEntry.js';
+import { findWaitingRequestFor } from '../updateRequest/updateRequest.repository.js';
 import {
   changeJournalVoucher,
   findJournalVoucherById,
@@ -125,14 +127,19 @@ export async function getJournalVoucher(actor: Actor, voucherId: string) {
   const voucher = await requireJournalVoucher(voucherId);
   const canDecide = await mayDecide(actor, voucher, APPROVE_PERMISSION);
   const canUpdate = Boolean(actor.permissions['journalVoucher.update']);
+  // Only one correction may wait per voucher, so the screen links to it instead of offering a second.
+  const waitingRequest = voucher.status === 'recorded' ? await findWaitingRequestFor(voucher._id) : null;
   return {
     ...(await toViewFor(actor, voucher)),
+    waitingUpdateRequest: waitingRequest ? { id: waitingRequest._id, number: waitingRequest.number } : undefined,
     allowedActions: {
       edit: canUpdate && voucher.status === 'draft',
       submit: canUpdate && voucher.status === 'draft',
       approve: canDecide && voucher.status === 'submitted',
       return: canDecide && voucher.status === 'submitted',
       reverse: canDecide && voucher.status === 'recorded',
+      // A recorded voucher is never edited; it is corrected through an update request someone else approves.
+      requestCorrection: Boolean(actor.permissions['updateRequest.create']) && voucher.status === 'recorded' && !waitingRequest,
     },
   };
 }
@@ -224,6 +231,48 @@ export async function reverseJournalVoucher(actor: Actor, voucherId: string, req
     return { $set: { status: 'reversed', reversedBy: actor.user._id, reversedAt: new Date(), reversalEntryId: reversal._id } };
   }, request.version);
   return toViewFor(actor, saved);
+}
+
+/** A recorded voucher's date, memo and balanced lines: what an update request replaces. */
+export interface CorrectedVoucherContent {
+  voucherDate: string;
+  memo: string;
+  lines: LedgerLine[];
+  total: number;
+}
+
+/**
+ * Corrects a recorded voucher for an approved update request, inside the request's transaction: reverses its current
+ * ledger entry (dated today), records the corrected entry, and saves the voucher with the new details and history.
+ * The voucher stays recorded and keeps its number. `expectedVersion` refuses it if the voucher changed since the
+ * request was made, such as being reversed. Returns the two new ledger entries.
+ */
+export async function correctRecordedVoucher(
+  actor: Actor,
+  voucherId: string,
+  corrected: CorrectedVoucherContent,
+  context: { requestNumber: string; session: ClientSession },
+): Promise<{ reversalEntryId: string; correctedEntryId: string }> {
+  const existing = await requireJournalVoucher(voucherId);
+  assertStatus(existing, 'recorded', 'corrected');
+  const ledgerEntryId = existing.ledgerEntryId;
+  if (!ledgerEntryId) throw new Error(`Recorded voucher ${existing._id} has no ledger entry.`);
+  const { session, requestNumber } = context;
+
+  const reversal = await reverseEntry(actor, ledgerEntryId, session, { memo: `${requestNumber}: reverses ${existing.number} ${existing.memo}` });
+  const correctedEntry = await postEntry(actor, {
+    entryDate: corrected.voucherDate,
+    memo: `${existing.number} ${corrected.memo} (corrected by ${requestNumber})`,
+    source: { type: JOURNAL_VOUCHER_RESOURCE, id: existing._id },
+    lines: corrected.lines,
+  }, session);
+
+  const saved = await changeJournalVoucher(existing._id, {
+    $set: { voucherDate: corrected.voucherDate, memo: corrected.memo, lines: corrected.lines, total: corrected.total, ledgerEntryId: correctedEntry._id },
+  }, { actorId: actor.user._id, expectedVersion: existing.version, session });
+  await writeRecordHistory(historyRef(existing._id), { action: 'updated', actor, before: existing, after: saved }, session);
+  await recordAudit({ action: 'journalVoucher.corrected', ...auditFields(actor, saved) }, session);
+  return { reversalEntryId: reversal._id, correctedEntryId: correctedEntry._id };
 }
 
 export async function getJournalVoucherHistory(actor: Actor, voucherId: string, page: PageRequest) {

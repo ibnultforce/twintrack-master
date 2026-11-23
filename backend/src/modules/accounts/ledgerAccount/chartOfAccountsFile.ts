@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { asRecord, fieldErrors, type FieldError, type Validated } from '../../../lib/validation.js';
-import { LEDGER_ACCOUNT_TYPES } from '../models/ledgerAccount.js';
+import { CASH_OR_BANK_KINDS, LEDGER_ACCOUNT_TYPES } from '../models/ledgerAccount.js';
 import type { LedgerAccountSeedRow } from './ledgerAccount.repository.js';
 import { ACCOUNT_CODE_MESSAGE, ACCOUNT_CODE_PATTERN } from './ledgerAccountFields.js';
 
@@ -11,6 +11,8 @@ const accountRowSchema = z.strictObject({
   type: z.enum(LEDGER_ACCOUNT_TYPES),
   parentId: z.string().min(1).optional(),
   description: z.string().optional(),
+  cashOrBank: z.enum(CASH_OR_BANK_KINDS).optional(),
+  bankName: z.string().min(1).optional(),
 });
 
 /**
@@ -40,6 +42,8 @@ export function validateChartOfAccountsFile(raw: unknown): Validated<LedgerAccou
     if (account.parentId && typeById.get(account.parentId) !== account.type) {
       errors.push({ path: `${path}.parentId`, message: `must be an earlier ${account.type} account in this file` });
     }
+    if (account.cashOrBank && account.type !== 'asset') errors.push({ path: `${path}.cashOrBank`, message: 'only an asset account can be cash or bank' });
+    if (account.bankName && account.cashOrBank !== 'bank') errors.push({ path: `${path}.bankName`, message: 'only a bank account has a bank name' });
     typeById.set(id, account.type);
     codes.add(account.code);
     rows.push({ _id: id, ...account });

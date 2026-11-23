@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.5.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal vouchers with approval, and the Accounts activity log.",
+    "version": "1.9.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -47,7 +47,9 @@
         "type",
         "parentId",
         "isActive",
-        "bankAccountNumber"
+        "bankAccountNumber",
+        "cashOrBank",
+        "bankName"
       ],
       "recordFields": [
         "code",
@@ -56,7 +58,9 @@
         "parentId",
         "description",
         "isActive",
-        "bankAccountNumber"
+        "bankAccountNumber",
+        "cashOrBank",
+        "bankName"
       ],
       "protectedFields": [
         "bankAccountNumber"
@@ -84,6 +88,26 @@
         "voucherDate",
         "memo",
         "lines"
+      ]
+    },
+    {
+      "key": "updateRequest",
+      "label": "Update requests",
+      "actions": [
+        "read",
+        "create",
+        "approve"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "status",
+        "rejectionNote"
+      ],
+      "recordFields": [
+        "recordType",
+        "recordId",
+        "reason",
+        "after"
       ]
     },
     {
@@ -151,6 +175,12 @@
       "permission": "ledgerAccount.read"
     },
     {
+      "method": "POST",
+      "path": "/ledger-accounts/:id/reveal-bank-number",
+      "access": "private",
+      "permission": "ledgerAccount.read"
+    },
+    {
       "method": "GET",
       "path": "/journal-vouchers",
       "access": "private",
@@ -203,6 +233,60 @@
       "path": "/journal-vouchers/:id/history",
       "access": "private",
       "permission": "journalVoucher.read"
+    },
+    {
+      "method": "GET",
+      "path": "/cash-bank",
+      "access": "private",
+      "permission": "ledgerAccount.read"
+    },
+    {
+      "method": "GET",
+      "path": "/update-requests",
+      "access": "private",
+      "permission": "updateRequest.read"
+    },
+    {
+      "method": "POST",
+      "path": "/update-requests",
+      "access": "private",
+      "permission": "updateRequest.create"
+    },
+    {
+      "method": "GET",
+      "path": "/update-requests/:id",
+      "access": "private",
+      "permission": "updateRequest.read"
+    },
+    {
+      "method": "POST",
+      "path": "/update-requests/:id/approve",
+      "access": "private",
+      "permission": "updateRequest.read"
+    },
+    {
+      "method": "POST",
+      "path": "/update-requests/:id/reject",
+      "access": "private",
+      "permission": "updateRequest.read"
+    },
+    {
+      "method": "GET",
+      "path": "/change-history",
+      "access": "private",
+      "anyPermission": [
+        "journalVoucher.read",
+        "updateRequest.read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/approvals",
+      "access": "private",
+      "anyPermission": [
+        "journalVoucher.read",
+        "updateRequest.read"
+      ]
     },
     {
       "method": "GET",

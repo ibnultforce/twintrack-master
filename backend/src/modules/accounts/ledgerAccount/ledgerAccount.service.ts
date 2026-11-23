@@ -7,8 +7,9 @@ import { recordAudit } from '../../master/audit/audit.repository.js';
 import { assertMayWriteFields, readFieldRules, redactHistory, redactRecord, type FieldRules } from '../../master/records/fieldSecurity.service.js';
 import { listRecordHistory, writeRecordHistory } from '../../master/records/recordHistory.service.js';
 import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
-import { accountHasLedgerLines, findAccountBalance } from '../ledger/ledger.repository.js';
+import { accountHasLedgerLines, findAccountBalance, sumLinesForAccounts } from '../ledger/ledger.repository.js';
 import { NORMAL_BALANCE, type LedgerAccountDoc, type LedgerAccountType } from '../models/ledgerAccount.js';
+import { maskBankAccountNumber, maskIfBankNumber } from './ledgerAccountFields.js';
 import {
   findLedgerAccountById,
   findLedgerAccountsPage,
@@ -23,6 +24,7 @@ import {
 } from './ledgerAccount.repository.js';
 
 const LEDGER_ACCOUNT_RESOURCE = 'ledgerAccount';
+const BANK_NUMBER_FIELD = 'bankAccountNumber';
 
 /** Deep enough for any real chart, and a guard against walking a broken parent chain forever. */
 const MAX_ACCOUNT_DEPTH = 10;
@@ -37,7 +39,20 @@ const invalidField = (path: string, message: string) => new ApiError(422, 'valid
 
 const duplicateCode = (code: string) => new ApiError(409, 'duplicate_account_code', `Another account already uses the code ${code}.`);
 
-function toLedgerAccountView(account: LedgerAccountDoc, rules: FieldRules) {
+/**
+ * Each account's balance from its ledger lines, on its normal side: an asset's debits minus credits, a liability's
+ * credits minus debits. So a positive figure is the usual case, and a negative one stands out.
+ */
+async function balancesOf(accounts: LedgerAccountDoc[]): Promise<Map<string, number>> {
+  const totals = await sumLinesForAccounts(accounts.map((account) => account._id));
+  const typeOf = new Map(accounts.map((account) => [account._id, account.type]));
+  return new Map(totals.map(({ accountId, debit, credit }) => {
+    const type = typeOf.get(accountId);
+    return [accountId, type && NORMAL_BALANCE[type] === 'credit' ? credit - debit : debit - credit];
+  }));
+}
+
+function toLedgerAccountView(account: LedgerAccountDoc, rules: FieldRules, balance = 0) {
   return redactRecord({
     id: account._id,
     code: account.code,
@@ -46,8 +61,12 @@ function toLedgerAccountView(account: LedgerAccountDoc, rules: FieldRules) {
     normalBalance: NORMAL_BALANCE[account.type],
     parentId: account.parentId,
     description: account.description,
-    bankAccountNumber: account.bankAccountNumber,
+    bankAccountNumber: account.bankAccountNumber && maskBankAccountNumber(account.bankAccountNumber),
+    cashOrBank: account.cashOrBank,
+    bankName: account.bankName,
     isActive: account.isActive,
+    /** Whole paisa, on the account's normal side, from ledger lines only. */
+    balance,
     version: account.version,
     createdBy: account.createdBy,
     createdAt: account.createdAt,
@@ -70,6 +89,15 @@ async function requireLedgerAccount(accountId: string): Promise<LedgerAccountDoc
   return account;
 }
 
+/**
+ * Only an asset account can be cash or bank, and only a bank account has a bank name. Checked on the account as it
+ * will be after a change, so changing the type or the kind can't leave a bank name or a cash income account behind.
+ */
+function assertValidCashOrBank(account: { type: LedgerAccountType; cashOrBank?: string | null; bankName?: string | null }): void {
+  if (account.cashOrBank && account.type !== 'asset') throw invalidField('cashOrBank', 'only an asset account can be cash or bank');
+  if (account.bankName && account.cashOrBank !== 'bank') throw invalidField('bankName', 'only a bank account has a bank name');
+}
+
 async function assertCodeIsFree(code: string, exceptId?: string): Promise<void> {
   if (await ledgerAccountCodeExists(code, exceptId)) throw duplicateCode(code);
 }
@@ -83,6 +111,7 @@ async function assertValidParent(parentId: string, type: LedgerAccountType, acco
   if (!parent) throw invalidField('parentId', 'no such account');
   if (!parent.isActive) throw invalidField('parentId', 'is inactive');
   if (parent.type !== type) throw invalidField('parentId', `has the type ${parent.type}, and a parent must have the same type`);
+  if (parent.cashOrBank) throw invalidField('parentId', "is a cash or bank account, so it can't group other accounts");
   // A group holds no money itself, so an account that already has ledger lines can't become one.
   if (await accountHasLedgerLines(parent._id)) throw invalidField('parentId', "has ledger lines, so it can't group other accounts");
 
@@ -106,17 +135,21 @@ async function saveWithUniqueCode<Result>(code: string | undefined, save: () => 
 
 export async function listLedgerAccounts(actor: Actor, query: PageRequest & LedgerAccountListFilter) {
   const [{ accounts, total }, rules] = await Promise.all([findLedgerAccountsPage(query), fieldRulesFor(actor)]);
-  return { total, page: query.page, pageSize: query.pageSize, accounts: accounts.map((account) => toLedgerAccountView(account, rules)) };
+  const balances = await balancesOf(accounts);
+  return { total, page: query.page, pageSize: query.pageSize, accounts: accounts.map((account) => toLedgerAccountView(account, rules, balances.get(account._id))) };
 }
 
 export async function getLedgerAccount(actor: Actor, accountId: string) {
-  return toLedgerAccountView(await requireLedgerAccount(accountId), await fieldRulesFor(actor));
+  const account = await requireLedgerAccount(accountId);
+  const balances = await balancesOf([account]);
+  return toLedgerAccountView(account, await fieldRulesFor(actor), balances.get(account._id));
 }
 
 export async function createLedgerAccount(actor: Actor, details: NewLedgerAccountDetails) {
   const rules = await fieldRulesFor(actor);
   assertMayWriteFields(rules, Object.keys(details), 'create');
   await assertCodeIsFree(details.code);
+  assertValidCashOrBank(details);
   if (details.parentId) await assertValidParent(details.parentId, details.type);
 
   const record: NewLedgerAccountRecord = { ...details, _id: `la_${randomUUID()}` };
@@ -135,6 +168,12 @@ async function assertChangeKeepsChartValid(existing: LedgerAccountDoc, changes: 
 
   const type = changes.type ?? existing.type;
   const typeChanged = type !== existing.type;
+  const cashOrBank = changes.cashOrBank === undefined ? existing.cashOrBank : changes.cashOrBank;
+  const bankName = changes.bankName === undefined ? existing.bankName : changes.bankName;
+  assertValidCashOrBank({ type, cashOrBank, bankName });
+  if (cashOrBank && !existing.cashOrBank && (await hasChildAccounts(existing._id))) {
+    throw invalidField('cashOrBank', 'this account groups other accounts, so it holds no money itself. Mark one of them instead');
+  }
   if (typeChanged && (await hasChildAccounts(existing._id))) {
     throw new ApiError(409, 'account_has_sub_accounts', 'This account has sub-accounts, so its type can only change after they are moved.');
   }
@@ -176,12 +215,30 @@ export async function updateLedgerAccount(actor: Actor, accountId: string, reque
     await recordAudit({ action: auditActionFor(existing, changes), ...auditFields(actor, result) }, session);
     return result;
   }));
-  return toLedgerAccountView(saved, rules);
+  return toLedgerAccountView(saved, rules, (await balancesOf([saved])).get(saved._id));
 }
 
 /** An account's change history. A bank number is hidden in it exactly as it is on the account. */
 export async function getLedgerAccountHistory(actor: Actor, accountId: string, page: PageRequest) {
   await requireLedgerAccount(accountId);
   const history = await listRecordHistory(historyRef(accountId), page);
-  return { ...history, entries: redactHistory(history.entries, await fieldRulesFor(actor)) };
+  const entries = redactHistory(history.entries, await fieldRulesFor(actor)).map((entry) => ({
+    ...entry,
+    changes: entry.changes.map((change) => (change.field === BANK_NUMBER_FIELD ? { ...change, from: maskIfBankNumber(change.from), to: maskIfBankNumber(change.to) } : change)),
+  }));
+  return { ...history, entries };
+}
+
+/**
+ * The full bank account number, for someone whose profile lets them see the field. Every reveal is written to the
+ * activity log, as the specification requires; everywhere else the number is masked.
+ */
+export async function revealBankAccountNumber(actor: Actor, accountId: string) {
+  const account = await requireLedgerAccount(accountId);
+  if ((await fieldRulesFor(actor)).hidden.includes(BANK_NUMBER_FIELD)) {
+    throw new ApiError(403, 'field_hidden', "Your profile doesn't let you see bank account numbers.");
+  }
+  if (!account.bankAccountNumber) throw new ApiError(404, 'no_bank_account_number', 'This account has no bank account number.');
+  await recordAudit({ action: 'ledgerAccount.bankNumberRevealed', ...auditFields(actor, account) });
+  return { bankAccountNumber: account.bankAccountNumber };
 }

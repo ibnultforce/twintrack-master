@@ -96,7 +96,23 @@
         },
         "bankAccountNumber": {
           "type": "string",
-          "description": "Protected field: left out unless the grant names it, in the account and its history"
+          "description": "Protected field: left out unless the grant names it; masked as \"•••• 7712\" when it does, in the account, lists and history. The full number comes only from POST /accounts/ledger-accounts/:id/reveal-bank-number, which writes the activity log"
+        },
+        "cashOrBank": {
+          "type": "string",
+          "enum": [
+            "cash",
+            "bank"
+          ],
+          "description": "Set on an asset account that holds money; the Cash and bank screen lists these. Only asset accounts, never one that groups others"
+        },
+        "bankName": {
+          "type": "string",
+          "description": "The bank, for a bank account, such as City Bank"
+        },
+        "balance": {
+          "type": "integer",
+          "description": "Paisa, from ledger lines only, on the account's normal side: debits minus credits for assets and expenses, credits minus debits for the rest"
         }
       }
     },
@@ -406,6 +422,18 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "waitingUpdateRequest": {
+          "type": "object",
+          "description": "On a single recorded voucher: the update request waiting to correct it",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "number": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -447,6 +475,187 @@
         },
         "module": {
           "const": "accounts"
+        }
+      }
+    },
+    "UpdateRequest": {
+      "type": "object",
+      "description": "A request to correct a recorded journal voucher. Applying it reverses the voucher's ledger entry and records the corrected one; someone other than the requester approves it.",
+      "required": [
+        "id",
+        "number",
+        "recordType",
+        "recordId",
+        "recordNumber",
+        "reason",
+        "before",
+        "after",
+        "status",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string",
+          "description": "UR-0001 and so on"
+        },
+        "recordType": {
+          "type": "string",
+          "enum": [
+            "journalVoucher"
+          ]
+        },
+        "recordId": {
+          "type": "string"
+        },
+        "recordNumber": {
+          "type": "string",
+          "description": "The voucher number, such as JV-0004"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "before": {
+          "type": "object",
+          "required": [
+            "voucherDate",
+            "memo",
+            "lines",
+            "total"
+          ],
+          "properties": {
+            "voucherDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "memo": {
+              "type": "string"
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "accountId": {
+                    "type": "string"
+                  },
+                  "debit": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "credit": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "memo": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "total": {
+              "type": "integer",
+              "description": "Paisa: the sum of the debits, which equals the sum of the credits"
+            }
+          },
+          "description": "The voucher when the request was made"
+        },
+        "after": {
+          "type": "object",
+          "required": [
+            "voucherDate",
+            "memo",
+            "lines",
+            "total"
+          ],
+          "properties": {
+            "voucherDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "memo": {
+              "type": "string"
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "accountId": {
+                    "type": "string"
+                  },
+                  "debit": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "credit": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "memo": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "total": {
+              "type": "integer",
+              "description": "Paisa: the sum of the debits, which equals the sum of the credits"
+            }
+          },
+          "description": "The voucher once the request is applied"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "waiting",
+            "applied",
+            "rejected"
+          ]
+        },
+        "createdBy": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decidedBy": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "decidedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rejectionNote": {
+          "type": "string"
+        },
+        "reversalEntryId": {
+          "type": "string"
+        },
+        "correctedEntryId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
         }
       }
     }

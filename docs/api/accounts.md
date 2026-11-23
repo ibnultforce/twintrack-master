@@ -21,7 +21,7 @@ Built so far: a status check, settings, the chart of accounts, the ledger core, 
 
 No resource is scoped: each is one list for the whole organisation. Only a super admin holds these until a profile grants them.
 
-**Protected field:** `ledgerAccount.bankAccountNumber` is hidden in accounts, lists and history unless the grant's `fieldAccess` names it (`read` to see it, `create` or `edit` to write it). Only a super admin sees it by default.
+**Protected field:** `ledgerAccount.bankAccountNumber` is hidden in accounts, lists, history and Cash and bank unless the grant's `fieldAccess` names it (`read` to see it, `create` or `edit` to write it). Only a super admin sees it by default. Even then it is masked, as `•••• 7712`; the full number comes only from `POST /accounts/ledger-accounts/:id/reveal-bank-number`, and every reveal is written to the activity log (`ledgerAccount.bankNumberRevealed`).
 
 ## Approvals: the maker never decides
 
@@ -84,11 +84,23 @@ HR isn't built yet, so payroll (plan Day 3) pays dummy employees. `npm run seed`
 
 **Errors:** `404 unknown_ledger_account`
 
+Each account also has `balance`: paisa from ledger lines only, on its normal side (debits minus credits for assets and expenses, credits minus debits for liabilities, equity and income).
+
+### `POST /accounts/ledger-accounts/:id/reveal-bank-number`
+
+**Access:** `private`, needs `ledgerAccount.read`, and read access to the `bankAccountNumber` field.
+
+The full bank account number, which every other response masks. Each call writes `ledgerAccount.bankNumberRevealed` to the activity log. A POST so it is never cached.
+
+**Returns:** `{ bankAccountNumber }`.
+
+**Errors:** `403 field_hidden` (the profile doesn't name the field), `404 unknown_ledger_account`, `404 no_bank_account_number`.
+
 ### `POST /accounts/ledger-accounts`
 
 **Access:** `private`, needs `ledgerAccount.create`
 
-**Body:** `code` (3 to 10 digits, unique), `name` (1 to 200 characters), `type`, optional `parentId` (an active account of the same type), optional `description` (up to 1000), optional `bankAccountNumber` (3 to 34 letters, digits, spaces or hyphens; needs `create` or `edit` field access)
+**Body:** `code` (3 to 10 digits, unique), `name` (1 to 200 characters), `type`, optional `parentId` (an active account of the same type), optional `description` (up to 1000), optional `bankAccountNumber` (3 to 34 letters, digits, spaces or hyphens; needs `create` or `edit` field access), optional `cashOrBank` (`cash` or `bank`; only on an asset account that groups no others, and it then can't become a parent), optional `bankName` (1 to 200 characters; only with `cashOrBank: "bank"`)
 
 **Returns:** `201` with the account.
 
@@ -98,7 +110,7 @@ HR isn't built yet, so payroll (plan Day 3) pays dummy employees. `npm run seed`
 
 **Access:** `private`, needs `ledgerAccount.update`
 
-**Body:** at least one of `code`, `name`, `type`, `parentId` (`null` makes it a top-level account), `description`, `bankAccountNumber` (`null` removes it), `isActive`; optional `version`, the version you last read, to refuse the change if someone else saved first.
+**Body:** at least one of `code`, `name`, `type`, `parentId` (`null` makes it a top-level account), `description`, `bankAccountNumber` (`null` removes it), `cashOrBank` (`null`: no longer cash or bank), `bankName` (`null` removes it), `isActive`; optional `version`, the version you last read, to refuse the change if someone else saved first.
 
 **Returns:** the account.
 
@@ -234,13 +246,15 @@ A voucher is checked like a ledger entry when it is saved and again when it is s
 }
 ```
 
-`GET /accounts/journal-vouchers/:id` also returns `allowedActions` (`edit`, `submit`, `approve`, `return`, `reverse`, each `true` or `false`) for the caller, so a screen shows only buttons that will work. The routes still check.
+`GET /accounts/journal-vouchers/:id` also returns `allowedActions` (`edit`, `submit`, `approve`, `return`, `reverse`, `requestCorrection`, each `true` or `false`) for the caller, so a screen shows only buttons that will work, and `waitingUpdateRequest` (`{ id, number }`) when a correction is waiting; `requestCorrection` is then `false`. The routes still check.
 
 ### `GET /accounts/journal-vouchers`
 
 **Access:** `private`, needs `journalVoucher.read`
 
-**Query:** `page`, `pageSize`, `status`
+**Query:** `page`, `pageSize`, `status`, `from` and `to` (the first and last voucher date, `YYYY-MM-DD`, either or both), `search` (the start of a voucher number such as `JV-00`, or any part of the memo, ignoring case). Filters combine.
+
+**Errors:** 422 `validation_failed` for a date that isn't real, or `to` before `from`.
 
 **Returns:** `vouchers`, newest date first, `total`, `page`, `pageSize`.
 
@@ -313,6 +327,100 @@ Writes a reversal in the ledger dated today and marks the voucher `reversed`. Th
 **Returns:** `entries` and `total`, as for an account's history.
 
 ## Activity log
+
+### `GET /accounts/cash-bank`
+
+**Access:** `private`, needs `ledgerAccount.read`
+
+The Cash and bank screen: every account marked `cashOrBank`, with figures worked out from ledger lines only. A balance is never typed in; an opening balance is a journal voucher between the account and `3900 Opening balance equity`.
+
+**Query:** `from` and `to` (`YYYY-MM-DD`). Default: the first of this month to today.
+
+**Returns:** `from`, `to`, `accounts` and `totals`. Each account: `id`, `code`, `name`, `cashOrBank`, `bankName`, `bankAccountNumber` (protected, as in the chart), `isActive`, and in paisa `opening` (debits minus credits dated before `from`), `moneyIn` (debits from `from` to `to`), `moneyOut` (credits in the period) and `balance` (`opening + moneyIn - moneyOut`). A reversal counts as money moving back. Inactive accounts are left out unless they had money in the period. `totals` sums the four figures.
+
+**Errors:** `422 validation_failed` for a date that isn't real, or `to` before `from`.
+
+### Update requests
+
+A recorded voucher is never edited. To correct one, someone asks with an update request, and someone else approves it. Applying a request, in one transaction, reverses the voucher's ledger entry (dated today), records the corrected entry (on the corrected date), and saves the voucher with the new details and a history entry; the voucher keeps its number and stays `recorded`. Only one request per voucher may wait at a time. The requester can't approve or reject their own request, super admins included; the approve permission or being today's stand-in approver is needed. Waiting requests appear in `GET /accounts/approvals` as type `updateRequest`.
+
+Each request returns `id`, `number` (`UR-0001`), `recordType` (`journalVoucher`), `recordId`, `recordNumber`, `reason`, `before` and `after` (each `voucherDate`, `memo`, `lines`, `total` in paisa), `status` (`waiting`, `applied`, `rejected`), `createdBy`, `createdAt`, `decidedBy`, `decidedAt`, `rejectionNote`, and once applied `reversalEntryId` and `correctedEntryId`.
+
+### `GET /accounts/update-requests`
+
+**Access:** `private`, needs `updateRequest.read`
+
+**Query:** `page`, `pageSize`, `status`, `recordId`
+
+**Returns:** `requests`, newest first, `total`, `page`, `pageSize`, and `summary` for the screen's tiles: `waiting`, `appliedThisWeek` (last 7 days), `rejected`, `averageReviewMinutes` (asking to a decision, over every decided request; `null` when none). Only requests about record types the caller can read are counted or listed.
+
+### `POST /accounts/update-requests`
+
+**Access:** `private`, needs `updateRequest.create`, and `journalVoucher.read` (checked in the service)
+
+**Body:** `recordType` (`journalVoucher`), `recordId`, `reason` (1 to 1000 characters), `changes` with at least one of `voucherDate`, `memo`, `lines` (checked like a new voucher's: balanced, active accounts that group nothing). Parts left out stay as recorded.
+
+**Returns:** `201` with the request, `waiting`.
+
+**Errors:**
+
+| Status and code | When |
+|---|---|
+| `403 forbidden` | The caller can't read vouchers |
+| `404 unknown_journal_voucher` | No such voucher |
+| `409 record_not_recorded` | The voucher is a draft, waiting or reversed; drafts are edited directly |
+| `409 update_request_already_waiting` | Another request for this voucher is waiting |
+| `422 unbalanced_entry`, `422 validation_failed` | The corrected lines are invalid |
+| `422 no_change` | The corrected voucher is the same as the recorded one |
+
+### `GET /accounts/update-requests/:id`
+
+**Access:** `private`, needs `updateRequest.read`
+
+**Returns:** the request, plus `allowedActions` (`approve`, `reject`) for the caller.
+
+**Errors:** `403 forbidden` (the caller can't read the record type the request is about), `404 unknown_update_request`
+
+### `POST /accounts/update-requests/:id/approve`
+
+**Access:** `private`, needs `updateRequest.read`; the service also needs `updateRequest.approve` or being today's stand-in approver, and refuses the requester.
+
+**Body:** optional `version`.
+
+**Returns:** the request, `applied`.
+
+**Errors:** `403 own_record`, `403 forbidden`, `404 unknown_update_request`, `409 update_request_not_waiting`, `409 voucher_not_recorded` (the voucher was reversed after the request; nothing is applied and the request stays waiting), `409 version_conflict`, and the ledger's `422` errors when an account in the corrected lines was closed since.
+
+### `POST /accounts/update-requests/:id/reject`
+
+**Access:** as approve.
+
+**Body:** `note` (why, 1 to 1000 characters), optional `version`.
+
+**Returns:** the request, `rejected`. Nothing in the books changes, and a new request for the voucher may be made.
+
+**Errors:** as approve, without the ledger errors.
+
+### `GET /accounts/change-history`
+
+**Access:** `private`, needs `journalVoucher.read` or `updateRequest.read`
+
+Every change to a recorded voucher after it reached the books, newest first: reversals (shown with `journalVoucher.read`) and corrections (applied update requests, shown with both `journalVoucher.read` and `updateRequest.read`, since they show the voucher before and after). Up to 200 of each.
+
+**Returns:** `entries`, each `kind` (`correction` or `reversal`), `at`, `recordType`, `recordId`, `recordNumber`, `request` (`{ id, number }`, corrections only), `reason`, `changes` (`field` of `voucherDate`, `memo`, `total` or `lines`, with `from` and `to`; a reversal shows the total going to `0`), `askedBy` (corrections only) and `approvedBy`.
+
+### `GET /accounts/approvals`
+
+**Access:** `private`, needs any of `journalVoucher.read` or `updateRequest.read` (the read permission of each record type that waits for approval; bills and payroll runs will join the list)
+
+The one approvals queue. Only record types the caller can read are included.
+
+**Returns:**
+
+- `waitingForYou`: `{ total, items }`, records submitted for approval that the caller may decide now. Never records they made, super admins included, and only types whose approve permission they hold, unless they are today's stand-in approver from Settings.
+- `yoursWaiting`: `{ total, items }`, records the caller made that are waiting for someone else.
+
+Each item: `type` (such as `journalVoucher`), `id`, `number`, `title`, `amount` (paisa), `date` (`YYYY-MM-DD`), `createdBy` (`{ id, name }`), `submittedAt`. Oldest submission first; up to 200 items per record type, with `total` counting all of them.
 
 ### `GET /accounts/audit-log`
 

@@ -13,7 +13,8 @@
       "code": "1100",
       "name": "Cash in hand",
       "type": "asset",
-      "parentId": "la_1000"
+      "parentId": "la_1000",
+      "cashOrBank": "cash"
     },
     {
       "id": "la_1200",
@@ -127,6 +128,14 @@
       "name": "Retained earnings",
       "type": "equity",
       "parentId": "la_3000"
+    },
+    {
+      "id": "la_3900",
+      "code": "3900",
+      "name": "Opening balance equity",
+      "type": "equity",
+      "parentId": "la_3000",
+      "description": "The other side of each opening balance: record what an account held on the day the books start with a journal voucher between it and this account."
     },
     {
       "id": "la_4000",
