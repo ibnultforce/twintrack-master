@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.12.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, and the Accounts activity log.",
+    "version": "1.13.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -238,6 +238,93 @@
         "tds",
         "netPayable"
       ]
+    },
+    {
+      "key": "payrollRun",
+      "label": "Payroll runs",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "approve"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "month",
+        "payDate",
+        "lines",
+        "total",
+        "headcount",
+        "status",
+        "returnNote"
+      ],
+      "recordFields": [
+        "month",
+        "payDate",
+        "lines",
+        "total",
+        "headcount"
+      ],
+      "protectedFields": [
+        "lines"
+      ]
+    },
+    {
+      "key": "fixedAsset",
+      "label": "Fixed assets",
+      "actions": [
+        "read",
+        "create",
+        "update"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "name",
+        "assetTag",
+        "category",
+        "purchaseDate",
+        "cost",
+        "salvageValue",
+        "usefulLifeMonths",
+        "isActive"
+      ],
+      "recordFields": [
+        "name",
+        "assetTag",
+        "category",
+        "purchaseDate",
+        "cost",
+        "salvageValue",
+        "usefulLifeMonths",
+        "billId",
+        "isActive"
+      ]
+    },
+    {
+      "key": "inventoryItem",
+      "label": "Inventory",
+      "actions": [
+        "read",
+        "create",
+        "update"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "name",
+        "assetTag",
+        "category",
+        "unit",
+        "reorderLevel",
+        "isActive"
+      ],
+      "recordFields": [
+        "name",
+        "assetTag",
+        "category",
+        "unit",
+        "reorderLevel",
+        "isActive"
+      ]
     }
   ],
   "routes": [
@@ -432,6 +519,7 @@
         "journalVoucher.read",
         "invoice.read",
         "bill.read",
+        "payrollRun.read",
         "updateRequest.read"
       ]
     },
@@ -608,6 +696,138 @@
       "path": "/bills/:id/history",
       "access": "private",
       "permission": "bill.read"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll-runs",
+      "access": "private",
+      "permission": "payrollRun.read"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll-runs",
+      "access": "private",
+      "permission": "payrollRun.create"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll-runs/:id",
+      "access": "private",
+      "permission": "payrollRun.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/payroll-runs/:id",
+      "access": "private",
+      "permission": "payrollRun.update"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll-runs/:id/submit",
+      "access": "private",
+      "permission": "payrollRun.update"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll-runs/:id/approve",
+      "access": "private",
+      "permission": "payrollRun.read"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll-runs/:id/return",
+      "access": "private",
+      "permission": "payrollRun.read"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll-runs/:id/cancel",
+      "access": "private",
+      "permission": "payrollRun.read"
+    },
+    {
+      "method": "POST",
+      "path": "/payroll-runs/:id/pay",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "GET",
+      "path": "/payroll-runs/:id/history",
+      "access": "private",
+      "permission": "payrollRun.read"
+    },
+    {
+      "method": "GET",
+      "path": "/fixed-assets",
+      "access": "private",
+      "permission": "fixedAsset.read"
+    },
+    {
+      "method": "POST",
+      "path": "/fixed-assets",
+      "access": "private",
+      "permission": "fixedAsset.create"
+    },
+    {
+      "method": "GET",
+      "path": "/fixed-assets/depreciation",
+      "access": "private",
+      "permission": "fixedAsset.read"
+    },
+    {
+      "method": "POST",
+      "path": "/fixed-assets/depreciation",
+      "access": "private",
+      "permission": "fixedAsset.update"
+    },
+    {
+      "method": "GET",
+      "path": "/fixed-assets/:id",
+      "access": "private",
+      "permission": "fixedAsset.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/fixed-assets/:id",
+      "access": "private",
+      "permission": "fixedAsset.update"
+    },
+    {
+      "method": "GET",
+      "path": "/fixed-assets/:id/history",
+      "access": "private",
+      "permission": "fixedAsset.read"
+    },
+    {
+      "method": "GET",
+      "path": "/inventory-items",
+      "access": "private",
+      "permission": "inventoryItem.read"
+    },
+    {
+      "method": "POST",
+      "path": "/inventory-items",
+      "access": "private",
+      "permission": "inventoryItem.create"
+    },
+    {
+      "method": "GET",
+      "path": "/inventory-items/:id",
+      "access": "private",
+      "permission": "inventoryItem.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/inventory-items/:id",
+      "access": "private",
+      "permission": "inventoryItem.update"
+    },
+    {
+      "method": "POST",
+      "path": "/inventory-items/:id/movements",
+      "access": "private",
+      "permission": "inventoryItem.update"
     }
   ]
 }

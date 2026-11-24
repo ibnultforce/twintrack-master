@@ -13211,6 +13211,1081 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /accounts/payroll-runs",
+          "method": "GET",
+          "path": "/accounts/payroll-runs",
+          "purpose": "Payroll runs, newest month first, with what is paid on each recorded one. Salaries per person are hidden unless the profile grants the lines field.",
+          "input": "page, pageSize, status",
+          "access": "Needs payrollRun.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every run",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs",
+          "method": "POST",
+          "path": "/accounts/payroll-runs",
+          "purpose": "Makes the draft run for a month from the active employees; someone who joined during the month is paid for the days from their join date.",
+          "input": "month, payDate",
+          "access": "Needs payrollRun.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "November 2026",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs",
+                "as": "farhana@twintrack.test",
+                "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The same month twice",
+              "expected": 409,
+              "code": "payroll_month_taken",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs",
+                "as": "farhana@twintrack.test",
+                "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not a month",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs",
+                "as": "farhana@twintrack.test",
+                "body": "{\"month\":\"2026-13\",\"payDate\":\"2026-11-30\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/payroll-runs/:id",
+          "method": "GET",
+          "path": "/accounts/payroll-runs/:id",
+          "purpose": "One run with its payments and the actions the caller may take.",
+          "input": "",
+          "access": "Needs payrollRun.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs/{{runId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such run",
+              "expected": 404,
+              "code": "unknown_payroll_run",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs/pr_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/payroll-runs/:id",
+          "method": "PATCH",
+          "path": "/accounts/payroll-runs/:id",
+          "purpose": "Edits a draft with a reason: a new pay date, or a changed gross for named people (0 takes them off). Changing salaries needs edit access to the lines field.",
+          "input": "payDate, adjustments (employeeId, gross, note), reason (required), version",
+          "access": "Needs payrollRun.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A new pay date",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payroll-runs/{{runId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"payDate\":\"2026-12-01\",\"reason\":\"Bank holiday on the 30th\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason given",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payroll-runs/{{runId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"payDate\":\"2026-12-01\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs/:id/submit",
+          "method": "POST",
+          "path": "/accounts/payroll-runs/:id/submit",
+          "purpose": "Sends a draft run for approval.",
+          "input": "version",
+          "access": "Needs payrollRun.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Already submitted",
+              "expected": 409,
+              "code": "payroll_run_not_draft",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs/:id/approve",
+          "method": "POST",
+          "path": "/accounts/payroll-runs/:id/approve",
+          "purpose": "Records it: salary expense per person against salaries payable, dated the pay date. Never by its maker.",
+          "input": "version",
+          "access": "Needs payrollRun.read; the service needs payrollRun.approve or the stand-in",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own run",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Still a draft",
+              "expected": 409,
+              "code": "payroll_run_not_submitted",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs/:id/return",
+          "method": "POST",
+          "path": "/accounts/payroll-runs/:id/return",
+          "purpose": "Sends a submitted run back to its maker with a note.",
+          "input": "note, version",
+          "access": "As approve",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own run",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{\"note\":\"Check the new joiner\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No note",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs/{{runId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs/:id/cancel",
+          "method": "POST",
+          "path": "/accounts/payroll-runs/:id/cancel",
+          "purpose": "Gives up a draft, or cancels a recorded run with a reversal. The month can then be run again.",
+          "input": "reason, version",
+          "access": "As approve for a recorded run; payrollRun.update for a draft",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reason\":\"Wrong month\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payroll-runs/:id/pay",
+          "method": "POST",
+          "path": "/accounts/payroll-runs/:id/pay",
+          "purpose": "Makes one draft payment voucher for a recorded run, from a bank account.",
+          "input": "paymentDate, moneyAccountId, amount (all that is open when left out), reference",
+          "access": "Needs journalVoucher.create and payroll read access",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A run not yet recorded",
+              "expected": 409,
+              "code": "payroll_run_not_recorded",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/{{runId}}/pay",
+                "as": "farhana@twintrack.test",
+                "body": "{\"paymentDate\":\"2026-11-30\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payroll-runs/pr_nobody/pay",
+                "as": "karim@twintrack.test",
+                "body": "{\"paymentDate\":\"2026-11-30\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/payroll-runs/:id/history",
+          "method": "GET",
+          "path": "/accounts/payroll-runs/:id/history",
+          "purpose": "The changes to a run, newest first, with the reason for each edit. Salary changes are hidden without the lines field.",
+          "input": "page, pageSize",
+          "access": "Needs payrollRun.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payroll-runs",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\",\"payDate\":\"2026-11-30\"}",
+                  "save": {
+                    "runId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs/{{runId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such run",
+              "expected": 404,
+              "code": "unknown_payroll_run",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/payroll-runs/pr_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/fixed-assets",
+          "method": "GET",
+          "path": "/accounts/fixed-assets",
+          "purpose": "The fixed asset register, with each asset depreciation so far and book value read from recorded depreciation runs.",
+          "input": "page, pageSize, category, isActive, search",
+          "access": "Needs fixedAsset.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every asset",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}",
+                  "save": {
+                    "assetId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/fixed-assets",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/fixed-assets",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/fixed-assets",
+          "method": "POST",
+          "path": "/accounts/fixed-assets",
+          "purpose": "Adds an asset to the register, depreciated straight-line from its purchase month.",
+          "input": "name, assetTag, category, purchaseDate, cost, salvageValue, usefulLifeMonths, billId",
+          "access": "Needs fixedAsset.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A laptop over 36 months",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/fixed-assets",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A salvage value above the cost",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/fixed-assets",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":20000000,\"usefulLifeMonths\":36}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/fixed-assets/depreciation",
+          "method": "GET",
+          "path": "/accounts/fixed-assets/depreciation",
+          "purpose": "What a month depreciation run would record, per active asset, and whether the month already has one.",
+          "input": "month",
+          "access": "Needs fixedAsset.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "November 2026",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}",
+                  "save": {
+                    "assetId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/fixed-assets/depreciation?month=2026-11",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No month",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/fixed-assets/depreciation",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/fixed-assets/depreciation",
+          "method": "POST",
+          "path": "/accounts/fixed-assets/depreciation",
+          "purpose": "Makes the draft depreciation journal voucher for a month. Each month has one run; reversing it frees the month.",
+          "input": "month, voucherDate (defaults to the last day of the month)",
+          "access": "Needs fixedAsset.update and journalVoucher.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "November 2026",
+              "expected": 201,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}",
+                  "save": {
+                    "assetId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/fixed-assets/depreciation",
+                "as": "farhana@twintrack.test",
+                "body": "{\"month\":\"2026-11\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The same month twice",
+              "expected": 409,
+              "code": "depreciation_month_taken",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}",
+                  "save": {
+                    "assetId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets/depreciation",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"month\":\"2026-11\"}"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/fixed-assets/depreciation",
+                "as": "farhana@twintrack.test",
+                "body": "{\"month\":\"2026-11\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A month with nothing to depreciate",
+              "expected": 422,
+              "code": "nothing_to_depreciate",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/fixed-assets/depreciation",
+                "as": "farhana@twintrack.test",
+                "body": "{\"month\":\"1990-01\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/fixed-assets/:id",
+          "method": "GET",
+          "path": "/accounts/fixed-assets/:id",
+          "purpose": "One asset with its month-by-month schedule, each month marked recorded, waiting or not yet run.",
+          "input": "",
+          "access": "Needs fixedAsset.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A laptop",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}",
+                  "save": {
+                    "assetId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/fixed-assets/{{assetId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such asset",
+              "expected": 404,
+              "code": "unknown_fixed_asset",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/fixed-assets/fa_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/fixed-assets/:id",
+          "method": "PATCH",
+          "path": "/accounts/fixed-assets/:id",
+          "purpose": "Changes an asset. Cost, purchase date, salvage value and life are refused once it has depreciation in the books.",
+          "input": "name, assetTag, category, purchaseDate, cost, salvageValue, usefulLifeMonths, isActive, version",
+          "access": "Needs fixedAsset.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A new tag",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}",
+                  "save": {
+                    "assetId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/fixed-assets/{{assetId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"assetTag\":\"TT-LAP-015\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Nothing to change",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}",
+                  "save": {
+                    "assetId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/fixed-assets/{{assetId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/fixed-assets/:id/history",
+          "method": "GET",
+          "path": "/accounts/fixed-assets/:id/history",
+          "purpose": "The changes to an asset, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs fixedAsset.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A laptop",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/fixed-assets",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Laptop, 16 GB\",\"assetTag\":\"TT-LAP-014\",\"category\":\"computers\",\"purchaseDate\":\"2026-11-03\",\"cost\":16000000,\"salvageValue\":1000000,\"usefulLifeMonths\":36}",
+                  "save": {
+                    "assetId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/fixed-assets/{{assetId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such asset",
+              "expected": 404,
+              "code": "unknown_fixed_asset",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/fixed-assets/fa_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/inventory-items",
+          "method": "GET",
+          "path": "/accounts/inventory-items",
+          "purpose": "Inventory items with stock on hand worked out from their movements, and whether each is running low.",
+          "input": "page, pageSize, isActive, search",
+          "access": "Needs inventoryItem.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every item",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/inventory-items",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Printer toner\",\"assetTag\":\"TT-INV-0042\",\"category\":\"Office supplies\",\"unit\":\"boxes\",\"reorderLevel\":2}",
+                  "save": {
+                    "itemId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/inventory-items",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/inventory-items",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/inventory-items",
+          "method": "POST",
+          "path": "/accounts/inventory-items",
+          "purpose": "Adds an inventory item.",
+          "input": "name, assetTag, category, unit, reorderLevel",
+          "access": "Needs inventoryItem.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Printer toner",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/inventory-items",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Printer toner\",\"assetTag\":\"TT-INV-0042\",\"category\":\"Office supplies\",\"unit\":\"boxes\",\"reorderLevel\":2}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No unit",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/inventory-items",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Toner\",\"category\":\"Office supplies\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/inventory-items/:id",
+          "method": "GET",
+          "path": "/accounts/inventory-items/:id",
+          "purpose": "One item with its stock movements, newest first.",
+          "input": "",
+          "access": "Needs inventoryItem.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Printer toner",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/inventory-items",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Printer toner\",\"assetTag\":\"TT-INV-0042\",\"category\":\"Office supplies\",\"unit\":\"boxes\",\"reorderLevel\":2}",
+                  "save": {
+                    "itemId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/inventory-items/{{itemId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such item",
+              "expected": 404,
+              "code": "unknown_inventory_item",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/inventory-items/ii_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/inventory-items/:id",
+          "method": "PATCH",
+          "path": "/accounts/inventory-items/:id",
+          "purpose": "Changes an item, or deactivates it.",
+          "input": "name, assetTag, category, unit, reorderLevel (null clears), isActive, version",
+          "access": "Needs inventoryItem.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A new reorder level",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/inventory-items",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Printer toner\",\"assetTag\":\"TT-INV-0042\",\"category\":\"Office supplies\",\"unit\":\"boxes\",\"reorderLevel\":2}",
+                  "save": {
+                    "itemId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/inventory-items/{{itemId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reorderLevel\":3}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Nothing to change",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/inventory-items",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Printer toner\",\"assetTag\":\"TT-INV-0042\",\"category\":\"Office supplies\",\"unit\":\"boxes\",\"reorderLevel\":2}",
+                  "save": {
+                    "itemId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/inventory-items/{{itemId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/inventory-items/:id/movements",
+          "method": "POST",
+          "path": "/accounts/inventory-items/:id/movements",
+          "purpose": "Records stock in, out, or a count correction. Stock never goes below zero.",
+          "input": "date, kind (in, out, adjust), quantity, note, reference",
+          "access": "Needs inventoryItem.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Ten boxes received",
+              "expected": 201,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/inventory-items",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Printer toner\",\"assetTag\":\"TT-INV-0042\",\"category\":\"Office supplies\",\"unit\":\"boxes\",\"reorderLevel\":2}",
+                  "save": {
+                    "itemId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/inventory-items/{{itemId}}/movements",
+                "as": "farhana@twintrack.test",
+                "body": "{\"date\":\"2026-11-03\",\"kind\":\"in\",\"quantity\":10,\"reference\":\"B-0002\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "More out than on hand",
+              "expected": 422,
+              "code": "not_enough_stock",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/inventory-items",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Printer toner\",\"assetTag\":\"TT-INV-0042\",\"category\":\"Office supplies\",\"unit\":\"boxes\",\"reorderLevel\":2}",
+                  "save": {
+                    "itemId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/inventory-items/{{itemId}}/movements",
+                "as": "farhana@twintrack.test",
+                "body": "{\"date\":\"2026-11-03\",\"kind\":\"out\",\"quantity\":1}"
+              }
+            }
+          ]
         }
       ]
     }

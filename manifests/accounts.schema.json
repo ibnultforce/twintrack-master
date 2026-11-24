@@ -480,7 +480,9 @@
             "type": {
               "enum": [
                 "invoice",
-                "bill"
+                "bill",
+                "payrollRun",
+                "depreciation"
               ]
             },
             "id": {
@@ -1234,6 +1236,330 @@
         "version": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "PayrollRun": {
+      "type": "object",
+      "description": "One month's salaries. lines is protected.",
+      "required": [
+        "id",
+        "number",
+        "month",
+        "monthLabel",
+        "payDate",
+        "total",
+        "headcount",
+        "status",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string",
+          "pattern": "^PR-\\d{4,}$"
+        },
+        "month": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "monthLabel": {
+          "type": "string"
+        },
+        "payDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "employeeId",
+              "employeeCode",
+              "name",
+              "department",
+              "gross"
+            ],
+            "properties": {
+              "employeeId": {
+                "type": "string"
+              },
+              "employeeCode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "department": {
+                "type": "string"
+              },
+              "gross": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paisa"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa"
+        },
+        "headcount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "submitted",
+            "recorded",
+            "cancelled"
+          ]
+        },
+        "paid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outstanding": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "paymentStatus": {
+          "enum": [
+            "unpaid",
+            "part_paid",
+            "paid",
+            "overdue"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "FixedAsset": {
+      "type": "object",
+      "required": [
+        "id",
+        "number",
+        "name",
+        "category",
+        "purchaseDate",
+        "cost",
+        "salvageValue",
+        "usefulLifeMonths",
+        "monthlyDepreciation",
+        "accumulatedDepreciation",
+        "bookValue",
+        "isActive",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string",
+          "pattern": "^FA-\\d{4,}$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "assetTag": {
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "computers",
+            "furniture",
+            "office_equipment",
+            "vehicles",
+            "software",
+            "other"
+          ]
+        },
+        "purchaseDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "cost": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa"
+        },
+        "salvageValue": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa"
+        },
+        "usefulLifeMonths": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "monthlyDepreciation": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa, straight-line"
+        },
+        "accumulatedDepreciation": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa, from recorded depreciation runs"
+        },
+        "bookValue": {
+          "type": "integer",
+          "description": "Paisa: cost less accumulated depreciation"
+        },
+        "billId": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "schedule": {
+          "type": "array",
+          "description": "Only on one asset",
+          "items": {
+            "type": "object",
+            "required": [
+              "month",
+              "amount"
+            ],
+            "properties": {
+              "month": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "monthLabel": {
+                "type": "string"
+              },
+              "voucher": {
+                "type": "object",
+                "properties": {
+                  "voucherId": {
+                    "type": "string"
+                  },
+                  "number": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "draft",
+                      "submitted",
+                      "recorded"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "InventoryItem": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "category",
+        "unit",
+        "onHand",
+        "isLow",
+        "isActive",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "assetTag": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "reorderLevel": {
+          "type": "number",
+          "minimum": 0
+        },
+        "onHand": {
+          "type": "number",
+          "description": "From the movements"
+        },
+        "isLow": {
+          "type": "boolean"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "movements": {
+          "type": "array",
+          "description": "Only on one item, newest first",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "date",
+              "kind",
+              "quantity"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "kind": {
+                "enum": [
+                  "in",
+                  "out",
+                  "adjust"
+                ]
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "note": {
+                "type": "string"
+              },
+              "reference": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     }

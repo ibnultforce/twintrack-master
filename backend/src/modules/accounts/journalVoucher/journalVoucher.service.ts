@@ -258,6 +258,12 @@ export async function createLinkedVoucher(
   return insertVoucher(actor, voucherType, header, lines, moneyAccountId, linkedDocument);
 }
 
+/** Makes a draft journal voucher that another record worked out, such as a month's depreciation. It is never edited. */
+export async function createLinkedJournalVoucher(actor: Actor, details: VoucherHeader & { lines: NewLedgerLine[]; linkedDocument: LinkedDocument }) {
+  const { lines, linkedDocument, ...header } = details;
+  return insertVoucher(actor, 'journal', header, lines, undefined, linkedDocument);
+}
+
 /** A voucher that settles an invoice or bill keeps the amount it settles, so it is never edited. */
 export const linkedVoucherRefused = (voucher: Pick<JournalVoucherDoc, 'number' | 'linkedDocument'>) =>
   new ApiError(409, 'linked_voucher', `${voucher.number} settles ${voucher.linkedDocument?.number}, so it can't be changed. Reverse it, or return it and make a new one from ${voucher.linkedDocument?.number}.`);

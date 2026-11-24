@@ -23,11 +23,15 @@ Built so far: a status check, settings, the chart of accounts, the ledger core, 
 | `vendor.read` / `.create` / `.update` | See, add and change vendors |
 | `bill.read` / `.create` / `.update` | See bills; make one; edit, submit and cancel drafts |
 | `bill.approve` | Record, return or cancel other people's bills |
+| `payrollRun.read` / `.create` / `.update` | See payroll runs; make a month's run; edit, submit and cancel drafts |
+| `payrollRun.approve` | Record, return or cancel other people's runs |
+| `fixedAsset.read` / `.create` / `.update` | See the asset register; add assets; change them and run depreciation |
+| `inventoryItem.read` / `.create` / `.update` | See stock; add items; change them and record movements |
 | `auditLog.read` | Read the Accounts activity log |
 
 No resource is scoped: each is one list for the whole organisation. Only a super admin holds these until a profile grants them.
 
-**Protected field:** `ledgerAccount.bankAccountNumber` is hidden in accounts, lists, history and Cash and bank unless the grant's `fieldAccess` names it (`read` to see it, `create` or `edit` to write it). Only a super admin sees it by default. Even then it is masked, as `•••• 7712`; the full number comes only from `POST /accounts/ledger-accounts/:id/reveal-bank-number`, and every reveal is written to the activity log (`ledgerAccount.bankNumberRevealed`).
+**Protected fields:** `payrollRun.lines` (each person's pay) is hidden unless a grant names it. `ledgerAccount.bankAccountNumber` is hidden in accounts, lists, history and Cash and bank unless the grant's `fieldAccess` names it (`read` to see it, `create` or `edit` to write it). Only a super admin sees it by default. Even then it is masked, as `•••• 7712`; the full number comes only from `POST /accounts/ledger-accounts/:id/reveal-bank-number`, and every reveal is written to the activity log (`ledgerAccount.bankNumberRevealed`).
 
 ## Approvals: the maker never decides
 
@@ -543,6 +547,109 @@ As for invoices, with `bill.update` and `bill.approve`. Cancelling a recorded bi
 A receipt or payment voucher made by Receive payment or Pay carries `linkedDocument` (`type`, `id`, `number`, `amount` in the document's currency). It can't be edited (`409 linked_voucher`) or corrected by an update request (`409 linked_voucher`): a wrong one is returned to its maker or reversed, and a new one made from the document. A reversed voucher no longer counts as paid, so the document opens again.
 
 The accounts these post to are the starting chart's 1300, 2100, 2300, 4100, 4200 and 5800, named in one place (`accounts/postingAccounts.ts`). Choosing them in Settings is not built yet.
+
+## Payroll
+
+Monthly payroll on the dummy employees (`seed/accounts-employees.json`) until HR is built. A run (`PR-0001`) is made from the active employees for one month: each is paid their monthly salary, or for someone who joined during the month, the share of calendar days from their join date, rounded to the paisa. Gross only for now; tax and provident fund deductions come with Day 5. One run per month that isn't cancelled (`409 payroll_month_taken`).
+
+| Status | Means | Next |
+|---|---|---|
+| `draft` | Made from the employees | Edit (with a reason), submit, cancel |
+| `submitted` | Waiting for someone other than its maker | Approve, return with a note |
+| `recorded` | Dr 5100 Salaries and wages per person; Cr 2200 Salaries payable the total, dated the pay date | Pay; cancel with a reversal while it has no payments |
+| `cancelled` | Given up, or reversed; the month can be run again | None |
+
+**Protected field:** `payrollRun.lines` (each person's pay) is hidden in runs and their history unless the grant's `fieldAccess` names it; changing a person's pay needs `edit` on it. `total` and `headcount` show to anyone who can read payroll. A recorded run shows `paid`, `outstanding`, `pending` and `paymentStatus`, worked out from linked payment vouchers, overdue from the day after the pay date.
+
+### `GET /accounts/payroll-runs`, `GET /accounts/payroll-runs/:id`, `GET /accounts/payroll-runs/:id/history`
+
+**Access:** `private`, needs `payrollRun.read`. The list takes `page`, `pageSize`, `status`. One run adds `payments` and `allowedActions` (`edit`, `submit`, `approve`, `return`, `cancel`, `pay`).
+
+### `POST /accounts/payroll-runs`
+
+**Access:** `private`, needs `payrollRun.create`. **Body:** `month` (`YYYY-MM`), `payDate`.
+
+**Errors:** `409 payroll_month_taken`, `422 no_employees`
+
+### `PATCH /accounts/payroll-runs/:id`
+
+**Access:** `private`, needs `payrollRun.update` (and `edit` on `lines` for adjustments). **Body:** `reason` (required) and `payDate` and/or `adjustments` (each `employeeId` on the run, `gross` in paisa, optional `note`; a gross of 0 takes them off this run); optional `version`. Drafts only.
+
+**Errors:** `403 field_not_editable`, `409 payroll_run_not_draft`, `422 validation_failed`
+
+### `POST /accounts/payroll-runs/:id/submit`, `/approve`, `/return`, `/cancel`
+
+As for bills, with `payrollRun.update` and `payrollRun.approve`; never by the maker (`403 own_record`). Cancelling a recorded run reverses it and is refused while it has payments (`409 payroll_run_has_payments`). Errors use `payroll_run_not_draft`, `payroll_run_not_submitted`.
+
+### `POST /accounts/payroll-runs/:id/pay`
+
+**Access:** `private`, needs `journalVoucher.create` and `payrollRun.read`. **Body:** `paymentDate`, `moneyAccountId`, optional `amount` (all that is open when left out), `reference`.
+
+**Returns:** `201` with one draft **payment voucher** for the run: Dr 2200 Salaries payable, Cr the bank, linked to the run (`linkedDocument.type: payrollRun`).
+
+**Errors:** `409 payroll_run_not_recorded`, `409 nothing_owed`, `422 more_than_owed`
+
+## Disbursements
+
+Every payment going out is a payment voucher, so the Disbursements screen is `GET /accounts/journal-vouchers?type=payment`. No route of its own.
+
+## Fixed assets
+
+The register of things the company owns and uses for years. A purchase reaches the books through a bill charged to 1600 Fixed assets; the register adds what depreciation needs. Numbers run `FA-0001`.
+
+**Depreciation** is straight-line, monthly, from the purchase month: (cost − salvage value) ÷ useful life in whole paisa, the last month taking what rounding left, so the months add up exactly. Depreciation reaches the books only through a month's **depreciation run**: one journal voucher for all active assets, Dr 5600 Depreciation, Cr 1650 Accumulated depreciation, each credit line naming its asset (`FA-0001`). An asset's `accumulatedDepreciation` and `bookValue` are read back from recorded runs. Each month has at most one run that isn't reversed; reversing it frees the month.
+
+### `GET /accounts/fixed-assets`, `GET /accounts/fixed-assets/:id/history`
+
+**Access:** `private`, needs `fixedAsset.read`. The list takes `page`, `pageSize`, `category`, `isActive`, `search` (number, name or tag). Each asset shows `monthlyDepreciation`, `accumulatedDepreciation`, `bookValue`.
+
+### `GET /accounts/fixed-assets/:id`
+
+Adds `schedule`: each month of its life with `amount`, `monthLabel`, and `voucher` (`voucherId`, `number`, `status`) when that month has a run.
+
+### `POST /accounts/fixed-assets`
+
+**Access:** `private`, needs `fixedAsset.create`. **Body:** `name`, optional `assetTag`, `category` (`computers`, `furniture`, `office_equipment`, `vehicles`, `software`, `other`), `purchaseDate`, `cost` (paisa, above zero), `salvageValue` (not above the cost), `usefulLifeMonths` (1 to 600), optional `billId`.
+
+### `PATCH /accounts/fixed-assets/:id`
+
+**Access:** `private`, needs `fixedAsset.update`. Any of the above and `isActive`; optional `version`. Cost, purchase date, salvage value and life are refused once any of its depreciation is recorded or waiting (`409 asset_depreciated`).
+
+### `GET /accounts/fixed-assets/depreciation`
+
+**Access:** `private`, needs `fixedAsset.read`. **Query:** `month`. **Returns:** `lines` (`assetId`, `number`, `name`, `amount`), `total`, and `existingRun` when the month has one.
+
+### `POST /accounts/fixed-assets/depreciation`
+
+**Access:** `private`, needs `fixedAsset.update`, and `journalVoucher.create` (checked in the service). **Body:** `month`, optional `voucherDate` (the month's last day by default).
+
+**Returns:** `201` with the draft journal voucher (`linkedDocument.type: depreciation`, `number: DEP 2026-11`). It can't be edited; it reaches the books when someone other than its maker approves it.
+
+**Errors:** `403 forbidden` (no voucher access), `409 depreciation_month_taken`, `422 nothing_to_depreciate`
+
+## Inventory
+
+Office stock counted in units: quantities only, since what it cost reaches the books through its bill. Stock on hand is worked out from the item's movements, never typed. No return to vendors (decision 5).
+
+### `GET /accounts/inventory-items`, `GET /accounts/inventory-items/:id`
+
+**Access:** `private`, needs `inventoryItem.read`. The list takes `page`, `pageSize`, `isActive`, `search` (name, tag or category). Each item shows `onHand` and `isLow` (at or below its reorder level). One item adds `movements`, newest first.
+
+### `POST /accounts/inventory-items`
+
+**Access:** `private`, needs `inventoryItem.create`. **Body:** `name`, optional `assetTag`, `category`, `unit` (such as pcs or boxes), optional `reorderLevel`.
+
+### `PATCH /accounts/inventory-items/:id`
+
+**Access:** `private`, needs `inventoryItem.update`. Any of the above (`null` clears the tag or reorder level) and `isActive`; optional `version`.
+
+### `POST /accounts/inventory-items/:id/movements`
+
+**Access:** `private`, needs `inventoryItem.update`. **Body:** `date`, `kind` (`in`, `out`, `adjust`), `quantity` (up to 3 decimals; above zero for in and out; signed for adjust), optional `note`, `reference`. Movements are never edited; a mistake is put right by an adjustment.
+
+**Returns:** `201` with the item and its movements.
+
+**Errors:** `409 inventory_item_inactive`, `422 not_enough_stock`, `422 validation_failed`
 
 ## Activity log
 

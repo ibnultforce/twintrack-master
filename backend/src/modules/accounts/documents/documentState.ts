@@ -55,4 +55,5 @@ export function assertWithinOpenAmount(amount: number, amountDue: number, settle
 
 /** The status error every document uses: "This bill is recorded, so it can't be edited." */
 export const wrongDocumentStatus = (documentLabel: string, statusLabel: string, allowed: string, action: string) =>
-  new ApiError(409, `${documentLabel}_not_${allowed}`, `This ${documentLabel} is ${statusLabel}, so it can't be ${action}.`);
+  // The code joins words with underscores: "payroll run" gives payroll_run_not_draft.
+  new ApiError(409, `${documentLabel.replace(/ /g, '_')}_not_${allowed}`, `This ${documentLabel} is ${statusLabel}, so it can't be ${action}.`);

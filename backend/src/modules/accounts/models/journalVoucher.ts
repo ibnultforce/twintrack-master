@@ -20,8 +20,8 @@ export type JournalVoucherStatus = (typeof JOURNAL_VOUCHER_STATUSES)[number];
 export const VOUCHER_TYPES = ['journal', 'payment', 'receipt'] as const;
 export type VoucherType = (typeof VOUCHER_TYPES)[number];
 
-/** What a payment or receipt settles: the invoice it was received for, or the bill it pays. */
-export const LINKED_DOCUMENT_TYPES = ['invoice', 'bill'] as const;
+/** What a voucher settles or comes from: an invoice, a bill or a payroll run it pays, or a month's depreciation run. */
+export const LINKED_DOCUMENT_TYPES = ['invoice', 'bill', 'payrollRun', 'depreciation'] as const;
 export type LinkedDocumentType = (typeof LINKED_DOCUMENT_TYPES)[number];
 
 export interface LinkedDocument {

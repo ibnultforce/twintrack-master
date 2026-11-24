@@ -381,6 +381,12 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>24 November 2026: Accounts payroll, fixed assets and inventory (manifest 1.13.0)</h3>
+      <ul>
+        <li>New resources <code>payrollRun</code> (read, create, update, approve; <code>lines</code> protected), <code>fixedAsset</code> and <code>inventoryItem</code> (read, create, update), with 22 routes. <code>/accounts/payroll-runs</code> makes a month's run from the dummy employees (a part month for new joiners), records salary expense per person against salaries payable on approval, and Pay makes one linked payment voucher. <code>/accounts/fixed-assets</code> keeps the register with straight-line monthly depreciation; a month's depreciation run makes one journal voucher (depreciation against accumulated depreciation), and book value is read back from recorded runs. <code>/accounts/inventory-items</code> counts stock from movements in, out and adjusted, never below zero. Payroll runs join the Approvals queue. New Payroll, Disbursements (payment vouchers), Fixed assets and Inventory screens in the Accounts app.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>24 November 2026: Accounts invoices, vendors and bills (manifest 1.12.0)</h3>
       <ul>
         <li>New resources <code>clientAccount</code> (read, update), <code>invoice</code> and <code>bill</code> (read, create, update, approve) and <code>vendor</code> (read, create, update), with 28 routes. <code>/accounts/clients</code> sets each Master client's terms, currency and hourly rate. <code>/accounts/invoices</code> bills finished, billable Project management tasks (estimated hours × the client rate, marked invoiced at once) and typed items, in the invoice's currency; approving records receivable against service income in taka at the rate on the issue date. Receive payment makes a receipt voucher linked to the invoice, with the rate difference to exchange gain or loss. <code>/accounts/vendors</code> keeps each vendor's TDS rate; <code>/accounts/bills</code> prices quantity × unit price, works out TDS, and records expense against accounts payable and tax payable; Pay makes a linked payment voucher. Paid, outstanding and overdue come only from linked recorded vouchers. Linked vouchers can't be edited or corrected by update request. Invoices and bills join the Approvals queue. New Clients, Invoices, Vendors and bills screens in the Accounts app.</li>
