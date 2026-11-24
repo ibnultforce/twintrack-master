@@ -381,6 +381,12 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>24 November 2026: Accounts bonus, incentive, commission and employee payments (manifest 1.16.0)</h3>
+      <ul>
+        <li>New resources <code>staffPayout</code> (read, create, update, approve) and <code>commissionRule</code> (read, create, update). <code>/accounts/staff-payouts</code>: a month of Project management incentives, a typed bonus, or unpaid commission, recorded as expense against salaries payable on approval and paid with a linked payment voucher; approving incentives marks them paid in Project management in the same transaction, so an incentive is paid once. <code>/accounts/commission-rules</code>: an employee's rate on money received from a client, with earnings per receipt. <code>GET /accounts/employee-payments</code>: salary, bonus and commission per employee, salaries only with the payroll lines field. New Employee payments, Bonus and incentive, and Commission screens in the Accounts app.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>24 November 2026: Accounts bank reconciliation and office expenses (manifest 1.15.0)</h3>
       <ul>
         <li>New resource <code>bankReconciliation</code> (read, create, update) and <code>/accounts/bank-reconciliations</code>: load a bank's CSV statement (any common column layout, day-first dates), refused unless it adds up; lines match ledger entries on the account by amount within 7 days, by hand too; the summary explains the statement balance from the books with unmatched items; sign-off once nothing is unexplained. Sample statement in <code>docs/samples/</code>. New <code>GET /accounts/office-expenses</code>: running costs by expense account from the ledger. New Bank reconciliation and Office expenses screens in the Accounts app.</li>

@@ -14,6 +14,7 @@ import { journalVoucherRoutes } from './journalVoucher/journalVoucher.routes.js'
 import { ledgerAccountRoutes } from './ledgerAccount/ledgerAccount.routes.js';
 import { payrollRoutes } from './payroll/payroll.routes.js';
 import { settingsRoutes } from './settings/settings.routes.js';
+import { staffPayoutRoutes } from './staffPayout/staffPayout.routes.js';
 import { statusRoutes } from './status/status.routes.js';
 import { updateRequestRoutes } from './updateRequest/updateRequest.routes.js';
 import { vendorRoutes } from './vendor/vendor.routes.js';
@@ -21,4 +22,4 @@ import { vendorRoutes } from './vendor/vendor.routes.js';
 export { ACCOUNTS_MODULE_KEY } from './accountsModule.js';
 
 /** Every built route of the Accounts module. A test checks this list against manifests/accounts.manifest.json. */
-export const accountsRoutes: ApiRoute[] = [...statusRoutes, ...settingsRoutes, ...ledgerAccountRoutes, ...journalVoucherRoutes, ...cashBankRoutes, ...generalLedgerRoutes, ...bankReconciliationRoutes, ...clientAccountRoutes, ...invoiceRoutes, ...vendorRoutes, ...billRoutes, ...payrollRoutes, ...fixedAssetRoutes, ...inventoryRoutes, ...updateRequestRoutes, ...changeHistoryRoutes, ...approvalRoutes, ...auditLogRoutes];
+export const accountsRoutes: ApiRoute[] = [...statusRoutes, ...settingsRoutes, ...ledgerAccountRoutes, ...journalVoucherRoutes, ...cashBankRoutes, ...generalLedgerRoutes, ...bankReconciliationRoutes, ...clientAccountRoutes, ...invoiceRoutes, ...vendorRoutes, ...billRoutes, ...payrollRoutes, ...staffPayoutRoutes, ...fixedAssetRoutes, ...inventoryRoutes, ...updateRequestRoutes, ...changeHistoryRoutes, ...approvalRoutes, ...auditLogRoutes];

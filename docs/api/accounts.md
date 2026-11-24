@@ -28,6 +28,8 @@ Built so far: a status check, settings, the chart of accounts, the ledger core, 
 | `fixedAsset.read` / `.create` / `.update` | See the asset register; add assets; change them and run depreciation |
 | `inventoryItem.read` / `.create` / `.update` | See stock; add items; change them and record movements |
 | `bankReconciliation.read` / `.create` / `.update` | See statements; load one from CSV; match lines and sign it off |
+| `staffPayout.read` / `.create` / `.update` / `.approve` | Bonus, incentive and commission payouts, as for payroll runs |
+| `commissionRule.read` / `.create` / `.update` | See commission rules and earnings; add and change rules |
 | `auditLog.read` | Read the Accounts activity log |
 
 No resource is scoped: each is one list for the whole organisation. Only a super admin holds these until a profile grants them.
@@ -735,6 +737,46 @@ A bank's statement, loaded from its CSV (decision 8), matched line by line again
 **Access:** `private`, needs `ledgerAccount.read`. **Query:** `from`, `to`.
 
 **Returns:** `categories` (expense accounts with their net amount in the period), `total`, and `lines` newest first (`entryDate`, `accountId`, `memo`, `source` with its number, `isReversal`, `amount`). Every expense account counts except salaries, bonus and incentives, commission, depreciation and exchange loss (`NOT_OFFICE_EXPENSES` in `postingAccounts.ts`). Read from the ledger, so a reversal nets out. Expenses are added with a bill or a payment voucher.
+
+## Bonus, incentive and commission
+
+A **staff payout** (`BI-0001`) pays several people at once. It is drafted, submitted and approved by someone other than its maker like a bill; approving records Dr 5200 Bonus and incentives (5250 Commission for commission) per person, Cr 2200 Salaries payable; **Pay** makes one linked payment voucher.
+
+| `kind` | People | Amounts |
+|---|---|---|
+| `incentive` | TwinTrack people | Project management's unpaid monthly incentives for `month` (taka there, converted to paisa). Approving marks each one paid in Project management in the same transaction; if any was paid meanwhile, nothing is recorded (`409 incentive_already_paid`). A person's month is on one live payout only, so **an incentive is paid once**. A recorded incentive payout can't be cancelled. |
+| `bonus` | Payroll employees | Typed per employee. |
+| `commission` | Payroll employees | Every employee's unpaid commission (below), with the receipts it is earned on; a receipt is paid once. |
+
+### `GET /accounts/staff-payouts`, `GET /accounts/staff-payouts/:id`, `GET /accounts/staff-payouts/:id/history`
+
+**Access:** `private`, needs `staffPayout.read`. The list takes `page`, `pageSize`, `kind`, `status`. One payout adds `payments` and `allowedActions` (`submit`, `approve`, `return`, `cancel`, `pay`).
+
+### `POST /accounts/staff-payouts`
+
+**Access:** `private`, needs `staffPayout.create`. **Body:** `kind` and: for `incentive`, `month` and `payDate`; for `bonus`, `title`, `payDate`, `lines` (each `employeeId`, `amount` in paisa, optional `note`); for `commission`, `payDate`.
+
+**Errors:** `422 nothing_to_pay`, `422 validation_failed`
+
+### `POST /accounts/staff-payouts/:id/submit`, `/approve`, `/return`, `/cancel`, `/pay`
+
+As for payroll runs, with `staffPayout.update` and `staffPayout.approve`. Errors use `payout_not_draft`, `payout_not_submitted`, `payout_not_recorded`, `incentive_already_paid`, `incentive_payout_recorded`, `payout_has_payments`.
+
+### Commission rules
+
+Commission is earned on **money received**, not on invoices: each recorded receipt from the rule's client, dated on or after its start, earns the rate on what reached the bank (in taka), rounded to the paisa.
+
+- `GET /accounts/commission-rules` (`commissionRule.read`): `rules`, each with `employeeName`, `clientName`, `rateBasisPoints`, `startDate`, `isActive`, `received`, `earned`, `inPayouts`, `unpaid`, and `items` (per receipt: `receiptNumber`, `date`, `invoiceNumber`, `received`, `commission`, `payoutNumber` when in a payout).
+- `POST /accounts/commission-rules` (`commissionRule.create`): `employeeId`, `clientId`, `rateBasisPoints` (200 is 2%), `startDate`. One active rule per employee and client (`409 commission_rule_exists`).
+- `PATCH /accounts/commission-rules/:id` (`commissionRule.update`): `rateBasisPoints`, `startDate`, `isActive`, `version`. Commission already in a payout keeps the amount it was paid at.
+
+## Employee payments
+
+### `GET /accounts/employee-payments`
+
+**Access:** `private`, needs `payrollRun.read` or `staffPayout.read`. **Query:** optional `employeeId`, `from`, `to` (pay dates).
+
+**Returns:** `employees` (the payroll employee list), `payments` newest first (`employeeId`, `employeeName`, `type` salary, bonus or commission, `forWhat`, `date`, `amount`, `record` with its number, `isPaid` when the whole run or payout is paid from the bank), `totals` per type, and `maySeeSalaries`. Salaries come from recorded payroll runs and show only with read access to the payroll run's protected `lines` field.
 
 ## Activity log
 

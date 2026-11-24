@@ -14763,6 +14763,656 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /accounts/staff-payouts",
+          "method": "GET",
+          "path": "/accounts/staff-payouts",
+          "purpose": "Bonus, incentive and commission payouts, newest first, with what is paid on each recorded one.",
+          "input": "page, pageSize, kind, status",
+          "access": "Needs staffPayout.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every payout",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/staff-payouts",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/staff-payouts",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/staff-payouts",
+          "method": "POST",
+          "path": "/accounts/staff-payouts",
+          "purpose": "Makes a draft payout: a month of incentives from Project management, everyone's unpaid commission, or a bonus typed per employee.",
+          "input": "kind (incentive: month, payDate; bonus: title, payDate, lines; commission: payDate)",
+          "access": "Needs staffPayout.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "An Eid bonus",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts",
+                "as": "farhana@twintrack.test",
+                "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A month with no unpaid incentives",
+              "expected": 422,
+              "code": "nothing_to_pay",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts",
+                "as": "farhana@twintrack.test",
+                "body": "{\"kind\":\"incentive\",\"month\":\"1990-01\",\"payDate\":\"1990-01-31\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "An unknown kind",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts",
+                "as": "farhana@twintrack.test",
+                "body": "{\"kind\":\"gift\",\"payDate\":\"2026-11-30\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/staff-payouts/:id",
+          "method": "GET",
+          "path": "/accounts/staff-payouts/:id",
+          "purpose": "One payout with its payments and the actions the caller may take.",
+          "input": "",
+          "access": "Needs staffPayout.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A bonus",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/staff-payouts/{{payoutId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such payout",
+              "expected": 404,
+              "code": "unknown_staff_payout",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/staff-payouts/sp_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/staff-payouts/:id/submit",
+          "method": "POST",
+          "path": "/accounts/staff-payouts/:id/submit",
+          "purpose": "Sends a draft payout for approval.",
+          "input": "version",
+          "access": "Needs staffPayout.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Already submitted",
+              "expected": 409,
+              "code": "payout_not_draft",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts/{{payoutId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/staff-payouts/:id/approve",
+          "method": "POST",
+          "path": "/accounts/staff-payouts/:id/approve",
+          "purpose": "Records it (expense against salaries payable); for incentives, marks each month paid in Project management at once. Never by its maker.",
+          "input": "version",
+          "access": "Needs staffPayout.read; the service needs staffPayout.approve or the stand-in",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own payout",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts/{{payoutId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Still a draft",
+              "expected": 409,
+              "code": "payout_not_submitted",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/staff-payouts/:id/return",
+          "method": "POST",
+          "path": "/accounts/staff-payouts/:id/return",
+          "purpose": "Sends a submitted payout back to its maker with a note.",
+          "input": "note, version",
+          "access": "As approve",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own payout",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts/{{payoutId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{\"note\":\"Check the amounts\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No note",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts/{{payoutId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/staff-payouts/:id/cancel",
+          "method": "POST",
+          "path": "/accounts/staff-payouts/:id/cancel",
+          "purpose": "Gives up a draft, or reverses a recorded bonus or commission payout with no payments. A recorded incentive payout stays.",
+          "input": "reason, version",
+          "access": "As approve for a recorded payout; staffPayout.update for a draft",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reason\":\"Wrong amounts\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/staff-payouts/:id/pay",
+          "method": "POST",
+          "path": "/accounts/staff-payouts/:id/pay",
+          "purpose": "Makes one draft payment voucher for a recorded payout.",
+          "input": "paymentDate, moneyAccountId, amount, reference",
+          "access": "Needs journalVoucher.create and payout read access",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A payout not yet recorded",
+              "expected": 409,
+              "code": "payout_not_recorded",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/{{payoutId}}/pay",
+                "as": "farhana@twintrack.test",
+                "body": "{\"paymentDate\":\"2026-11-30\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/staff-payouts/sp_nobody/pay",
+                "as": "karim@twintrack.test",
+                "body": "{\"paymentDate\":\"2026-11-30\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/staff-payouts/:id/history",
+          "method": "GET",
+          "path": "/accounts/staff-payouts/:id/history",
+          "purpose": "The changes to a payout, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs staffPayout.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A bonus",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/staff-payouts",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"kind\":\"bonus\",\"title\":\"Eid bonus 2026\",\"payDate\":\"2026-11-15\",\"lines\":[{\"employeeId\":\"emp_01\",\"amount\":4250000,\"note\":\"Half of basic\"}]}",
+                  "save": {
+                    "payoutId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/staff-payouts/{{payoutId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such payout",
+              "expected": 404,
+              "code": "unknown_staff_payout",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/staff-payouts/sp_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/commission-rules",
+          "method": "GET",
+          "path": "/accounts/commission-rules",
+          "purpose": "Commission rules with what each earned on money received, what is in payouts, and what is still unpaid, per receipt.",
+          "input": "",
+          "access": "Needs commissionRule.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every rule",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/commission-rules",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/commission-rules",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/commission-rules",
+          "method": "POST",
+          "path": "/accounts/commission-rules",
+          "purpose": "Adds a rule: an employee earns a rate on what one client pays from a date. One active rule per employee and client.",
+          "input": "employeeId, clientId, rateBasisPoints, startDate",
+          "access": "Needs commissionRule.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "2% on Hope Foundation",
+              "expected": 201,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/commission-rules",
+                "as": "farhana@twintrack.test",
+                "body": "{\"employeeId\":\"emp_01\",\"clientId\":\"{{clientId}}\",\"rateBasisPoints\":200,\"startDate\":\"2026-11-01\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A second rule for the same pair",
+              "expected": 409,
+              "code": "commission_rule_exists",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/commission-rules",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"clientId\":\"{{clientId}}\",\"rateBasisPoints\":200,\"startDate\":\"2026-11-01\"}",
+                  "save": {
+                    "ruleId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/commission-rules",
+                "as": "farhana@twintrack.test",
+                "body": "{\"employeeId\":\"emp_01\",\"clientId\":\"{{clientId}}\",\"rateBasisPoints\":200,\"startDate\":\"2026-11-01\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such employee",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/commission-rules",
+                "as": "farhana@twintrack.test",
+                "body": "{\"employeeId\":\"emp_nobody\",\"clientId\":\"{{clientId}}\",\"rateBasisPoints\":200,\"startDate\":\"2026-11-01\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/commission-rules/:id",
+          "method": "PATCH",
+          "path": "/accounts/commission-rules/:id",
+          "purpose": "Changes a rule rate or start, or stops it.",
+          "input": "rateBasisPoints, startDate, isActive, version",
+          "access": "Needs commissionRule.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A new rate",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/commission-rules",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"clientId\":\"{{clientId}}\",\"rateBasisPoints\":200,\"startDate\":\"2026-11-01\"}",
+                  "save": {
+                    "ruleId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/commission-rules/{{ruleId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"rateBasisPoints\":300}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such rule",
+              "expected": 404,
+              "code": "unknown_commission_rule",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/commission-rules/cr_nobody",
+                "as": "farhana@twintrack.test",
+                "body": "{\"isActive\":false}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/employee-payments",
+          "method": "GET",
+          "path": "/accounts/employee-payments",
+          "purpose": "What each payroll employee received: salary from recorded runs (only with the payroll lines field), and bonus and commission from recorded payouts, with whether each is paid.",
+          "input": "employeeId, from, to",
+          "access": "Needs payrollRun.read or staffPayout.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Everyone",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/employee-payments",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/employee-payments",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
         }
       ]
     }

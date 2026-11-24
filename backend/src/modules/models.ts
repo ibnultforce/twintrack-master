@@ -10,6 +10,7 @@ import { Invoice } from './accounts/models/invoice.js';
 import { Vendor } from './accounts/models/vendor.js';
 import { PayrollRun } from './accounts/models/payrollRun.js';
 import { BankStatement } from './accounts/models/bankStatement.js';
+import { CommissionRule, StaffPayout } from './accounts/models/staffPayout.js';
 import { FixedAsset } from './accounts/models/fixedAsset.js';
 import { InventoryItem, InventoryMovement } from './accounts/models/inventoryItem.js';
 import { DemoNote } from './demo/models/note.js';
@@ -25,4 +26,4 @@ import { TaskComment } from './projects/models/taskComment.js';
 import { TaskCounter } from './projects/models/taskCounter.js';
 
 /** Every model in the app, for preparing and clearing collections. */
-export const appModels = [DemoNote, ...masterModels, ...hrModels, Project, Task, TaskComment, TaskCounter, PointsEntry, ProjectCredential, TaskAttachment, TaskAttachmentUsage, IncentiveSetting, ProjectIncentive, IncentiveLedgerEntry, LedgerAccount, LedgerEntry, AccountsSettings, JournalVoucher, VoucherCounter, UpdateRequest, AccountsEmployee, ClientAccount, Invoice, Vendor, Bill, PayrollRun, FixedAsset, InventoryItem, InventoryMovement, BankStatement];
+export const appModels = [DemoNote, ...masterModels, ...hrModels, Project, Task, TaskComment, TaskCounter, PointsEntry, ProjectCredential, TaskAttachment, TaskAttachmentUsage, IncentiveSetting, ProjectIncentive, IncentiveLedgerEntry, LedgerAccount, LedgerEntry, AccountsSettings, JournalVoucher, VoucherCounter, UpdateRequest, AccountsEmployee, ClientAccount, Invoice, Vendor, Bill, PayrollRun, FixedAsset, InventoryItem, InventoryMovement, BankStatement, StaffPayout, CommissionRule];

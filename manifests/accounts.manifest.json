@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.15.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, and the Accounts activity log.",
+    "version": "1.16.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, the general ledger, client accounts, bank reconciliation, office expenses, bonus, incentive and commission payouts, employee payments, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -335,6 +335,55 @@
         "update"
       ],
       "scoped": false
+    },
+    {
+      "key": "staffPayout",
+      "label": "Bonus, incentive and commission",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "approve"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "title",
+        "payDate",
+        "lines",
+        "total",
+        "status",
+        "returnNote"
+      ],
+      "recordFields": [
+        "kind",
+        "title",
+        "month",
+        "payDate",
+        "lines",
+        "total"
+      ]
+    },
+    {
+      "key": "commissionRule",
+      "label": "Commission rules",
+      "actions": [
+        "read",
+        "create",
+        "update"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "rateBasisPoints",
+        "startDate",
+        "isActive"
+      ],
+      "recordFields": [
+        "employeeId",
+        "clientId",
+        "rateBasisPoints",
+        "startDate",
+        "isActive"
+      ]
     }
   ],
   "routes": [
@@ -530,6 +579,7 @@
         "invoice.read",
         "bill.read",
         "payrollRun.read",
+        "staffPayout.read",
         "updateRequest.read"
       ]
     },
@@ -910,6 +960,87 @@
       "path": "/bank-reconciliations/:id/complete",
       "access": "private",
       "permission": "bankReconciliation.update"
+    },
+    {
+      "method": "GET",
+      "path": "/staff-payouts",
+      "access": "private",
+      "permission": "staffPayout.read"
+    },
+    {
+      "method": "POST",
+      "path": "/staff-payouts",
+      "access": "private",
+      "permission": "staffPayout.create"
+    },
+    {
+      "method": "GET",
+      "path": "/staff-payouts/:id",
+      "access": "private",
+      "permission": "staffPayout.read"
+    },
+    {
+      "method": "POST",
+      "path": "/staff-payouts/:id/submit",
+      "access": "private",
+      "permission": "staffPayout.update"
+    },
+    {
+      "method": "POST",
+      "path": "/staff-payouts/:id/approve",
+      "access": "private",
+      "permission": "staffPayout.read"
+    },
+    {
+      "method": "POST",
+      "path": "/staff-payouts/:id/return",
+      "access": "private",
+      "permission": "staffPayout.read"
+    },
+    {
+      "method": "POST",
+      "path": "/staff-payouts/:id/cancel",
+      "access": "private",
+      "permission": "staffPayout.read"
+    },
+    {
+      "method": "POST",
+      "path": "/staff-payouts/:id/pay",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "GET",
+      "path": "/staff-payouts/:id/history",
+      "access": "private",
+      "permission": "staffPayout.read"
+    },
+    {
+      "method": "GET",
+      "path": "/commission-rules",
+      "access": "private",
+      "permission": "commissionRule.read"
+    },
+    {
+      "method": "POST",
+      "path": "/commission-rules",
+      "access": "private",
+      "permission": "commissionRule.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/commission-rules/:id",
+      "access": "private",
+      "permission": "commissionRule.update"
+    },
+    {
+      "method": "GET",
+      "path": "/employee-payments",
+      "access": "private",
+      "anyPermission": [
+        "payrollRun.read",
+        "staffPayout.read"
+      ]
     }
   ]
 }

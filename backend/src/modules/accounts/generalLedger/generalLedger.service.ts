@@ -8,6 +8,7 @@ import { JournalVoucher } from '../models/journalVoucher.js';
 import { LedgerEntry } from '../models/ledgerEntry.js';
 import { NORMAL_BALANCE } from '../models/ledgerAccount.js';
 import { PayrollRun } from '../models/payrollRun.js';
+import { StaffPayout } from '../models/staffPayout.js';
 import { LedgerAccount } from '../models/ledgerAccount.js';
 import { NOT_OFFICE_EXPENSES } from '../postingAccounts.js';
 
@@ -29,6 +30,7 @@ const SOURCE_NUMBERS: Record<string, (ids: string[]) => Promise<{ _id: string; n
   invoice: (ids) => Invoice.find({ _id: { $in: ids } }).select('number').lean(),
   bill: (ids) => Bill.find({ _id: { $in: ids } }).select('number').lean(),
   payrollRun: (ids) => PayrollRun.find({ _id: { $in: ids } }).select('number').lean(),
+  staffPayout: (ids) => StaffPayout.find({ _id: { $in: ids } }).select('number').lean(),
 };
 
 export async function sourceNumbers(sources: { type: string; id: string }[]): Promise<Map<string, string>> {
