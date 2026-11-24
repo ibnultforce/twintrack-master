@@ -182,7 +182,7 @@ async function linesFor(request: NewStaffPayout): Promise<{ title: string; month
 /** Makes a draft payout: a month's unpaid incentives, everyone's unpaid commission, or a bonus typed per employee. */
 export async function createStaffPayout(actor: Actor, request: NewStaffPayout) {
   const { title, month, lines } = await linesFor(request);
-  if (lines.length === 0) throw new ApiError(422, 'nothing_to_pay', request.kind === 'incentive' ? `Nobody has an unpaid incentive for ${monthLabel(request.month)}. Generate it in Project management first.` : 'Nobody has anything to pay.');
+  if (lines.length === 0) throw new ApiError(422, 'nothing_to_pay', request.kind === 'incentive' ? `Nobody has an incentive for ${monthLabel(request.month)} left to pay: each is already paid or on another payout, or Project management hasn't generated the month yet.` : 'Nobody has anything to pay.');
   const number = await takeNextDocumentNumber('staffPayout', 'BI-');
   const payout = await runInTransaction(async (session) => {
     const [created] = await StaffPayout.create([{
