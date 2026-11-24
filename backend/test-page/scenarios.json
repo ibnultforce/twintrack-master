@@ -11512,6 +11512,1705 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /accounts/clients",
+          "method": "GET",
+          "path": "/accounts/clients",
+          "purpose": "How each active Master client is billed: terms, currency and hourly rate, on the defaults until set.",
+          "input": "",
+          "access": "Needs clientAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every active client",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/clients",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/clients",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/clients/:id",
+          "method": "PATCH",
+          "path": "/accounts/clients/:id",
+          "purpose": "Sets the payment terms, billing currency and hourly rate of a client.",
+          "input": "termsDays, currency, hourlyRate (null clears), version",
+          "access": "Needs clientAccount.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Net 15 at Tk 4,500 an hour",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/clients/{{clientId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"termsDays\":15,\"hourlyRate\":450000}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A currency not listed in Settings",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/clients/{{clientId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"currency\":\"JPY\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such client",
+              "expected": 404,
+              "code": "unknown_client",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/clients/cl_nobody",
+                "as": "farhana@twintrack.test",
+                "body": "{\"termsDays\":15}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices",
+          "method": "GET",
+          "path": "/accounts/invoices",
+          "purpose": "Invoices, newest first, with what is paid and still owed on each issued one.",
+          "input": "page, pageSize, status, paymentStatus, clientId, from, to, search",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every invoice",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Overdue ones",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices?paymentStatus=overdue",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/invoices",
+          "method": "POST",
+          "path": "/accounts/invoices",
+          "purpose": "Saves a draft invoice from finished, billable tasks (estimated hours times the client rate) and typed items. Its tasks are marked invoiced at once.",
+          "input": "clientId, issueDate, dueDate, currency, taskIds, items",
+          "access": "Needs invoice.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A milestone invoice in taka",
+              "expected": 201,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices",
+                "as": "farhana@twintrack.test",
+                "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No tasks and no items",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices",
+                "as": "farhana@twintrack.test",
+                "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices",
+                "as": "karim@twintrack.test",
+                "body": "{\"clientId\":\"cl_1\",\"issueDate\":\"2026-11-10\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices/billable-tasks",
+          "method": "GET",
+          "path": "/accounts/invoices/billable-tasks",
+          "purpose": "Finished, billable tasks of the client in a period that no invoice has billed yet, priced at the client rate.",
+          "input": "clientId, from, to",
+          "access": "Needs invoice.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "November, for a client",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/billable-tasks?clientId={{clientId}}&from=2026-11-01&to=2026-11-30",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No period",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/billable-tasks?clientId={{clientId}}",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices/:id",
+          "method": "GET",
+          "path": "/accounts/invoices/:id",
+          "purpose": "One invoice with its receipts and the actions the caller may take.",
+          "input": "",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/{{invoiceId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such invoice",
+              "expected": 404,
+              "code": "unknown_invoice",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/in_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/invoices/:id",
+          "method": "PATCH",
+          "path": "/accounts/invoices/:id",
+          "purpose": "Edits a draft, with a reason kept in its history. Tasks and items each replace the whole set.",
+          "input": "issueDate, dueDate, currency, taskIds, items, reason (required), version",
+          "access": "Needs invoice.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A new due date",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/invoices/{{invoiceId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"dueDate\":\"2026-12-10\",\"reason\":\"Client asked for Net 30\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason given",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/invoices/{{invoiceId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"dueDate\":\"2026-12-10\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/invoices/:id/submit",
+          "method": "POST",
+          "path": "/accounts/invoices/:id/submit",
+          "purpose": "Sends a draft for approval.",
+          "input": "version",
+          "access": "Needs invoice.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Already submitted",
+              "expected": 409,
+              "code": "invoice_not_draft",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices/{{invoiceId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/invoices/:id/approve",
+          "method": "POST",
+          "path": "/accounts/invoices/:id/approve",
+          "purpose": "Issues it: records receivable against service income in taka at the rate on the issue date. Never by its maker.",
+          "input": "version",
+          "access": "Needs invoice.read; the service needs invoice.approve or the stand-in",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own invoice",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices/{{invoiceId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Still a draft",
+              "expected": 409,
+              "code": "invoice_not_submitted",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/invoices/:id/return",
+          "method": "POST",
+          "path": "/accounts/invoices/:id/return",
+          "purpose": "Sends a submitted invoice back to its maker with a note.",
+          "input": "note, version",
+          "access": "As approve",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own invoice",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices/{{invoiceId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{\"note\":\"Fix the due date\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No note",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices/{{invoiceId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/invoices/:id/cancel",
+          "method": "POST",
+          "path": "/accounts/invoices/:id/cancel",
+          "purpose": "Gives up a draft, or cancels an issued invoice with a reversal. Its tasks can be billed again.",
+          "input": "reason, version",
+          "access": "As approve for an issued invoice; invoice.update for a draft",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reason\":\"Wrong client\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/invoices/:id/receive-payment",
+          "method": "POST",
+          "path": "/accounts/invoices/:id/receive-payment",
+          "purpose": "Makes a draft receipt voucher for an issued invoice; the rate difference goes to exchange gain or loss.",
+          "input": "receivedDate, moneyAccountId, amount (invoice currency; all that is open when left out), reference",
+          "access": "Needs journalVoucher.create and invoice read access",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "An invoice not yet issued",
+              "expected": 409,
+              "code": "invoice_not_issued",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/{{invoiceId}}/receive-payment",
+                "as": "farhana@twintrack.test",
+                "body": "{\"receivedDate\":\"2026-11-20\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/invoices/in_nobody/receive-payment",
+                "as": "karim@twintrack.test",
+                "body": "{\"receivedDate\":\"2026-11-20\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/invoices/:id/history",
+          "method": "GET",
+          "path": "/accounts/invoices/:id/history",
+          "purpose": "The changes to an invoice, newest first, with the reason for each edit.",
+          "input": "page, pageSize",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/clients",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Hope Foundation\"}",
+                  "save": {
+                    "clientId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/invoices",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"clientId\":\"{{clientId}}\",\"issueDate\":\"2026-11-10\",\"items\":[{\"description\":\"Donor Portal, phase 2\",\"amount\":2500000,\"milestone\":\"Reports\"}]}",
+                  "save": {
+                    "invoiceId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/{{invoiceId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such invoice",
+              "expected": 404,
+              "code": "unknown_invoice",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/invoices/in_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/vendors",
+          "method": "GET",
+          "path": "/accounts/vendors",
+          "purpose": "Vendors by name.",
+          "input": "page, pageSize, category, isActive, search",
+          "access": "Needs vendor.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every vendor",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/vendors",
+          "method": "POST",
+          "path": "/accounts/vendors",
+          "purpose": "Adds a vendor with the TDS rate withheld from their bills.",
+          "input": "name, category, tdsBasisPoints, contactEmail, contactPhone",
+          "access": "Needs vendor.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "An equipment vendor at 5% TDS",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/vendors",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "An unknown category",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/vendors",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"X\",\"category\":\"cars\",\"tdsBasisPoints\":0}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/vendors/:id",
+          "method": "GET",
+          "path": "/accounts/vendors/:id",
+          "purpose": "One vendor.",
+          "input": "",
+          "access": "Needs vendor.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A vendor",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors/{{vendorId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such vendor",
+              "expected": 404,
+              "code": "unknown_vendor",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors/vn_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/vendors/:id",
+          "method": "PATCH",
+          "path": "/accounts/vendors/:id",
+          "purpose": "Changes the details or TDS rate of a vendor, or deactivates them.",
+          "input": "name, category, tdsBasisPoints, contactEmail, contactPhone (null clears), isActive, version",
+          "access": "Needs vendor.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A new TDS rate",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/vendors/{{vendorId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"tdsBasisPoints\":300}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Nothing to change",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/vendors/{{vendorId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/vendors/:id/history",
+          "method": "GET",
+          "path": "/accounts/vendors/:id/history",
+          "purpose": "The changes to a vendor, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs vendor.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A vendor",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors/{{vendorId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such vendor",
+              "expected": 404,
+              "code": "unknown_vendor",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/vendors/vn_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bills",
+          "method": "GET",
+          "path": "/accounts/bills",
+          "purpose": "Bills, newest first, with what is paid and still owed on each recorded one.",
+          "input": "page, pageSize, status, paymentStatus, vendorId, from, to, search",
+          "access": "Needs bill.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every bill",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills",
+          "method": "POST",
+          "path": "/accounts/bills",
+          "purpose": "Saves a draft bill. Each line is quantity times unit price; TDS is the vendor rate on the total.",
+          "input": "vendorId, vendorReference, billDate, dueDate, lines (description, accountId, quantity, unitPrice)",
+          "access": "Needs bill.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Two laptops at 5% TDS",
+              "expected": 201,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills",
+                "as": "farhana@twintrack.test",
+                "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A line naming no real account",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills",
+                "as": "farhana@twintrack.test",
+                "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"lines\":[{\"description\":\"Ghost\",\"accountId\":\"la_none\",\"quantity\":1,\"unitPrice\":100}]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bills/:id",
+          "method": "GET",
+          "path": "/accounts/bills/:id",
+          "purpose": "One bill with its payments and the actions the caller may take.",
+          "input": "",
+          "access": "Needs bill.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills/{{billId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such bill",
+              "expected": 404,
+              "code": "unknown_bill",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills/bl_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/bills/:id",
+          "method": "PATCH",
+          "path": "/accounts/bills/:id",
+          "purpose": "Edits a draft, with a reason kept in its history.",
+          "input": "vendorId, vendorReference, billDate, dueDate, lines, reason (required), version",
+          "access": "Needs bill.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The invoice number of the vendor",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/bills/{{billId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"vendorReference\":\"TW-8812\",\"reason\":\"Added the vendor invoice number\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason given",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/bills/{{billId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"vendorReference\":\"TW-8812\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/submit",
+          "method": "POST",
+          "path": "/accounts/bills/:id/submit",
+          "purpose": "Sends a draft for approval.",
+          "input": "version",
+          "access": "Needs bill.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Already submitted",
+              "expected": 409,
+              "code": "bill_not_draft",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/approve",
+          "method": "POST",
+          "path": "/accounts/bills/:id/approve",
+          "purpose": "Records it: each line charged to its account, the vendor owed the net, TDS owed to the tax authority. Never by its maker.",
+          "input": "version",
+          "access": "Needs bill.read; the service needs bill.approve or the stand-in",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own bill",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Still a draft",
+              "expected": 409,
+              "code": "bill_not_submitted",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/return",
+          "method": "POST",
+          "path": "/accounts/bills/:id/return",
+          "purpose": "Sends a submitted bill back to its maker with a note.",
+          "input": "note, version",
+          "access": "As approve",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own bill",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{\"note\":\"Attach the receipt\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No note",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills/{{billId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/cancel",
+          "method": "POST",
+          "path": "/accounts/bills/:id/cancel",
+          "purpose": "Gives up a draft, or cancels a recorded bill with a reversal.",
+          "input": "reason, version",
+          "access": "As approve for a recorded bill; bill.update for a draft",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reason\":\"Duplicate\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/bills/:id/pay",
+          "method": "POST",
+          "path": "/accounts/bills/:id/pay",
+          "purpose": "Makes a draft payment voucher for a recorded bill, from cash or a bank account.",
+          "input": "paymentDate, moneyAccountId, amount (all that is open when left out), reference",
+          "access": "Needs journalVoucher.create and bill read access",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A bill not yet recorded",
+              "expected": 409,
+              "code": "bill_not_recorded",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/{{billId}}/pay",
+                "as": "farhana@twintrack.test",
+                "body": "{\"paymentDate\":\"2026-11-14\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/bills/bl_nobody/pay",
+                "as": "karim@twintrack.test",
+                "body": "{\"paymentDate\":\"2026-11-14\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/bills/:id/history",
+          "method": "GET",
+          "path": "/accounts/bills/:id/history",
+          "purpose": "The changes to a bill, newest first, with the reason for each edit.",
+          "input": "page, pageSize",
+          "access": "Needs bill.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"TechWorld\",\"category\":\"equipment\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/bills",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"vendorId\":\"{{vendorId}}\",\"billDate\":\"2026-11-03\",\"dueDate\":\"2026-11-15\",\"lines\":[{\"description\":\"Laptop, 16 GB\",\"accountId\":\"la_1600\",\"quantity\":2,\"unitPrice\":16000000}]}",
+                  "save": {
+                    "billId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills/{{billId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such bill",
+              "expected": 404,
+              "code": "unknown_bill",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/bills/bl_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
         }
       ]
     }

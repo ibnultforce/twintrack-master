@@ -4,7 +4,7 @@ import { escapeRegex, pageOffset, type PageRequest } from '../../../lib/query.js
 import { changeRecord } from '../../../lib/records/recordWrites.js';
 import { JournalVoucher, VoucherCounter, type JournalVoucherDoc, type JournalVoucherStatus, type VoucherType } from '../models/journalVoucher.js';
 
-export type NewJournalVoucherRecord = Pick<JournalVoucherDoc, '_id' | 'voucherType' | 'number' | 'voucherDate' | 'memo' | 'party' | 'reference' | 'moneyAccountId' | 'lines' | 'total'>;
+export type NewJournalVoucherRecord = Pick<JournalVoucherDoc, '_id' | 'voucherType' | 'number' | 'voucherDate' | 'memo' | 'party' | 'reference' | 'moneyAccountId' | 'linkedDocument' | 'lines' | 'total'>;
 
 export const journalVoucherNotFound = () => new ApiError(404, 'unknown_journal_voucher', 'No such journal voucher.');
 
@@ -75,3 +75,29 @@ export async function findSubmittedJournalVouchers(creator: { notMadeBy: string 
 
 /** Reversed vouchers, most recently reversed first, for the Change history screen. */
 export const findReversedJournalVouchers = (limit: number) => JournalVoucher.find({ status: 'reversed' }).sort({ reversedAt: -1 }).limit(limit).lean();
+
+/** How much of each document its vouchers settle: `recorded` counts only recorded ones; `committed` adds drafts and those waiting. */
+export interface SettledAmounts {
+  recorded: number;
+  committed: number;
+}
+
+/** Settled amounts per invoice or bill id, in the document's currency. Reversed vouchers count for nothing. */
+export async function sumSettledAmounts(documentIds: string[]): Promise<Map<string, SettledAmounts>> {
+  const rows = await JournalVoucher.aggregate<{ _id: { id: string; status: JournalVoucherStatus }; amount: number }>([
+    { $match: { 'linkedDocument.id': { $in: documentIds }, status: { $in: ['draft', 'submitted', 'recorded'] }, deletedAt: { $exists: false } } },
+    { $group: { _id: { id: '$linkedDocument.id', status: '$status' }, amount: { $sum: '$linkedDocument.amount' } } },
+  ]);
+  const settled = new Map<string, SettledAmounts>(documentIds.map((id) => [id, { recorded: 0, committed: 0 }]));
+  for (const row of rows) {
+    const amounts = settled.get(row._id.id);
+    if (!amounts) continue;
+    amounts.committed += row.amount;
+    if (row._id.status === 'recorded') amounts.recorded += row.amount;
+  }
+  return settled;
+}
+
+/** The vouchers that settle one document, newest first, for its page. */
+export const findVouchersLinkedTo = (documentId: string) =>
+  JournalVoucher.find({ 'linkedDocument.id': documentId }).sort({ voucherDate: -1, number: -1 }).lean();

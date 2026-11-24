@@ -381,6 +381,12 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>24 November 2026: Accounts invoices, vendors and bills (manifest 1.12.0)</h3>
+      <ul>
+        <li>New resources <code>clientAccount</code> (read, update), <code>invoice</code> and <code>bill</code> (read, create, update, approve) and <code>vendor</code> (read, create, update), with 28 routes. <code>/accounts/clients</code> sets each Master client's terms, currency and hourly rate. <code>/accounts/invoices</code> bills finished, billable Project management tasks (estimated hours × the client rate, marked invoiced at once) and typed items, in the invoice's currency; approving records receivable against service income in taka at the rate on the issue date. Receive payment makes a receipt voucher linked to the invoice, with the rate difference to exchange gain or loss. <code>/accounts/vendors</code> keeps each vendor's TDS rate; <code>/accounts/bills</code> prices quantity × unit price, works out TDS, and records expense against accounts payable and tax payable; Pay makes a linked payment voucher. Paid, outstanding and overdue come only from linked recorded vouchers. Linked vouchers can't be edited or corrected by update request. Invoices and bills join the Approvals queue. New Clients, Invoices, Vendors and bills screens in the Accounts app.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>24 November 2026: Accounts default currency (manifest 1.11.0)</h3>
       <ul>
         <li>Accounts settings take <code>defaultCurrency</code>: the currency new documents such as invoices and bills start in, BDT or one of the listed currencies (BDT until set). The books stay in taka, now shown as <code>homeCurrency</code>. A currency that is the default can't be removed from the list. It is a settings field a profile can hide or lock, and its changes are kept in the history. The Settings screen in the Accounts app gets a Default currency choice.</li>

@@ -20,6 +20,19 @@ export type JournalVoucherStatus = (typeof JOURNAL_VOUCHER_STATUSES)[number];
 export const VOUCHER_TYPES = ['journal', 'payment', 'receipt'] as const;
 export type VoucherType = (typeof VOUCHER_TYPES)[number];
 
+/** What a payment or receipt settles: the invoice it was received for, or the bill it pays. */
+export const LINKED_DOCUMENT_TYPES = ['invoice', 'bill'] as const;
+export type LinkedDocumentType = (typeof LINKED_DOCUMENT_TYPES)[number];
+
+export interface LinkedDocument {
+  type: LinkedDocumentType;
+  id: string;
+  /** INV-0001 or B-0001, so lists can show it without a lookup. */
+  number: string;
+  /** How much of the document it settles, in the document's currency, minor units (cents or paisa). */
+  amount: number;
+}
+
 /** A manual journal entry that needs a second person's approval before it reaches the ledger. */
 export interface JournalVoucherDoc extends RecordFields {
   _id: string;
@@ -36,6 +49,11 @@ export interface JournalVoucherDoc extends RecordFields {
   reference?: string;
   /** The cash or bank account a payment came out of or a receipt went into. Set on payment and receipt vouchers only. */
   moneyAccountId?: string;
+  /**
+   * The invoice or bill this payment or receipt settles. Set by that document's Receive payment or Pay action and
+   * never edited: a wrong one is reversed and made again, so the document's paid amount always matches the books.
+   */
+  linkedDocument?: LinkedDocument;
   /** The full balanced ledger lines, including the cash or bank line of a payment or receipt. */
   lines: LedgerLine[];
   /** The sum of the debits, which equals the sum of the credits. */
@@ -68,6 +86,18 @@ const journalVoucherSchema = new Schema<JournalVoucherDoc>(
     party: String,
     reference: String,
     moneyAccountId: String,
+    linkedDocument: {
+      type: new Schema<LinkedDocument>(
+        {
+          type: { type: String, enum: LINKED_DOCUMENT_TYPES, required: true },
+          id: { type: String, required: true },
+          number: { type: String, required: true },
+          amount: { type: Number, required: true },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     lines: { type: [lineSchema], required: true },
     total: { type: Number, required: true },
     status: { type: String, enum: JOURNAL_VOUCHER_STATUSES, required: true, index: true },
@@ -85,6 +115,8 @@ const journalVoucherSchema = new Schema<JournalVoucherDoc>(
 );
 
 addRecordFields(journalVoucherSchema);
+
+journalVoucherSchema.index({ 'linkedDocument.id': 1, status: 1 });
 
 export const JournalVoucher = model<JournalVoucherDoc>('AccountsJournalVoucher', journalVoucherSchema, 'accounts_journal_vouchers');
 

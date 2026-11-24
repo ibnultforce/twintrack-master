@@ -100,3 +100,9 @@ export async function sumUnbilledHours(): Promise<UnbilledProjectHours[]> {
     .map((row) => ({ projectId: row._id, projectName: projects.get(row._id)?.name ?? row._id, clientId: projects.get(row._id)?.clientId, hours: row.hours }))
     .sort((first, second) => second.hours - first.hours);
 }
+
+/** The named tasks with the project each belongs to, for an invoice to check before it bills them. */
+export async function findTasksByIds(taskIds: string[]): Promise<BillableTask[]> {
+  const tasks = await Task.find({ _id: { $in: taskIds }, deletedAt: { $exists: false } }).select(taskFields).lean<StoredTask[]>();
+  return tasks.map((task) => toBillableTask(task, task.completedAt ?? task.createdAt));
+}

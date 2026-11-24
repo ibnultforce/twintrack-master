@@ -9,7 +9,7 @@ import { findUsersByIds } from '../../master/users/users.repository.js';
 import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
 import { assertMayDecide, mayDecide } from '../approvals/approvalRules.js';
 import { findJournalVoucherById } from '../journalVoucher/journalVoucher.repository.js';
-import { correctRecordedVoucher } from '../journalVoucher/journalVoucher.service.js';
+import { correctRecordedVoucher, linkedVoucherRefused } from '../journalVoucher/journalVoucher.service.js';
 import { assertKeepsMoneyLine } from '../journalVoucher/moneyVoucher.js';
 import { checkBalancedLines, type NewLedgerLine } from '../ledger/ledger.service.js';
 import type { JournalVoucherDoc } from '../models/journalVoucher.js';
@@ -144,6 +144,8 @@ export async function getUpdateRequest(actor: Actor, requestId: string) {
 export async function createUpdateRequest(actor: Actor, details: NewUpdateRequest) {
   assertMayReadRecordType(actor, details.recordType);
   const voucher = await requireRecordedVoucher(details.recordId);
+  // A payment or receipt that settles an invoice or bill is reversed and made again instead, so the document stays right.
+  if (voucher.linkedDocument) throw linkedVoucherRefused(voucher);
   if (await findWaitingRequestFor(voucher._id)) throw alreadyWaiting(voucher.number);
 
   const checked = details.changes.lines ? await checkBalancedLines(details.changes.lines) : undefined;

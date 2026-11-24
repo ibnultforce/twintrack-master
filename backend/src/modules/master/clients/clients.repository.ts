@@ -51,3 +51,6 @@ export function updateClient(clientId: string, changes: ClientChanges, context: 
   const toUnset = Object.fromEntries(entries.filter(([, value]) => value === null).map(([field]) => [field, 1]));
   return changeRecord(Client, clientId, { $set: toSet, ...(Object.keys(toUnset).length > 0 && { $unset: toUnset }) }, context, clientNotFound);
 }
+
+/** Active clients, by name, for other modules to list (such as Accounts billing). */
+export const findActiveClients = () => Client.find({ status: 'active' }).sort({ name: 1, _id: 1 }).lean();

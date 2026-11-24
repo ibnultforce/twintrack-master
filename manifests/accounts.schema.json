@@ -466,6 +466,35 @@
               "type": "string"
             }
           }
+        },
+        "linkedDocument": {
+          "type": "object",
+          "description": "The invoice or bill a receipt or payment settles. Such a voucher is never edited or corrected by an update request.",
+          "required": [
+            "type",
+            "id",
+            "number",
+            "amount"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "invoice",
+                "bill"
+              ]
+            },
+            "id": {
+              "type": "string"
+            },
+            "number": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minor units of the document currency"
+            }
+          }
         }
       }
     },
@@ -688,6 +717,523 @@
         },
         "version": {
           "type": "integer"
+        }
+      }
+    },
+    "ClientAccount": {
+      "type": "object",
+      "description": "How Accounts bills one Master client. Defaults until set: Net 30, the Settings default currency, no rate.",
+      "required": [
+        "clientId",
+        "clientName",
+        "termsDays",
+        "currency",
+        "version"
+      ],
+      "properties": {
+        "clientId": {
+          "type": "string"
+        },
+        "clientName": {
+          "type": "string"
+        },
+        "termsDays": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3,10}$"
+        },
+        "hourlyRate": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minor units of the currency per hour of task estimate"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Invoice": {
+      "type": "object",
+      "description": "Money a client owes, in its own currency. Issued invoices are recorded in taka at the rate on the issue date.",
+      "required": [
+        "id",
+        "number",
+        "clientId",
+        "clientName",
+        "currency",
+        "issueDate",
+        "dueDate",
+        "lines",
+        "total",
+        "status",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string",
+          "pattern": "^INV-\\d{4,}$"
+        },
+        "clientId": {
+          "type": "string"
+        },
+        "clientName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3,10}$"
+        },
+        "issueDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "dueDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "description",
+              "amount"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Minor units of the invoice currency"
+              },
+              "taskId": {
+                "type": "string"
+              },
+              "hours": {
+                "type": "number",
+                "minimum": 0
+              },
+              "milestone": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minor units of the invoice currency"
+        },
+        "exchangeRate": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Paisa per unit on the issue date; set when issued"
+        },
+        "totalInTaka": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa; set when issued"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "submitted",
+            "issued",
+            "cancelled"
+          ]
+        },
+        "paid": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Settled by recorded vouchers linked to it, in its currency"
+        },
+        "outstanding": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Still owed"
+        },
+        "pending": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Settled by linked vouchers still in draft or waiting for approval"
+        },
+        "paymentStatus": {
+          "enum": [
+            "unpaid",
+            "part_paid",
+            "paid",
+            "overdue"
+          ],
+          "description": "Only on an issued invoice or recorded bill"
+        },
+        "daysOverdue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "returnNote": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "submittedBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "approvedBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "cancelledBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "cancelledAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ledgerEntryId": {
+          "type": "string"
+        },
+        "reversalEntryId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Vendor": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "category",
+        "tdsBasisPoints",
+        "isActive",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "rent",
+            "cloud",
+            "utilities",
+            "equipment",
+            "food_and_events",
+            "other"
+          ]
+        },
+        "tdsBasisPoints": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "500 is 5%"
+        },
+        "contactEmail": {
+          "type": "string"
+        },
+        "contactPhone": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Bill": {
+      "type": "object",
+      "description": "Money owed to a vendor, in taka. TDS is the vendor rate on the total; the vendor is owed the rest.",
+      "required": [
+        "id",
+        "number",
+        "vendorId",
+        "vendorName",
+        "billDate",
+        "dueDate",
+        "lines",
+        "amount",
+        "tdsBasisPoints",
+        "tds",
+        "netPayable",
+        "status",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string",
+          "pattern": "^B-\\d{4,}$"
+        },
+        "vendorId": {
+          "type": "string"
+        },
+        "vendorName": {
+          "type": "string"
+        },
+        "vendorReference": {
+          "type": "string"
+        },
+        "billDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "dueDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "description",
+              "accountId",
+              "quantity",
+              "unitPrice",
+              "amount"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "accountId": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "unitPrice": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paisa"
+              },
+              "amount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paisa: quantity times unit price, rounded"
+              }
+            }
+          }
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa"
+        },
+        "tdsBasisPoints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa"
+        },
+        "netPayable": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "submitted",
+            "recorded",
+            "cancelled"
+          ]
+        },
+        "paid": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Settled by recorded vouchers linked to it, in its currency"
+        },
+        "outstanding": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Still owed"
+        },
+        "pending": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Settled by linked vouchers still in draft or waiting for approval"
+        },
+        "paymentStatus": {
+          "enum": [
+            "unpaid",
+            "part_paid",
+            "paid",
+            "overdue"
+          ],
+          "description": "Only on an issued invoice or recorded bill"
+        },
+        "daysOverdue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "returnNote": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "submittedBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "approvedBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "cancelledBy": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "cancelledAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ledgerEntryId": {
+          "type": "string"
+        },
+        "reversalEntryId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     }

@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.11.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, and the Accounts activity log.",
+    "version": "1.12.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -95,7 +95,8 @@
         "party",
         "reference",
         "moneyAccountId",
-        "lines"
+        "lines",
+        "linkedDocument"
       ]
     },
     {
@@ -125,6 +126,118 @@
         "read"
       ],
       "scoped": false
+    },
+    {
+      "key": "clientAccount",
+      "label": "Client billing",
+      "actions": [
+        "read",
+        "update"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "termsDays",
+        "currency",
+        "hourlyRate"
+      ],
+      "recordFields": [
+        "termsDays",
+        "currency",
+        "hourlyRate"
+      ]
+    },
+    {
+      "key": "invoice",
+      "label": "Invoices",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "approve"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "clientId",
+        "currency",
+        "issueDate",
+        "dueDate",
+        "lines",
+        "total",
+        "exchangeRate",
+        "totalInTaka",
+        "status",
+        "returnNote"
+      ],
+      "recordFields": [
+        "clientId",
+        "currency",
+        "issueDate",
+        "dueDate",
+        "lines",
+        "total",
+        "exchangeRate",
+        "totalInTaka"
+      ]
+    },
+    {
+      "key": "vendor",
+      "label": "Vendors",
+      "actions": [
+        "read",
+        "create",
+        "update"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "name",
+        "category",
+        "tdsBasisPoints",
+        "contactEmail",
+        "contactPhone",
+        "isActive"
+      ],
+      "recordFields": [
+        "name",
+        "category",
+        "tdsBasisPoints",
+        "contactEmail",
+        "contactPhone",
+        "isActive"
+      ]
+    },
+    {
+      "key": "bill",
+      "label": "Bills",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "approve"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "vendorId",
+        "vendorReference",
+        "billDate",
+        "dueDate",
+        "lines",
+        "amount",
+        "tds",
+        "netPayable",
+        "status",
+        "returnNote"
+      ],
+      "recordFields": [
+        "vendorId",
+        "vendorReference",
+        "billDate",
+        "dueDate",
+        "lines",
+        "amount",
+        "tdsBasisPoints",
+        "tds",
+        "netPayable"
+      ]
     }
   ],
   "routes": [
@@ -317,6 +430,8 @@
       "access": "private",
       "anyPermission": [
         "journalVoucher.read",
+        "invoice.read",
+        "bill.read",
         "updateRequest.read"
       ]
     },
@@ -325,6 +440,174 @@
       "path": "/audit-log",
       "access": "private",
       "permission": "auditLog.read"
+    },
+    {
+      "method": "GET",
+      "path": "/clients",
+      "access": "private",
+      "permission": "clientAccount.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/clients/:id",
+      "access": "private",
+      "permission": "clientAccount.update"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices",
+      "access": "private",
+      "permission": "invoice.read"
+    },
+    {
+      "method": "POST",
+      "path": "/invoices",
+      "access": "private",
+      "permission": "invoice.create"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/billable-tasks",
+      "access": "private",
+      "permission": "invoice.create"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/:id",
+      "access": "private",
+      "permission": "invoice.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/invoices/:id",
+      "access": "private",
+      "permission": "invoice.update"
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/:id/submit",
+      "access": "private",
+      "permission": "invoice.update"
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/:id/approve",
+      "access": "private",
+      "permission": "invoice.read"
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/:id/return",
+      "access": "private",
+      "permission": "invoice.read"
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/:id/cancel",
+      "access": "private",
+      "permission": "invoice.read"
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/:id/receive-payment",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/:id/history",
+      "access": "private",
+      "permission": "invoice.read"
+    },
+    {
+      "method": "GET",
+      "path": "/vendors",
+      "access": "private",
+      "permission": "vendor.read"
+    },
+    {
+      "method": "POST",
+      "path": "/vendors",
+      "access": "private",
+      "permission": "vendor.create"
+    },
+    {
+      "method": "GET",
+      "path": "/vendors/:id",
+      "access": "private",
+      "permission": "vendor.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/vendors/:id",
+      "access": "private",
+      "permission": "vendor.update"
+    },
+    {
+      "method": "GET",
+      "path": "/vendors/:id/history",
+      "access": "private",
+      "permission": "vendor.read"
+    },
+    {
+      "method": "GET",
+      "path": "/bills",
+      "access": "private",
+      "permission": "bill.read"
+    },
+    {
+      "method": "POST",
+      "path": "/bills",
+      "access": "private",
+      "permission": "bill.create"
+    },
+    {
+      "method": "GET",
+      "path": "/bills/:id",
+      "access": "private",
+      "permission": "bill.read"
+    },
+    {
+      "method": "PATCH",
+      "path": "/bills/:id",
+      "access": "private",
+      "permission": "bill.update"
+    },
+    {
+      "method": "POST",
+      "path": "/bills/:id/submit",
+      "access": "private",
+      "permission": "bill.update"
+    },
+    {
+      "method": "POST",
+      "path": "/bills/:id/approve",
+      "access": "private",
+      "permission": "bill.read"
+    },
+    {
+      "method": "POST",
+      "path": "/bills/:id/return",
+      "access": "private",
+      "permission": "bill.read"
+    },
+    {
+      "method": "POST",
+      "path": "/bills/:id/cancel",
+      "access": "private",
+      "permission": "bill.read"
+    },
+    {
+      "method": "POST",
+      "path": "/bills/:id/pay",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "GET",
+      "path": "/bills/:id/history",
+      "access": "private",
+      "permission": "bill.read"
     }
   ]
 }

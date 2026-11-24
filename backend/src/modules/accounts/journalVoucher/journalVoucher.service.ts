@@ -11,7 +11,7 @@ import { findUsersByIds } from '../../master/users/users.repository.js';
 import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
 import { assertMayDecide, mayDecide } from '../approvals/approvalRules.js';
 import { checkBalancedLines, postEntry, reverseEntry, type NewLedgerLine } from '../ledger/ledger.service.js';
-import type { JournalVoucherDoc, JournalVoucherStatus, VoucherType } from '../models/journalVoucher.js';
+import type { JournalVoucherDoc, JournalVoucherStatus, LinkedDocument, VoucherType } from '../models/journalVoucher.js';
 import type { LedgerLine } from '../models/ledgerEntry.js';
 import { findWaitingRequestFor } from '../updateRequest/updateRequest.repository.js';
 import {
@@ -104,6 +104,7 @@ function toJournalVoucherView(voucher: JournalVoucherDoc, rules: FieldRules, nam
     party: voucher.party,
     reference: voucher.reference,
     moneyAccountId: voucher.moneyAccountId,
+    linkedDocument: voucher.linkedDocument,
     lines: voucher.lines,
     total: voucher.total,
     status: voucher.status,
@@ -170,13 +171,13 @@ export async function getJournalVoucher(actor: Actor, voucherId: string) {
     ...(await toViewFor(actor, voucher)),
     waitingUpdateRequest: waitingRequest ? { id: waitingRequest._id, number: waitingRequest.number } : undefined,
     allowedActions: {
-      edit: canUpdate && voucher.status === 'draft',
+      edit: canUpdate && voucher.status === 'draft' && !voucher.linkedDocument,
       submit: canUpdate && voucher.status === 'draft',
       approve: canDecide && voucher.status === 'submitted',
       return: canDecide && voucher.status === 'submitted',
       reverse: canDecide && voucher.status === 'recorded',
       // A recorded voucher is never edited; it is corrected through an update request someone else approves.
-      requestCorrection: Boolean(actor.permissions['updateRequest.create']) && voucher.status === 'recorded' && !waitingRequest,
+      requestCorrection: Boolean(actor.permissions['updateRequest.create']) && voucher.status === 'recorded' && !waitingRequest && !voucher.linkedDocument,
     },
   };
 }
@@ -194,14 +195,31 @@ function headerChanges(changes: Partial<VoucherHeader>): { $set: Partial<Voucher
   return { $set, $unset };
 }
 
-async function insertVoucher(actor: Actor, voucherType: VoucherType, header: VoucherHeader, lines: NewLedgerLine[], moneyAccountId?: string) {
+async function insertVoucher(
+  actor: Actor,
+  voucherType: VoucherType,
+  header: VoucherHeader,
+  lines: NewLedgerLine[],
+  moneyAccountId?: string,
+  linkedDocument?: LinkedDocument,
+) {
   const checked = await checkBalancedLines(lines);
   const number = `${NUMBER_PREFIXES[voucherType]}${String(await takeNextVoucherNumber(voucherType)).padStart(NUMBER_DIGITS, '0')}`;
   const { $set: headerFields } = headerChanges(header);
 
   const voucher = await runInTransaction(async (session) => {
     const created = await insertJournalVoucher(
-      { _id: `jv_${randomUUID()}`, voucherType, number, voucherDate: header.voucherDate, memo: header.memo, ...headerFields, ...(moneyAccountId && { moneyAccountId }), ...checked },
+      {
+        _id: `jv_${randomUUID()}`,
+        voucherType,
+        number,
+        voucherDate: header.voucherDate,
+        memo: header.memo,
+        ...headerFields,
+        ...(moneyAccountId && { moneyAccountId }),
+        ...(linkedDocument && { linkedDocument }),
+        ...checked,
+      },
       actor.user._id,
       session,
     );
@@ -226,10 +244,29 @@ export async function createMoneyVoucher(actor: Actor, voucherType: MoneyVoucher
   return insertVoucher(actor, voucherType, header, buildMoneyVoucherLines(voucherType, moneyAccountId, items), moneyAccountId);
 }
 
+/**
+ * Makes a draft payment or receipt that settles an invoice or bill, with lines the document worked out, such as an
+ * exchange difference. The money account must be cash or a bank account. Only invoices and bills call this.
+ */
+export async function createLinkedVoucher(
+  actor: Actor,
+  voucherType: MoneyVoucherType,
+  details: VoucherHeader & { party: string; moneyAccountId: string; lines: NewLedgerLine[]; linkedDocument: LinkedDocument },
+) {
+  const { lines, moneyAccountId, linkedDocument, ...header } = details;
+  await assertIsMoneyAccount(moneyAccountId);
+  return insertVoucher(actor, voucherType, header, lines, moneyAccountId, linkedDocument);
+}
+
+/** A voucher that settles an invoice or bill keeps the amount it settles, so it is never edited. */
+export const linkedVoucherRefused = (voucher: Pick<JournalVoucherDoc, 'number' | 'linkedDocument'>) =>
+  new ApiError(409, 'linked_voucher', `${voucher.number} settles ${voucher.linkedDocument?.number}, so it can't be changed. Reverse it, or return it and make a new one from ${voucher.linkedDocument?.number}.`);
+
 /** The draft to edit, checked for type, status and field access before anything is worked out. */
 async function requireEditableDraft(actor: Actor, voucherId: string, voucherType: VoucherType, changedFields: string[]): Promise<JournalVoucherDoc> {
   const existing = await requireJournalVoucher(voucherId);
   assertType(existing, voucherType);
+  if (existing.linkedDocument) throw linkedVoucherRefused(existing);
   assertStatus(existing, 'draft', 'edited');
   assertMayWriteFields(await fieldRulesFor(actor), changedFields, 'update');
   return existing;

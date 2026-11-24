@@ -17,6 +17,12 @@ Built so far: a status check, settings, the chart of accounts, the ledger core, 
 | `journalVoucher.create` | Save a new journal voucher as a draft |
 | `journalVoucher.update` | Edit a draft, and submit it for approval |
 | `journalVoucher.approve` | Approve, return or reverse other people's vouchers |
+| `clientAccount.read` / `.update` | See / set how each client is billed: terms, currency, hourly rate |
+| `invoice.read` / `.create` / `.update` | See invoices; make one; edit, submit and cancel drafts |
+| `invoice.approve` | Issue, return or cancel other people's invoices |
+| `vendor.read` / `.create` / `.update` | See, add and change vendors |
+| `bill.read` / `.create` / `.update` | See bills; make one; edit, submit and cancel drafts |
+| `bill.approve` | Record, return or cancel other people's bills |
 | `auditLog.read` | Read the Accounts activity log |
 
 No resource is scoped: each is one list for the whole organisation. Only a super admin holds these until a profile grants them.
@@ -361,6 +367,182 @@ Writes a reversal in the ledger dated today and marks the voucher `reversed`. Th
 **Access:** `private`, needs `journalVoucher.read`
 
 **Returns:** `entries` and `total`, as for an account's history.
+
+## Client billing
+
+How each active Master client is billed. The client itself (name, contacts, status) stays in Master; Accounts keeps only how it bills them. A client nobody has set up is billed on the defaults: Net 30, the default currency from Settings, and no hourly rate.
+
+### `GET /accounts/clients`
+
+**Access:** `private`, needs `clientAccount.read`
+
+**Returns:** `clients`, by name: `clientId`, `clientName`, `termsDays`, `currency`, `hourlyRate` (minor units of the currency per hour; missing until set), `version`.
+
+### `PATCH /accounts/clients/:id`
+
+**Access:** `private`, needs `clientAccount.update`
+
+**Body:** at least one of `termsDays` (0 to 365), `currency` (`BDT` or a currency listed in Settings), `hourlyRate` (minor units above zero, such as `4500` for $45.00; `null` clears it); optional `version`. The first change creates the client's billing record.
+
+**Errors:** `404 unknown_client`, `409 version_conflict`, `422 validation_failed` (a currency not in Settings)
+
+## Invoices
+
+Money a client owes. An invoice is built from finished, billable Project management tasks that no invoice has billed yet, plus typed items such as milestones. A task bills its **estimated** hours × the client's hourly rate, rounded to the cent, so the price doesn't change with how long the work took. Its tasks are marked invoiced as soon as the draft is saved, so two invoices never bill the same task; cancelling the invoice frees them.
+
+| Status | Means | Next |
+|---|---|---|
+| `draft` | Being written | Edit (with a reason), submit, cancel |
+| `submitted` | Waiting for someone other than its maker | Approve (issues it), return with a note |
+| `issued` | Recorded: Dr 1300 Accounts receivable, Cr 4100 Service income, in taka at the rate on the issue date | Receive payment; cancel with a reversal while it has no receipts |
+| `cancelled` | Given up, or reversed in the ledger | None |
+
+An invoice is in its own currency (the client's, by default the Settings default). It needs a rate in Settings on or before its issue date (`422 no_exchange_rate` otherwise); approving stores that `exchangeRate` (paisa per unit) and `totalInTaka`. Numbers run `INV-0001` and are never reused. Due date defaults to the issue date plus the client's terms.
+
+**Paid is never typed.** An issued invoice shows `paid` (recorded receipts linked to it), `outstanding`, `pending` (receipts drafted or waiting for approval), `paymentStatus` (`unpaid`, `part_paid`, `paid`, `overdue` from the day after the due date) and `daysOverdue`.
+
+### `GET /accounts/invoices`
+
+**Access:** `private`, needs `invoice.read`
+
+**Query:** `page`, `pageSize`, `status`, `paymentStatus`, `clientId`, `from` and `to` (issue dates), `search` (the start of a number, or part of the client's name)
+
+**Returns:** `invoices`, newest issue date first, `total`, `page`, `pageSize`.
+
+### `POST /accounts/invoices`
+
+**Access:** `private`, needs `invoice.create`
+
+**Body:** `clientId`, `issueDate`, optional `dueDate`, `currency`, `taskIds` (finished, billable tasks on the client's projects that no other invoice bills; the invoice must be in the client's billing currency and the client needs an hourly rate), `items` (each `description`, `amount` in the currency's minor units, optional `milestone`). At least one task or item.
+
+**Returns:** `201` with the draft.
+
+**Errors:** `404 unknown_client`, `422 validation_failed` (a task that isn't the client's, finished, billable or free; no lines; a due date before the issue date), `422 no_exchange_rate`
+
+### `GET /accounts/invoices/billable-tasks`
+
+**Access:** `private`, needs `invoice.create`
+
+**Query:** `clientId`, `from`, `to` (completion dates)
+
+**Returns:** `client` (its billing settings) and `tasks`: `id`, `number`, `title`, `projectId`, `projectName`, `hours`, `date`, and `amount` at the client's rate when it has one.
+
+### `GET /accounts/invoices/:id`
+
+**Access:** `private`, needs `invoice.read`
+
+**Returns:** the invoice, `receipts` (`id`, `number`, `voucherDate`, `amount`, `status`) and `allowedActions` (`edit`, `submit`, `approve`, `return`, `cancel`, `receivePayment`).
+
+### `PATCH /accounts/invoices/:id`
+
+**Access:** `private`, needs `invoice.update`
+
+**Body:** `reason` (required, kept in the history) and at least one of `issueDate`, `dueDate`, `currency`, `taskIds`, `items` (each replaces the whole set); optional `version`. Drafts only.
+
+**Errors:** `409 invoice_not_draft`, `409 version_conflict`, `422 validation_failed`, `422 no_exchange_rate`
+
+### `POST /accounts/invoices/:id/submit`, `/approve`, `/return`
+
+As for vouchers: submit needs `invoice.update`; approve and return need `invoice.read` at the route, and `invoice.approve` or being today's stand-in in the service, never the maker (`403 own_record`). Approve records the receivable in the same transaction. Return takes `note`.
+
+**Errors:** `409 invoice_not_draft`, `409 invoice_not_submitted`, `403 own_record`, `403 forbidden`, `409 version_conflict`
+
+### `POST /accounts/invoices/:id/cancel`
+
+**Access:** `private`, needs `invoice.read`; a draft needs `invoice.update`, an issued invoice needs `invoice.approve` or the stand-in, never its maker.
+
+**Body:** `reason`, optional `version`. An issued invoice is reversed in the ledger, dated today. Its tasks are freed.
+
+**Errors:** `409 invoice_has_receipts` (reverse them first), `409 invoice_not_draft` for one already cancelled or still submitted
+
+### `POST /accounts/invoices/:id/receive-payment`
+
+**Access:** `private`, needs `journalVoucher.create` (the result is a receipt voucher) and `invoice.read`
+
+**Body:** `receivedDate`, `moneyAccountId` (cash or a bank account), optional `amount` in the invoice's currency (all that is still open when left out), `reference`.
+
+**Returns:** `201` with a draft **receipt voucher** (`RV-…`) linked to the invoice (`linkedDocument`). It reaches the books when someone other than its maker approves it. Its lines: Dr the bank at the rate on the received date; Cr 1300 Accounts receivable at the invoice's rate (worked out on the running total, so the last receipt clears exactly what was recorded); the difference to 4200 Exchange gain or 5800 Exchange loss.
+
+**Errors:** `409 invoice_not_issued`, `409 nothing_owed`, `422 more_than_owed` (counting receipts waiting for approval), `422 no_exchange_rate`
+
+### `GET /accounts/invoices/:id/history`
+
+**Access:** `private`, needs `invoice.read`. Changes newest first, with each edit's `reason`.
+
+## Vendors
+
+### `GET /accounts/vendors`, `GET /accounts/vendors/:id`, `GET /accounts/vendors/:id/history`
+
+**Access:** `private`, needs `vendor.read`. The list takes `page`, `pageSize`, `category`, `isActive` (`true` or `false`), `search` (part of the name).
+
+### `POST /accounts/vendors`
+
+**Access:** `private`, needs `vendor.create`
+
+**Body:** `name`, `category` (`rent`, `cloud`, `utilities`, `equipment`, `food_and_events`, `other`), `tdsBasisPoints` (tax deducted at source from their bills: `500` is 5%), optional `contactEmail`, `contactPhone`.
+
+### `PATCH /accounts/vendors/:id`
+
+**Access:** `private`, needs `vendor.update`
+
+**Body:** any of the above (`null` clears a contact), `isActive`; optional `version`. A vendor is deactivated, never deleted. A new TDS rate applies to bills saved after it.
+
+## Bills
+
+Money owed to a vendor, in taka. Each line is quantity (up to 3 decimals) × unit price, rounded to the paisa, and names the expense or asset account it is charged to. TDS is the vendor's rate on the total, rounded to the paisa; the vendor is owed the rest (`netPayable`). Numbers run `B-0001`.
+
+| Status | Means | Next |
+|---|---|---|
+| `draft` | Being written | Edit (with a reason), submit, cancel |
+| `submitted` | Waiting for someone other than its maker | Approve (records it), return with a note |
+| `recorded` | Dr each line's account; Cr 2100 Accounts payable the net; Cr 2300 VAT and tax payable the TDS | Pay; cancel with a reversal while it has no payments |
+| `cancelled` | Given up, or reversed in the ledger | None |
+
+A recorded bill shows `paid`, `outstanding`, `pending`, `paymentStatus` and `daysOverdue`, worked out from the payment vouchers linked to it, as for invoices.
+
+### `GET /accounts/bills`
+
+**Access:** `private`, needs `bill.read`. **Query:** `page`, `pageSize`, `status`, `paymentStatus`, `vendorId`, `from`, `to` (bill dates), `search` (the start of a number, or part of the vendor's name or reference).
+
+### `POST /accounts/bills`
+
+**Access:** `private`, needs `bill.create`
+
+**Body:** `vendorId` (active), optional `vendorReference`, `billDate`, optional `dueDate` (on or after the bill date; defaults to it), `lines` (1 to 200, each `description`, `accountId`, `quantity`, `unitPrice` in paisa). The lines are checked as the ledger will check them.
+
+**Errors:** `404 unknown_vendor`, `422 validation_failed` (an inactive vendor, an unknown or inactive account, a group account, a total of zero)
+
+### `GET /accounts/bills/:id`
+
+**Access:** `private`, needs `bill.read`. Returns the bill, `payments` and `allowedActions` (`edit`, `submit`, `approve`, `return`, `cancel`, `pay`).
+
+### `PATCH /accounts/bills/:id`
+
+**Access:** `private`, needs `bill.update`. **Body:** `reason` (required) and at least one of `vendorId`, `vendorReference` (empty removes it), `billDate`, `dueDate`, `lines`; optional `version`. New lines or a new vendor price it again at the vendor's current TDS rate. Drafts only (`409 bill_not_draft`).
+
+### `POST /accounts/bills/:id/submit`, `/approve`, `/return`, `/cancel`
+
+As for invoices, with `bill.update` and `bill.approve`. Cancelling a recorded bill reverses it and is refused while it has payments (`409 bill_has_payments`).
+
+### `POST /accounts/bills/:id/pay`
+
+**Access:** `private`, needs `journalVoucher.create` (the result is a payment voucher) and `bill.read`
+
+**Body:** `paymentDate`, `moneyAccountId` (cash or a bank account), optional `amount` in paisa (all that is open when left out), `reference`.
+
+**Returns:** `201` with a draft **payment voucher** (`PV-…`) linked to the bill: Dr 2100 Accounts payable, Cr the bank. It reaches the books when someone other than its maker approves it.
+
+**Errors:** `409 bill_not_recorded`, `409 nothing_owed`, `422 more_than_owed`
+
+### `GET /accounts/bills/:id/history`
+
+**Access:** `private`, needs `bill.read`.
+
+## Payments linked to invoices and bills
+
+A receipt or payment voucher made by Receive payment or Pay carries `linkedDocument` (`type`, `id`, `number`, `amount` in the document's currency). It can't be edited (`409 linked_voucher`) or corrected by an update request (`409 linked_voucher`): a wrong one is returned to its maker or reversed, and a new one made from the document. A reversed voucher no longer counts as paid, so the document opens again.
+
+The accounts these post to are the starting chart's 1300, 2100, 2300, 4100, 4200 and 5800, named in one place (`accounts/postingAccounts.ts`). Choosing them in Settings is not built yet.
 
 ## Activity log
 
