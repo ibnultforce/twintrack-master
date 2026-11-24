@@ -23,6 +23,7 @@ import {
   submitInvoice,
   updateInvoice,
 } from './invoice.service.js';
+import { getClientStatement, listClientAccounts } from './clientStatements.js';
 
 const MAX_LINES = 200;
 const MAX_TEXT = 500;
@@ -125,6 +126,13 @@ const handleHistory: RequestHandler = async (req, res) => {
   res.json(await getInvoiceHistory(getActor(req), invoiceId(req), parseRequestQuery(z.object(paginationQueryFields), req.query)));
 };
 
+const handleClientAccounts: RequestHandler = async (_req, res) => {
+  res.json(await listClientAccounts());
+};
+const handleClientStatement: RequestHandler = async (req, res) => {
+  res.json(await getClientStatement(String(req.params.id)));
+};
+
 const BASE = '/accounts/invoices';
 
 /**
@@ -145,6 +153,9 @@ export const invoiceRoutes: ApiRoute[] = [
   { method: 'POST', path: `${BASE}/:id/cancel`, access: 'private', permission: 'invoice.read', bodySchema: cancelBodySchema, handler: handleCancel },
   { method: 'POST', path: `${BASE}/:id/receive-payment`, access: 'private', permission: 'journalVoucher.create', bodySchema: receiveBodySchema, handler: handleReceive },
   { method: 'GET', path: `${BASE}/:id/history`, access: 'private', permission: 'invoice.read', handler: handleHistory },
+  // What each client was billed, paid and owes, and one client's statement: read from invoices and their receipts.
+  { method: 'GET', path: '/accounts/client-accounts', access: 'private', permission: 'invoice.read', handler: handleClientAccounts },
+  { method: 'GET', path: '/accounts/client-accounts/:id', access: 'private', permission: 'invoice.read', handler: handleClientStatement },
 ];
 
 /** Invoices waiting for approval, for the Approvals queue. The amount is in taka at the rate on the issue date. */

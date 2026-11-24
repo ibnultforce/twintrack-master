@@ -14286,6 +14286,142 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /accounts/general-ledger",
+          "method": "GET",
+          "path": "/accounts/general-ledger",
+          "purpose": "Every line posted to one account in a period, oldest first, with the opening balance and a running balance after each line.",
+          "input": "accountId, from, to, page, pageSize",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Cash in hand, November",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/general-ledger?accountId=la_1100&from=2026-11-01&to=2026-11-30",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such account",
+              "expected": 404,
+              "code": "unknown_ledger_account",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/general-ledger?accountId=la_none&from=2026-11-01&to=2026-11-30",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/general-ledger?accountId=la_1100&from=2026-11-01&to=2026-11-30",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/trial-balance",
+          "method": "GET",
+          "path": "/accounts/trial-balance",
+          "purpose": "Every account with lines, its debits, credits and balance, and the grand totals, up to a date.",
+          "input": "to",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The whole ledger",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/trial-balance",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not a date",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/trial-balance?to=2026-13-01",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/client-accounts",
+          "method": "GET",
+          "path": "/accounts/client-accounts",
+          "purpose": "What each client was billed, paid and owes, in taka at the issue rates, with ageing and a rating.",
+          "input": "",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every client with invoices",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/client-accounts",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/client-accounts",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/client-accounts/:id",
+          "method": "GET",
+          "path": "/accounts/client-accounts/:id",
+          "purpose": "One client statement: invoices and receipts by date with the balance owed after each.",
+          "input": "",
+          "access": "Needs invoice.read",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "No such client",
+              "expected": 404,
+              "code": "unknown_client",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/client-accounts/cl_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/client-accounts/cl_nobody",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
         }
       ]
     }

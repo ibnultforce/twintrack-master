@@ -651,6 +651,42 @@ Office stock counted in units: quantities only, since what it cost reaches the b
 
 **Errors:** `409 inventory_item_inactive`, `422 not_enough_stock`, `422 validation_failed`
 
+## General ledger and trial balance
+
+### `GET /accounts/general-ledger`
+
+**Access:** `private`, needs `ledgerAccount.read`
+
+**Query:** `accountId`, `from`, `to` (entry dates, inclusive), `page`, `pageSize`
+
+**Returns:** `account` (`id`, `code`, `name`, `type`, `normalBalance`), `opening` (the balance before `from`), `totalDebit`, `totalCredit`, `closing`, `total` (lines in the period), and `lines`, oldest first: `entryId`, `entryDate`, `memo` (the line's, or the entry's), `entryMemo`, `source` (`type`, `id`, `number` such as `PV-0001`), `isReversal`, `debit`, `credit`, `balance` (running, debits minus credits, carried across pages). Read straight from ledger entries, so an account's `closing` over all dates equals its trial balance figure.
+
+**Errors:** `404 unknown_ledger_account`, `422 validation_failed` (`to` before `from`)
+
+### `GET /accounts/trial-balance`
+
+**Access:** `private`, needs `ledgerAccount.read`. **Query:** optional `to` (entries up to and including it).
+
+**Returns:** `rows` (`accountId`, `code`, `name`, `type`, `debit`, `credit`, `balance`), `totalDebit`, `totalCredit`, `difference` (always 0).
+
+## Client accounts
+
+What each client was billed, paid and still owes, worked out from issued invoices and the recorded receipts linked to them. Amounts are in taka at each invoice's issue rate, as the books recorded them, so the total outstanding equals the 1300 Accounts receivable balance.
+
+### `GET /accounts/client-accounts`
+
+**Access:** `private`, needs `invoice.read`
+
+**Returns:** `ageingBuckets` (`notYetDue`, `days1To30`, `days31To60`, `over60` with labels), `totals` (`billed`, `received`, `outstanding`, `ageing`), and `clients` (active clients with issued invoices): `clientId`, `clientName`, `invoiceCount`, `billed`, `received`, `outstanding`, `overdueCount`, `ageing`, `lastPayment`, `averageDaysToPay` (issue to last receipt, over paid invoices), `rating` (`watch` when any invoice is overdue, otherwise `good`).
+
+### `GET /accounts/client-accounts/:id`
+
+**Access:** `private`, needs `invoice.read`
+
+**Returns:** `client`, the same summary as above, `lines` (invoices and receipts by date: `kind`, `number`, `currency`, `amount` in the invoice currency, `charge` and `payment` in taka, `balance` owed after it) and `dueSoon` (invoice numbers due within 30 days).
+
+**Errors:** `404 unknown_client`
+
 ## Activity log
 
 ### `GET /accounts/cash-bank`

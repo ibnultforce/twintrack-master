@@ -3,7 +3,7 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.13.0",
+    "version": "1.14.0",
     "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
@@ -828,6 +828,30 @@
       "path": "/inventory-items/:id/movements",
       "access": "private",
       "permission": "inventoryItem.update"
+    },
+    {
+      "method": "GET",
+      "path": "/general-ledger",
+      "access": "private",
+      "permission": "ledgerAccount.read"
+    },
+    {
+      "method": "GET",
+      "path": "/trial-balance",
+      "access": "private",
+      "permission": "ledgerAccount.read"
+    },
+    {
+      "method": "GET",
+      "path": "/client-accounts",
+      "access": "private",
+      "permission": "invoice.read"
+    },
+    {
+      "method": "GET",
+      "path": "/client-accounts/:id",
+      "access": "private",
+      "permission": "invoice.read"
     }
   ]
 }
