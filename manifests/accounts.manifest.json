@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.9.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, and the Accounts activity log.",
+    "version": "1.11.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -21,6 +21,7 @@
         "standInApproverId",
         "standInUntil",
         "currencies",
+        "defaultCurrency",
         "exchangeRates",
         "taxRates"
       ],
@@ -28,6 +29,7 @@
         "standInApproverId",
         "standInUntil",
         "currencies",
+        "defaultCurrency",
         "exchangeRates",
         "taxRates"
       ]
@@ -68,7 +70,7 @@
     },
     {
       "key": "journalVoucher",
-      "label": "Journal vouchers",
+      "label": "Vouchers (journal, payment, receipt)",
       "actions": [
         "read",
         "create",
@@ -79,6 +81,9 @@
       "trackedFields": [
         "voucherDate",
         "memo",
+        "party",
+        "reference",
+        "moneyAccountId",
         "lines",
         "total",
         "status",
@@ -87,6 +92,9 @@
       "recordFields": [
         "voucherDate",
         "memo",
+        "party",
+        "reference",
+        "moneyAccountId",
         "lines"
       ]
     },
@@ -201,6 +209,30 @@
     {
       "method": "PATCH",
       "path": "/journal-vouchers/:id",
+      "access": "private",
+      "permission": "journalVoucher.update"
+    },
+    {
+      "method": "POST",
+      "path": "/payment-vouchers",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/payment-vouchers/:id",
+      "access": "private",
+      "permission": "journalVoucher.update"
+    },
+    {
+      "method": "POST",
+      "path": "/receipt-vouchers",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/receipt-vouchers/:id",
       "access": "private",
       "permission": "journalVoucher.update"
     },

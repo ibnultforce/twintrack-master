@@ -9780,7 +9780,7 @@
           "method": "PATCH",
           "path": "/accounts/settings",
           "purpose": "Changes the settings. Rate lists are replaced whole; null clears the stand-in.",
-          "input": "standInApproverId, standInUntil, currencies, exchangeRates, taxRates, version",
+          "input": "standInApproverId, standInUntil, currencies, defaultCurrency, exchangeRates, taxRates, version",
           "access": "Needs setting.update",
           "scenarios": [
             {
@@ -9817,6 +9817,30 @@
                 "path": "/accounts/settings",
                 "as": "karim@twintrack.test",
                 "body": "{\"taxRates\":[]}"
+              }
+            },
+            {
+              "kind": "success",
+              "title": "Makes US dollars the default for new documents",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/settings",
+                "as": "farhana@twintrack.test",
+                "body": "{\"currencies\":[{\"code\":\"USD\",\"name\":\"US dollar\"}],\"defaultCurrency\":\"USD\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A default currency that isn't listed",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/settings",
+                "as": "farhana@twintrack.test",
+                "body": "{\"defaultCurrency\":\"JPY\"}"
               }
             }
           ]
@@ -9962,7 +9986,7 @@
           "method": "GET",
           "path": "/accounts/journal-vouchers",
           "purpose": "Lists journal vouchers, newest date first.",
-          "input": "page, pageSize, status, from, to and search in the query",
+          "input": "page, pageSize, status, from, to and search in the query, type (journal, payment or receipt)",
           "access": "Needs journalVoucher.read",
           "scenarios": [
             {
@@ -10016,6 +10040,16 @@
                 "path": "/accounts/journal-vouchers",
                 "as": "karim@twintrack.test"
               }
+            },
+            {
+              "kind": "success",
+              "title": "Only payment vouchers",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/journal-vouchers?type=payment",
+                "as": "farhana@twintrack.test"
+              }
             }
           ]
         },
@@ -10024,7 +10058,7 @@
           "method": "POST",
           "path": "/accounts/journal-vouchers",
           "purpose": "Saves a balanced journal voucher as a draft, with the next JV number.",
-          "input": "voucherDate, memo, lines (accountId with debit or credit in paisa)",
+          "input": "voucherDate, memo, party, reference, lines",
           "access": "Needs journalVoucher.create",
           "scenarios": [
             {
@@ -10111,8 +10145,8 @@
           "id": "PATCH /accounts/journal-vouchers/:id",
           "method": "PATCH",
           "path": "/accounts/journal-vouchers/:id",
-          "purpose": "Edits a draft. Submitted, recorded and reversed vouchers refuse edits.",
-          "input": "voucherDate, memo, lines, version",
+          "purpose": "Edits a draft journal voucher, with a reason kept in its history. Submitted, recorded and reversed vouchers refuse edits, and payment and receipt vouchers are edited on their own paths.",
+          "input": "voucherDate, memo, party, reference, lines, reason (required), version",
           "access": "Needs journalVoucher.update",
           "scenarios": [
             {
@@ -10135,7 +10169,7 @@
                 "method": "PATCH",
                 "path": "/accounts/journal-vouchers/{{voucherId}}",
                 "as": "farhana@twintrack.test",
-                "body": "{\"memo\":\"November office rent, receipt 4471\"}"
+                "body": "{\"memo\":\"November office rent, receipt 4471\",\"reason\":\"Added the receipt number\"}"
               }
             },
             {
@@ -10163,7 +10197,324 @@
                 "method": "PATCH",
                 "path": "/accounts/journal-vouchers/{{voucherId}}",
                 "as": "farhana@twintrack.test",
-                "body": "{\"memo\":\"Too late\"}"
+                "body": "{\"memo\":\"Too late\",\"reason\":\"Added the receipt number\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason given",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/journal-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-02\",\"memo\":\"November office rent\",\"lines\":[{\"accountId\":\"la_5300\",\"debit\":2500000},{\"accountId\":\"la_1100\",\"credit\":2500000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/journal-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"memo\":\"November office rent, receipt 4471\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/payment-vouchers",
+          "method": "POST",
+          "path": "/accounts/payment-vouchers",
+          "purpose": "Saves a draft payment voucher. Name the cash or bank account and what the money was for; the API adds the cash or bank line, so the voucher always balances.",
+          "input": "voucherDate, memo, party, reference, moneyAccountId, lines (accountId, amount, memo)",
+          "access": "Needs journalVoucher.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A payment from cash",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payment-vouchers",
+                "as": "farhana@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-10\",\"memo\":\"Paying Desh Furniture\",\"party\":\"Desh Furniture\",\"reference\":\"Cheque 004512\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_2100\",\"amount\":1800000,\"memo\":\"Bill DF-221\"}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A money account that isn't cash or a bank",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payment-vouchers",
+                "as": "farhana@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-10\",\"memo\":\"Paying Desh Furniture\",\"party\":\"Desh Furniture\",\"reference\":\"Cheque 004512\",\"moneyAccountId\":\"la_5300\",\"lines\":[{\"accountId\":\"la_2100\",\"amount\":1800000,\"memo\":\"Bill DF-221\"}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payment-vouchers",
+                "as": "karim@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-10\",\"memo\":\"Paying Desh Furniture\",\"party\":\"Desh Furniture\",\"reference\":\"Cheque 004512\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_2100\",\"amount\":1800000,\"memo\":\"Bill DF-221\"}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not signed in",
+              "expected": 401,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/payment-vouchers",
+                "body": "{\"voucherDate\":\"2026-11-10\",\"memo\":\"Paying Desh Furniture\",\"party\":\"Desh Furniture\",\"reference\":\"Cheque 004512\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_2100\",\"amount\":1800000,\"memo\":\"Bill DF-221\"}]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/payment-vouchers/:id",
+          "method": "PATCH",
+          "path": "/accounts/payment-vouchers/:id",
+          "purpose": "Edits a draft payment voucher, with a reason kept in its history. A new money account or new lines rebuild the cash or bank line.",
+          "input": "voucherDate, memo, party, reference, moneyAccountId, lines, reason (required), version",
+          "access": "Needs journalVoucher.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Changes the reference",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payment-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-10\",\"memo\":\"Paying Desh Furniture\",\"party\":\"Desh Furniture\",\"reference\":\"Cheque 004512\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_2100\",\"amount\":1800000,\"memo\":\"Bill DF-221\"}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payment-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reference\":\"Cheque 004513\",\"reason\":\"Wrong cheque number\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason given",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payment-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-10\",\"memo\":\"Paying Desh Furniture\",\"party\":\"Desh Furniture\",\"reference\":\"Cheque 004512\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_2100\",\"amount\":1800000,\"memo\":\"Bill DF-221\"}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payment-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reference\":\"Cheque 004513\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A receipt voucher's id",
+              "expected": 409,
+              "code": "wrong_voucher_type",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipt-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-12\",\"memo\":\"Client payment for October\",\"party\":\"Acme Ltd\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_1300\",\"amount\":250000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payment-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"memo\":\"x\",\"reason\":\"Typo\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/payment-vouchers/jv_none",
+                "as": "karim@twintrack.test",
+                "body": "{\"memo\":\"x\",\"reason\":\"Typo\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/receipt-vouchers",
+          "method": "POST",
+          "path": "/accounts/receipt-vouchers",
+          "purpose": "Saves a draft receipt voucher. Name the cash or bank account and what the money was for; the API adds the cash or bank line, so the voucher always balances.",
+          "input": "voucherDate, memo, party, reference, moneyAccountId, lines (accountId, amount, memo)",
+          "access": "Needs journalVoucher.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A receipt from cash",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipt-vouchers",
+                "as": "farhana@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-12\",\"memo\":\"Client payment for October\",\"party\":\"Acme Ltd\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_1300\",\"amount\":250000}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A money account that isn't cash or a bank",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipt-vouchers",
+                "as": "farhana@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-12\",\"memo\":\"Client payment for October\",\"party\":\"Acme Ltd\",\"moneyAccountId\":\"la_5300\",\"lines\":[{\"accountId\":\"la_1300\",\"amount\":250000}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipt-vouchers",
+                "as": "karim@twintrack.test",
+                "body": "{\"voucherDate\":\"2026-11-12\",\"memo\":\"Client payment for October\",\"party\":\"Acme Ltd\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_1300\",\"amount\":250000}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not signed in",
+              "expected": 401,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/receipt-vouchers",
+                "body": "{\"voucherDate\":\"2026-11-12\",\"memo\":\"Client payment for October\",\"party\":\"Acme Ltd\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_1300\",\"amount\":250000}]}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/receipt-vouchers/:id",
+          "method": "PATCH",
+          "path": "/accounts/receipt-vouchers/:id",
+          "purpose": "Edits a draft receipt voucher, with a reason kept in its history. A new money account or new lines rebuild the cash or bank line.",
+          "input": "voucherDate, memo, party, reference, moneyAccountId, lines, reason (required), version",
+          "access": "Needs journalVoucher.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Changes the reference",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipt-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-12\",\"memo\":\"Client payment for October\",\"party\":\"Acme Ltd\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_1300\",\"amount\":250000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/receipt-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reference\":\"Cheque 004513\",\"reason\":\"Wrong cheque number\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason given",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/receipt-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-12\",\"memo\":\"Client payment for October\",\"party\":\"Acme Ltd\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_1300\",\"amount\":250000}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/receipt-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reference\":\"Cheque 004513\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A payment voucher's id",
+              "expected": 409,
+              "code": "wrong_voucher_type",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/payment-vouchers",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"voucherDate\":\"2026-11-10\",\"memo\":\"Paying Desh Furniture\",\"party\":\"Desh Furniture\",\"reference\":\"Cheque 004512\",\"moneyAccountId\":\"la_1100\",\"lines\":[{\"accountId\":\"la_2100\",\"amount\":1800000,\"memo\":\"Bill DF-221\"}]}",
+                  "save": {
+                    "voucherId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/receipt-vouchers/{{voucherId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"memo\":\"x\",\"reason\":\"Typo\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/receipt-vouchers/jv_none",
+                "as": "karim@twintrack.test",
+                "body": "{\"memo\":\"x\",\"reason\":\"Typo\"}"
               }
             }
           ]

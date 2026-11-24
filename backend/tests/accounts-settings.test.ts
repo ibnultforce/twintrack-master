@@ -2,9 +2,10 @@ import type { Application } from 'express';
 import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
-import { isStandInActive } from '../src/modules/accounts/settings/settings.service.js';
+import { findDefaultCurrency, isStandInActive } from '../src/modules/accounts/settings/settings.service.js';
 import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { AuditLog } from '../src/modules/master/models/auditLog.js';
+import { RecordHistory } from '../src/modules/master/models/recordHistory.js';
 import { useTestDatabase } from './helpers/database.js';
 import { addPerson, importSeedManifests, requestsAs, signIn } from './helpers/signedIn.js';
 import { createTestConfig } from './helpers/testConfig.js';
@@ -113,6 +114,49 @@ describe('Accounts settings', () => {
     expect(refused.status).toBe(422);
     expect(refused.body.error.fields[0].path).toBe('currencies');
     expect((await farhana.patch(BASE, { currencies: [], exchangeRates: [] })).status).toBe(200);
+  });
+
+  describe('default currency', () => {
+    it('is the home currency until someone chooses another', async () => {
+      const response = await (await as('farhana')).get(BASE);
+      expect(response.body).toMatchObject({ homeCurrency: 'BDT', defaultCurrency: 'BDT' });
+      expect(await findDefaultCurrency()).toBe('BDT');
+    });
+
+    it('may be a listed currency, kept in the history, and back to the home currency', async () => {
+      const farhana = await as('farhana');
+      const saved = await farhana.patch(BASE, { currencies: [{ code: 'USD', name: 'US dollar' }], defaultCurrency: 'USD' });
+      expect(saved.status).toBe(200);
+      expect(saved.body.defaultCurrency).toBe('USD');
+      expect(await findDefaultCurrency()).toBe('USD');
+      expect(await RecordHistory.exists({ module: 'accounts', object: 'setting', 'changes.field': 'defaultCurrency' })).toBeTruthy();
+
+      expect((await farhana.patch(BASE, { defaultCurrency: 'BDT' })).body.defaultCurrency).toBe('BDT');
+    });
+
+    it('refuses a currency that is not listed', async () => {
+      const refused = await (await as('farhana')).patch(BASE, { defaultCurrency: 'EUR' });
+      expect(refused.status).toBe(422);
+      expect(refused.body.error.fields[0].path).toBe('defaultCurrency');
+      expect((await (await as('farhana')).patch(BASE, { defaultCurrency: 'usd' })).status).toBe(422);
+    });
+
+    it('refuses removing the currency that is the default', async () => {
+      const farhana = await as('farhana');
+      await farhana.patch(BASE, { currencies: [{ code: 'USD', name: 'US dollar' }], defaultCurrency: 'USD' });
+      const refused = await farhana.patch(BASE, { currencies: [] });
+      expect(refused.status).toBe(422);
+      expect(refused.body.error.fields[0].path).toBe('currencies');
+      expect((await farhana.patch(BASE, { currencies: [], defaultCurrency: 'BDT' })).status).toBe(200);
+    });
+
+    it('is hidden and locked like any other part, when a profile says so', async () => {
+      await AccessProfile.create({ _id: 'ap_no_default', name: 'No default', grants: { accounts: { setting: { actions: ['read', 'update'], fieldAccess: { defaultCurrency: 'hidden' } } } } });
+      await addPerson('sabbir', { profileId: 'ap_no_default' });
+      const sabbir = await as('sabbir');
+      expect((await sabbir.get(BASE)).body).not.toHaveProperty('defaultCurrency');
+      expect((await sabbir.patch(BASE, { defaultCurrency: 'BDT' })).body.error.code).toBe('field_not_editable');
+    });
   });
 
   it('clears the end date along with the stand-in', async () => {

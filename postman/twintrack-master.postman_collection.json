@@ -436,6 +436,14 @@
     {
       "key": "updateRequestId",
       "value": "ur_does_not_exist"
+    },
+    {
+      "key": "paymentVoucherId",
+      "value": ""
+    },
+    {
+      "key": "receiptVoucherId",
+      "value": ""
     }
   ],
   "item": [
@@ -14328,6 +14336,48 @@
           ]
         },
         {
+          "name": "Set a default currency that is not listed (refused)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"defaultCurrency\": \"JPY\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 422', () => pm.response.to.have.status(422));",
+                  "pm.test('points at defaultCurrency', () => pm.expect(pm.response.json().error.fields[0].path).to.eql('defaultCurrency'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "List stand-in approver candidates",
           "request": {
             "method": "GET",
@@ -14589,7 +14639,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"memo\": \"November office rent, receipt 4471\"\n}"
+              "raw": "{\n  \"memo\": \"November office rent, receipt 4471\",\n  \"reason\": \"Added the receipt number\"\n}"
             }
           },
           "event": [
@@ -14786,6 +14836,178 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save a payment voucher as a draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/payment-vouchers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "payment-vouchers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voucherDate\": \"2026-11-10\",\n  \"memo\": \"Paying Desh Furniture\",\n  \"party\": \"Desh Furniture\",\n  \"reference\": \"Cheque 004512\",\n  \"moneyAccountId\": \"la_1100\",\n  \"lines\": [\n    {\n      \"accountId\": \"la_2100\",\n      \"amount\": 1800000,\n      \"memo\": \"Bill DF-221\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('paymentVoucherId', pm.response.json().id);",
+                  "pm.test('is a payment numbered PV', () => pm.expect(pm.response.json().number).to.match(/^PV-/));",
+                  "pm.test('adds the cash line', () => pm.expect(pm.response.json().lines).to.have.length(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit a draft payment voucher",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/payment-vouchers/{{paymentVoucherId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "payment-vouchers",
+                "{{paymentVoucherId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"Cheque 004513\",\n  \"reason\": \"Wrong cheque number\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('keeps the new reference', () => pm.expect(pm.response.json().reference).to.eql('Cheque 004513'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save a receipt voucher as a draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/receipt-vouchers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "receipt-vouchers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voucherDate\": \"2026-11-12\",\n  \"memo\": \"Client payment for October\",\n  \"party\": \"Acme Ltd\",\n  \"moneyAccountId\": \"la_1100\",\n  \"lines\": [\n    {\n      \"accountId\": \"la_1300\",\n      \"amount\": 250000\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('receiptVoucherId', pm.response.json().id);",
+                  "pm.test('is a receipt numbered RV', () => pm.expect(pm.response.json().number).to.match(/^RV-/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit a draft receipt voucher without a reason (refused)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/receipt-vouchers/{{receiptVoucherId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "receipt-vouchers",
+                "{{receiptVoucherId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memo\": \"Client payment, October\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 422', () => pm.response.to.have.status(422));"
                 ]
               }
             }

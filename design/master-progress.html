@@ -381,6 +381,18 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>24 November 2026: Accounts default currency (manifest 1.11.0)</h3>
+      <ul>
+        <li>Accounts settings take <code>defaultCurrency</code>: the currency new documents such as invoices and bills start in, BDT or one of the listed currencies (BDT until set). The books stay in taka, now shown as <code>homeCurrency</code>. A currency that is the default can't be removed from the list. It is a settings field a profile can hide or lock, and its changes are kept in the history. The Settings screen in the Accounts app gets a Default currency choice.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
+      <h3>24 November 2026: Accounts payment and receipt vouchers (manifest 1.10.0)</h3>
+      <ul>
+        <li>New <code>POST</code> and <code>PATCH /accounts/payment-vouchers</code> and <code>/accounts/receipt-vouchers</code>: name one cash or bank account and what the money was for, and the API adds the cash or bank line. They are numbered PV and RV, share the journal voucher list, approval flow and <code>journalVoucher</code> permissions, and a voucher shows <code>voucherType</code>. Every voucher takes <code>party</code> and <code>reference</code>, and the list filters by <code>type</code>. Every edit to a draft now needs a <code>reason</code>, kept on the history entry. A correction to a recorded payment or receipt must still move money through its cash or bank account. New Payment voucher, Receipt voucher and Edit voucher screens in the Accounts app.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>24 November 2026: Accounts review against the specification (manifest 1.9.0)</h3>
       <ul>
         <li>Bank account numbers are masked (<code>•••• 7712</code>) in every response, history included; the full number comes only from the new <code>POST /accounts/ledger-accounts/:id/reveal-bank-number</code>, which writes <code>ledgerAccount.bankNumberRevealed</code> to the activity log. Chart accounts gain a computed <code>balance</code>. Update requests and their corrections in Change history now also need <code>journalVoucher.read</code>, so voucher details never show to someone who can't read vouchers; the request list adds a <code>summary</code>. A recorded voucher shows <code>waitingUpdateRequest</code> and turns off <code>requestCorrection</code> while one waits.</li>

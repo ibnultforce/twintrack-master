@@ -7,7 +7,7 @@ import { writeRecordHistory } from '../../master/records/recordHistory.service.j
 import { findUserById } from '../../master/users/users.repository.js';
 import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
 import { todayAsEntryDate } from '../ledger/ledger.service.js';
-import { ACCOUNTS_SETTINGS_ID, type AccountsSettingsDoc, type Currency, type ExchangeRate } from '../models/accountsSettings.js';
+import { ACCOUNTS_SETTINGS_ID, HOME_CURRENCY, type AccountsSettingsDoc, type Currency, type ExchangeRate } from '../models/accountsSettings.js';
 import { findApproverCandidates, findOrCreateSettings, saveSettings, type SettingsChanges } from './settings.repository.js';
 
 const SETTINGS_RESOURCE = 'setting';
@@ -22,6 +22,13 @@ const invalidField = (path: string, message: string) => new ApiError(422, 'valid
 export function isStandInActive(settings: Pick<AccountsSettingsDoc, 'standInApproverId' | 'standInUntil'>, today = todayAsEntryDate()): boolean {
   if (!settings.standInApproverId) return false;
   return !settings.standInUntil || today <= settings.standInUntil;
+}
+
+const defaultCurrencyOf = (settings: Pick<AccountsSettingsDoc, 'defaultCurrency'>) => settings.defaultCurrency ?? HOME_CURRENCY;
+
+/** The currency a new document starts in, for features such as invoices and bills to offer first. */
+export async function findDefaultCurrency(): Promise<string> {
+  return defaultCurrencyOf(await findOrCreateSettings());
 }
 
 /** The person who may approve as a stand-in today, or undefined when nobody may. */
@@ -49,7 +56,9 @@ async function toFullSettingsView(settings: AccountsSettingsDoc) {
     standInApprover: settings.standInApproverId ? { id: settings.standInApproverId, name: standIn?.name } : null,
     standInUntil: settings.standInUntil,
     isStandInActive: isStandInActive(settings),
+    homeCurrency: HOME_CURRENCY,
     currencies: [...settings.currencies].sort((first, second) => first.code.localeCompare(second.code)),
+    defaultCurrency: defaultCurrencyOf(settings),
     // By currency, then newest first, which is how people read a list of rates.
     exchangeRates: [...settings.exchangeRates].sort(
       (first, second) => first.currency.localeCompare(second.currency) || second.effectiveFrom.localeCompare(first.effectiveFrom),
@@ -92,6 +101,16 @@ function assertRatesNameKnownCurrencies(currencies: Currency[], rates: ExchangeR
   throw invalidField(`exchangeRates.${index}.currency`, `${missing} isn't one of the currencies; add it first`);
 }
 
+/**
+ * The default must be the home currency or a listed one. When the list is being changed, the error points at the
+ * currency being removed; otherwise at the default.
+ */
+function assertDefaultCurrencyIsKnown(currencies: Currency[], defaultCurrency: string, isChangingDefault: boolean): void {
+  if (defaultCurrency === HOME_CURRENCY || currencies.some((currency) => currency.code === defaultCurrency)) return;
+  if (isChangingDefault) throw invalidField('defaultCurrency', `${defaultCurrency} isn't one of the currencies; add it first`);
+  throw invalidField('currencies', `${defaultCurrency} is the default currency; choose another default first`);
+}
+
 async function assertValidChanges(existing: AccountsSettingsDoc, changes: SettingsChanges): Promise<void> {
   if (changes.standInApproverId) {
     const candidates = await findApproverCandidates();
@@ -108,6 +127,7 @@ async function assertValidChanges(existing: AccountsSettingsDoc, changes: Settin
     assertUnique(changes.exchangeRates.map((rate) => `${rate.currency} from ${rate.effectiveFrom}`), 'exchangeRates', 'the rate');
   }
   assertRatesNameKnownCurrencies(changes.currencies ?? existing.currencies, changes.exchangeRates ?? existing.exchangeRates, changes.currencies !== undefined);
+  assertDefaultCurrencyIsKnown(changes.currencies ?? existing.currencies, changes.defaultCurrency ?? defaultCurrencyOf(existing), changes.defaultCurrency !== undefined);
   if (changes.taxRates) assertUnique(changes.taxRates.map((rate) => rate.code), 'taxRates', 'the code');
 }
 

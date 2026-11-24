@@ -35,14 +35,14 @@ function listChanges(trackedFields: string[], before: Record<string, unknown> | 
  */
 export async function writeRecordHistory(
   ref: RecordRef,
-  event: { action: RecordHistoryDoc['action']; actor: Actor; before?: object; after?: object },
+  event: { action: RecordHistoryDoc['action']; actor: Actor; before?: object; after?: object; reason?: string },
   session: ClientSession,
 ): Promise<void> {
   const trackedFields = await findTrackedFields(ref.module, ref.object, session);
   const changes = listChanges(trackedFields, event.before as Record<string, unknown>, event.after as Record<string, unknown>);
   if (event.action === 'updated' && changes.length === 0) return;
   await RecordHistory.create(
-    [{ ...ref, at: new Date(), action: event.action, changes, actorId: event.actor.user._id, actorName: event.actor.user.name }],
+    [{ ...ref, at: new Date(), action: event.action, changes, ...(event.reason && { reason: event.reason }), actorId: event.actor.user._id, actorName: event.actor.user.name }],
     { session },
   );
 }
@@ -56,6 +56,6 @@ export async function listRecordHistory(ref: RecordRef, page: PageRequest) {
   ]);
   return {
     total,
-    entries: entries.map(({ _id, at, action, changes, actorId, actorName }) => ({ id: String(_id), at, action, changes, actorId, actorName })),
+    entries: entries.map(({ _id, at, action, changes, reason, actorId, actorName }) => ({ id: String(_id), at, action, changes, ...(reason && { reason }), actorId, actorName })),
   };
 }

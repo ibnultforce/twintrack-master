@@ -4,13 +4,12 @@ import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { parseRequestBody } from '../../../lib/validation.js';
 import { getActor } from '../../master/access/caller.js';
 import { accountingDateField, recordIdField, versionField } from '../accountsFields.js';
+import { HOME_CURRENCY } from '../models/accountsSettings.js';
 import { getSettings, listApproverCandidates, updateSettings } from './settings.service.js';
 
 const MAX_RATES = 100;
 /** 1,000,000.00 taka per unit: far above any real rate, and a guard against a misplaced decimal point. */
 const MAX_PAISA_PER_UNIT = 100_000_000;
-/** The currency the books are kept in, which never needs a rate. */
-const HOME_CURRENCY = 'BDT';
 /** 100%. */
 const MAX_BASIS_POINTS = 10_000;
 
@@ -43,6 +42,8 @@ const updateBodySchema = z
     standInApproverId: recordIdField.nullable().optional(),
     standInUntil: accountingDateField.nullable().optional(),
     currencies: z.array(currencySchema).max(MAX_RATES).optional(),
+    // The home currency or one of the currencies; checked against the list in the service.
+    defaultCurrency: z.string().trim().regex(/^[A-Z]{3,10}$/, 'must be a currency code, such as BDT or USD').optional(),
     exchangeRates: z.array(exchangeRateSchema).max(MAX_RATES).optional(),
     taxRates: z.array(taxRateSchema).max(MAX_RATES).optional(),
     version: versionField.optional(),

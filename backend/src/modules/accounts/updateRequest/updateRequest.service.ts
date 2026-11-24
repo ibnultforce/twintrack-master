@@ -10,6 +10,7 @@ import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
 import { assertMayDecide, mayDecide } from '../approvals/approvalRules.js';
 import { findJournalVoucherById } from '../journalVoucher/journalVoucher.repository.js';
 import { correctRecordedVoucher } from '../journalVoucher/journalVoucher.service.js';
+import { assertKeepsMoneyLine } from '../journalVoucher/moneyVoucher.js';
 import { checkBalancedLines, type NewLedgerLine } from '../ledger/ledger.service.js';
 import type { JournalVoucherDoc } from '../models/journalVoucher.js';
 import { CORRECTABLE_RECORD_TYPES, type CorrectableRecordType, type UpdateRequestDoc, type UpdateRequestStatus, type VoucherContent } from '../models/updateRequest.js';
@@ -146,6 +147,7 @@ export async function createUpdateRequest(actor: Actor, details: NewUpdateReques
   if (await findWaitingRequestFor(voucher._id)) throw alreadyWaiting(voucher.number);
 
   const checked = details.changes.lines ? await checkBalancedLines(details.changes.lines) : undefined;
+  if (checked) assertKeepsMoneyLine(voucher, checked.lines);
   const before = contentOf(voucher);
   const after: VoucherContent = {
     voucherDate: details.changes.voucherDate ?? before.voucherDate,

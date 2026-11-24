@@ -4,6 +4,9 @@ import { addRecordFields, type RecordFields } from '../../../lib/records/recordF
 /** The one settings record. Its id never changes, so reads and writes always find it. */
 export const ACCOUNTS_SETTINGS_ID = 'accounts';
 
+/** The currency the books are kept in. Every ledger amount is in it, and it never needs an exchange rate. */
+export const HOME_CURRENCY = 'BDT';
+
 /** A foreign currency the company deals in. Exchange rates can name only these. */
 export interface Currency {
   /** ISO 4217 code, such as USD. Never BDT, the home currency. */
@@ -37,6 +40,11 @@ export interface AccountsSettingsDoc extends RecordFields {
   /** The last day (YYYY-MM-DD) the stand-in may approve. Without it, the stand-in has no end date. */
   standInUntil?: string;
   currencies: Currency[];
+  /**
+   * The currency new documents, such as invoices and bills, start in: the home currency or one of `currencies`.
+   * People can still pick another per document. Settings saved before it existed have none, which means the home currency.
+   */
+  defaultCurrency?: string;
   exchangeRates: ExchangeRate[];
   taxRates: TaxRate[];
 }
@@ -50,6 +58,7 @@ const accountsSettingsSchema = new Schema<AccountsSettingsDoc>(
       type: [new Schema<Currency>({ code: { type: String, required: true }, name: { type: String, required: true } }, { _id: false })],
       default: [],
     },
+    defaultCurrency: String,
     exchangeRates: {
       type: [
         new Schema<ExchangeRate>(

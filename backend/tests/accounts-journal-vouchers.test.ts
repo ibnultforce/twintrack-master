@@ -130,12 +130,12 @@ describe('journal vouchers', () => {
     it('edits a draft, and refuses edits once it is submitted', async () => {
       const rahim = await as('rahim');
       const created = await rahim.post(BASE, rentVoucher);
-      const edited = await rahim.patch(`${BASE}/${created.body.id}`, { memo: 'Rent for November', version: created.body.version });
+      const edited = await rahim.patch(`${BASE}/${created.body.id}`, { memo: 'Rent for November', reason: 'Clearer memo', version: created.body.version });
       expect(edited.status).toBe(200);
       expect(edited.body.memo).toBe('Rent for November');
 
       await rahim.post(`${BASE}/${created.body.id}/submit`);
-      const refused = await rahim.patch(`${BASE}/${created.body.id}`, { memo: 'Changed after submitting' });
+      const refused = await rahim.patch(`${BASE}/${created.body.id}`, { memo: 'Changed after submitting', reason: 'Late change' });
       expect(refused.status).toBe(409);
       expect(refused.body.error.code).toBe('voucher_not_draft');
     });
@@ -143,8 +143,8 @@ describe('journal vouchers', () => {
     it('refuses an edit made from an old copy', async () => {
       const rahim = await as('rahim');
       const created = await rahim.post(BASE, rentVoucher);
-      await rahim.patch(`${BASE}/${created.body.id}`, { memo: 'First edit', version: 0 });
-      expect((await rahim.patch(`${BASE}/${created.body.id}`, { memo: 'Second edit', version: 0 })).status).toBe(409);
+      await rahim.patch(`${BASE}/${created.body.id}`, { memo: 'First edit', reason: 'Typo', version: 0 });
+      expect((await rahim.patch(`${BASE}/${created.body.id}`, { memo: 'Second edit', reason: 'Typo', version: 0 })).status).toBe(409);
     });
   });
 
@@ -270,7 +270,7 @@ describe('journal vouchers', () => {
       expect(returned.body).toMatchObject({ status: 'draft', returnNote: 'Attach the rent receipt number to the memo.' });
 
       const rahim = await as('rahim');
-      await rahim.patch(`${BASE}/${voucherId}`, { memo: 'November office rent, receipt 4471' });
+      await rahim.patch(`${BASE}/${voucherId}`, { memo: 'November office rent, receipt 4471', reason: 'Added the receipt number' });
       const resubmitted = await rahim.post(`${BASE}/${voucherId}/submit`);
       expect(resubmitted.body.status).toBe('submitted');
       expect(resubmitted.body.returnNote).toBeUndefined();

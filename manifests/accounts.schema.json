@@ -153,6 +153,10 @@
         "isStandInActive": {
           "type": "boolean"
         },
+        "homeCurrency": {
+          "const": "BDT",
+          "description": "The currency the books are kept in; every ledger amount is in it"
+        },
         "currencies": {
           "type": "array",
           "description": "Foreign currencies the company deals in, by code. Exchange rates name only these",
@@ -175,6 +179,11 @@
               }
             }
           }
+        },
+        "defaultCurrency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3,10}$",
+          "description": "The currency new documents such as invoices and bills start in: BDT or one of the currencies. People can pick another per document. BDT when never set"
         },
         "exchangeRates": {
           "type": "array",
@@ -244,9 +253,10 @@
     },
     "JournalVoucher": {
       "type": "object",
-      "description": "A manual journal entry that a second person approves before it reaches the ledger.",
+      "description": "A voucher a second person approves before it reaches the ledger: a journal voucher (any balanced lines), a payment out of one cash or bank account, or a receipt into one.",
       "required": [
         "id",
+        "voucherType",
         "number",
         "voucherDate",
         "memo",
@@ -259,9 +269,18 @@
         "id": {
           "type": "string"
         },
+        "voucherType": {
+          "enum": [
+            "journal",
+            "payment",
+            "receipt"
+          ],
+          "description": "Vouchers saved before payment and receipt vouchers existed are journal"
+        },
         "number": {
           "type": "string",
-          "pattern": "^JV-\\d{4,}$"
+          "pattern": "^(JV|PV|RV)-\\d{4,}$",
+          "description": "One series per type: JV, PV, RV"
         },
         "voucherDate": {
           "type": "string",
@@ -269,6 +288,18 @@
         },
         "memo": {
           "type": "string"
+        },
+        "party": {
+          "type": "string",
+          "description": "Who was paid, or who paid. Required on payment and receipt vouchers"
+        },
+        "reference": {
+          "type": "string",
+          "description": "The outside document, such as a cheque or bill number"
+        },
+        "moneyAccountId": {
+          "type": "string",
+          "description": "Payment and receipt vouchers only: the cash or bank account the money moved through"
         },
         "lines": {
           "type": "array",
@@ -298,7 +329,8 @@
                 "type": "string"
               }
             }
-          }
+          },
+          "description": "The full balanced lines, including the cash or bank line that the API adds to a payment or receipt"
         },
         "total": {
           "type": "integer",

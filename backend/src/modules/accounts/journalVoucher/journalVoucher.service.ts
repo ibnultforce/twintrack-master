@@ -11,7 +11,7 @@ import { findUsersByIds } from '../../master/users/users.repository.js';
 import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
 import { assertMayDecide, mayDecide } from '../approvals/approvalRules.js';
 import { checkBalancedLines, postEntry, reverseEntry, type NewLedgerLine } from '../ledger/ledger.service.js';
-import type { JournalVoucherDoc, JournalVoucherStatus } from '../models/journalVoucher.js';
+import type { JournalVoucherDoc, JournalVoucherStatus, VoucherType } from '../models/journalVoucher.js';
 import type { LedgerLine } from '../models/ledgerEntry.js';
 import { findWaitingRequestFor } from '../updateRequest/updateRequest.repository.js';
 import {
@@ -23,16 +23,36 @@ import {
   takeNextVoucherNumber,
   type JournalVoucherListFilter,
 } from './journalVoucher.repository.js';
+import { assertIsMoneyAccount, buildMoneyVoucherLines, itemsOf, type MoneyVoucherItem, type MoneyVoucherType } from './moneyVoucher.js';
 
 const JOURNAL_VOUCHER_RESOURCE = 'journalVoucher';
 const APPROVE_PERMISSION = 'journalVoucher.approve';
-const NUMBER_PREFIX = 'JV-';
+const NUMBER_PREFIXES: Record<VoucherType, string> = { journal: 'JV-', payment: 'PV-', receipt: 'RV-' };
 const NUMBER_DIGITS = 4;
 
-export interface JournalVoucherDetails {
+/** What a person writes on any voucher. */
+interface VoucherHeader {
   voucherDate: string;
   memo: string;
+  party?: string;
+  reference?: string;
+}
+
+export interface JournalVoucherDetails extends VoucherHeader {
   lines: NewLedgerLine[];
+}
+
+/** A payment or receipt: one cash or bank account, and what the money was for. */
+export interface MoneyVoucherDetails extends VoucherHeader {
+  party: string;
+  moneyAccountId: string;
+  lines: MoneyVoucherItem[];
+}
+
+/** Every edit to a draft says why, and the reason is kept in the voucher's history. */
+interface DraftEdit {
+  reason: string;
+  version?: number;
 }
 
 const fieldRulesFor = (actor: Actor) => readFieldRules(actor, ACCOUNTS_MODULE_KEY, JOURNAL_VOUCHER_RESOURCE);
@@ -43,6 +63,18 @@ const STATUS_LABELS: Record<JournalVoucherStatus, string> = { draft: 'a draft', 
 
 const wrongStatus = (voucher: JournalVoucherDoc, allowed: JournalVoucherStatus, action: string) =>
   new ApiError(409, `voucher_not_${allowed}`, `This voucher is ${STATUS_LABELS[voucher.status]}, so it can't be ${action}.`);
+
+const TYPE_LABELS: Record<VoucherType, string> = { journal: 'journal', payment: 'payment', receipt: 'receipt' };
+
+/** Vouchers saved before payment and receipt vouchers existed have no type, and are journal vouchers. */
+const typeOf = (voucher: Pick<JournalVoucherDoc, 'voucherType'>): VoucherType => voucher.voucherType ?? 'journal';
+
+function assertType(voucher: JournalVoucherDoc, expected: VoucherType): void {
+  const actual = typeOf(voucher);
+  if (actual !== expected) {
+    throw new ApiError(409, 'wrong_voucher_type', `${voucher.number} is a ${TYPE_LABELS[actual]} voucher. Edit it as one.`);
+  }
+}
 
 function assertStatus(voucher: JournalVoucherDoc, allowed: JournalVoucherStatus, action: string): void {
   if (voucher.status !== allowed) throw wrongStatus(voucher, allowed, action);
@@ -65,9 +97,13 @@ const personRef = (id: string | undefined, names: Map<string, string>) => (id ? 
 function toJournalVoucherView(voucher: JournalVoucherDoc, rules: FieldRules, names: Map<string, string>) {
   return redactRecord({
     id: voucher._id,
+    voucherType: typeOf(voucher),
     number: voucher.number,
     voucherDate: voucher.voucherDate,
     memo: voucher.memo,
+    party: voucher.party,
+    reference: voucher.reference,
+    moneyAccountId: voucher.moneyAccountId,
     lines: voucher.lines,
     total: voucher.total,
     status: voucher.status,
@@ -102,11 +138,12 @@ async function changeVoucher(
   auditAction: string,
   buildUpdate: (session: ClientSession) => Promise<UpdateQuery<JournalVoucherDoc>>,
   expectedVersion = existing.version,
+  reason?: string,
 ): Promise<JournalVoucherDoc> {
   return runInTransaction(async (session) => {
     const update = await buildUpdate(session);
     const saved = await changeJournalVoucher(existing._id, update, { actorId: actor.user._id, expectedVersion, session });
-    await writeRecordHistory(historyRef(existing._id), { action: 'updated', actor, before: existing, after: saved }, session);
+    await writeRecordHistory(historyRef(existing._id), { action: 'updated', actor, before: existing, after: saved, reason }, session);
     await recordAudit({ action: auditAction, ...auditFields(actor, saved) }, session);
     return saved;
   });
@@ -144,13 +181,30 @@ export async function getJournalVoucher(actor: Actor, voucherId: string) {
   };
 }
 
-export async function createJournalVoucher(actor: Actor, details: JournalVoucherDetails) {
-  assertMayWriteFields(await fieldRulesFor(actor), Object.keys(details), 'create');
-  const { lines, total } = await checkBalancedLines(details.lines);
-  const number = `${NUMBER_PREFIX}${String(await takeNextVoucherNumber()).padStart(NUMBER_DIGITS, '0')}`;
+/** The header fields to save: a blank party or reference is left out on create and removed on edit. */
+function headerChanges(changes: Partial<VoucherHeader>): { $set: Partial<VoucherHeader>; $unset: Record<string, 1> } {
+  const $set: Partial<VoucherHeader> = { ...(changes.voucherDate && { voucherDate: changes.voucherDate }), ...(changes.memo && { memo: changes.memo }) };
+  const $unset: Record<string, 1> = {};
+  for (const field of ['party', 'reference'] as const) {
+    const value = changes[field];
+    if (value === undefined) continue;
+    if (value) $set[field] = value;
+    else $unset[field] = 1;
+  }
+  return { $set, $unset };
+}
+
+async function insertVoucher(actor: Actor, voucherType: VoucherType, header: VoucherHeader, lines: NewLedgerLine[], moneyAccountId?: string) {
+  const checked = await checkBalancedLines(lines);
+  const number = `${NUMBER_PREFIXES[voucherType]}${String(await takeNextVoucherNumber(voucherType)).padStart(NUMBER_DIGITS, '0')}`;
+  const { $set: headerFields } = headerChanges(header);
 
   const voucher = await runInTransaction(async (session) => {
-    const created = await insertJournalVoucher({ _id: `jv_${randomUUID()}`, number, voucherDate: details.voucherDate, memo: details.memo, lines, total }, actor.user._id, session);
+    const created = await insertJournalVoucher(
+      { _id: `jv_${randomUUID()}`, voucherType, number, voucherDate: header.voucherDate, memo: header.memo, ...headerFields, ...(moneyAccountId && { moneyAccountId }), ...checked },
+      actor.user._id,
+      session,
+    );
     await writeRecordHistory(historyRef(created._id), { action: 'created', actor, after: created }, session);
     await recordAudit({ action: 'journalVoucher.created', ...auditFields(actor, created) }, session);
     return created;
@@ -158,17 +212,63 @@ export async function createJournalVoucher(actor: Actor, details: JournalVoucher
   return toViewFor(actor, voucher);
 }
 
-/** Edits a draft. Once submitted, a voucher changes only by being returned to its maker, or reversed once recorded. */
-export async function updateJournalVoucher(actor: Actor, voucherId: string, request: Partial<JournalVoucherDetails> & { version?: number }) {
-  const { version, ...changes } = request;
-  const existing = await requireJournalVoucher(voucherId);
-  assertStatus(existing, 'draft', 'edited');
-  assertMayWriteFields(await fieldRulesFor(actor), Object.keys(changes), 'update');
-  const checked = changes.lines ? await checkBalancedLines(changes.lines) : undefined;
+export async function createJournalVoucher(actor: Actor, details: JournalVoucherDetails) {
+  assertMayWriteFields(await fieldRulesFor(actor), Object.keys(details), 'create');
+  const { lines, ...header } = details;
+  return insertVoucher(actor, 'journal', header, lines);
+}
 
-  const $set = { ...(changes.voucherDate && { voucherDate: changes.voucherDate }), ...(changes.memo && { memo: changes.memo }), ...checked };
-  const saved = await changeVoucher(actor, existing, 'journalVoucher.updated', async () => ({ $set }), version);
+/** Makes a draft payment or receipt voucher, building its cash or bank line from the items. */
+export async function createMoneyVoucher(actor: Actor, voucherType: MoneyVoucherType, details: MoneyVoucherDetails) {
+  assertMayWriteFields(await fieldRulesFor(actor), Object.keys(details), 'create');
+  const { lines: items, moneyAccountId, ...header } = details;
+  await assertIsMoneyAccount(moneyAccountId);
+  return insertVoucher(actor, voucherType, header, buildMoneyVoucherLines(voucherType, moneyAccountId, items), moneyAccountId);
+}
+
+/** The draft to edit, checked for type, status and field access before anything is worked out. */
+async function requireEditableDraft(actor: Actor, voucherId: string, voucherType: VoucherType, changedFields: string[]): Promise<JournalVoucherDoc> {
+  const existing = await requireJournalVoucher(voucherId);
+  assertType(existing, voucherType);
+  assertStatus(existing, 'draft', 'edited');
+  assertMayWriteFields(await fieldRulesFor(actor), changedFields, 'update');
+  return existing;
+}
+
+/** Saves an edit to a draft, with its reason in the history. */
+async function saveDraftEdit(actor: Actor, existing: JournalVoucherDoc, update: UpdateQuery<JournalVoucherDoc>, edit: DraftEdit) {
+  const saved = await changeVoucher(actor, existing, 'journalVoucher.updated', async () => update, edit.version, edit.reason);
   return toViewFor(actor, saved);
+}
+
+/**
+ * Edits a draft journal voucher. Once submitted, a voucher changes only by being returned to its maker, or, once
+ * recorded, through an update request or a reversal.
+ */
+export async function updateJournalVoucher(actor: Actor, voucherId: string, request: Partial<JournalVoucherDetails> & DraftEdit) {
+  const { version, reason, lines, ...header } = request;
+  const existing = await requireEditableDraft(actor, voucherId, 'journal', Object.keys({ ...header, ...(lines && { lines }) }));
+  const checked = lines ? await checkBalancedLines(lines) : undefined;
+  const { $set, $unset } = headerChanges(header);
+  return saveDraftEdit(actor, existing, { $set: { ...$set, ...checked }, $unset }, { reason, version });
+}
+
+/** Edits a draft payment or receipt. A new money account or new items rebuild its lines; the part not sent is kept. */
+export async function updateMoneyVoucher(actor: Actor, voucherType: MoneyVoucherType, voucherId: string, request: Partial<MoneyVoucherDetails> & DraftEdit) {
+  const { version, reason, lines: newItems, moneyAccountId: newMoneyAccountId, ...header } = request;
+  const changedFields = Object.keys({ ...header, ...(newItems && { lines: newItems }), ...(newMoneyAccountId && { moneyAccountId: newMoneyAccountId }) });
+  const existing = await requireEditableDraft(actor, voucherId, voucherType, changedFields);
+
+  let linesUpdate = {};
+  if (newItems || newMoneyAccountId) {
+    const moneyAccountId = newMoneyAccountId ?? existing.moneyAccountId;
+    if (!moneyAccountId) throw new Error(`${voucherType} voucher ${existing._id} has no money account.`);
+    if (newMoneyAccountId) await assertIsMoneyAccount(newMoneyAccountId);
+    const items = newItems ?? itemsOf({ ...existing, voucherType });
+    linesUpdate = { moneyAccountId, ...(await checkBalancedLines(buildMoneyVoucherLines(voucherType, moneyAccountId, items))) };
+  }
+  const { $set, $unset } = headerChanges(header);
+  return saveDraftEdit(actor, existing, { $set: { ...$set, ...linesUpdate }, $unset }, { reason, version });
 }
 
 /** Sends a draft for approval. The lines are checked again, since an account may have been closed since it was saved. */

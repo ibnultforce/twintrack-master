@@ -181,7 +181,9 @@ One record for the whole module, created empty the first time it is read.
   "standInApprover": { "id": "u_05", "name": "Rumana" },
   "standInUntil": "2026-12-31",
   "isStandInActive": true,
+  "homeCurrency": "BDT",
   "currencies": [{ "code": "EUR", "name": "Euro" }, { "code": "USD", "name": "US dollar" }],
+  "defaultCurrency": "USD",
   "exchangeRates": [
     { "currency": "EUR", "effectiveFrom": "2026-11-01", "paisaPerUnit": 13100 },
     { "currency": "USD", "effectiveFrom": "2026-11-01", "paisaPerUnit": 12250 }
@@ -199,11 +201,13 @@ Each part of the settings is a field of the `setting` resource (`standInApprover
 
 **Access:** `private`, needs `setting.update`
 
-**Body:** at least one of `standInApproverId` (`null` clears it, and its end date), `standInUntil` (YYYY-MM-DD, the last day; `null` for no end), `currencies`, `exchangeRates`, `taxRates`; optional `version`. Rate lists replace the saved list whole.
+**Body:** at least one of `standInApproverId` (`null` clears it, and its end date), `standInUntil` (YYYY-MM-DD, the last day; `null` for no end), `currencies`, `defaultCurrency`, `exchangeRates`, `taxRates`; optional `version`. Rate lists replace the saved list whole.
 
-**Errors:** `403 field_not_editable` (a part the profile can't edit), `409 version_conflict`, `422 validation_failed` (a stand-in who isn't an active person able to open journal vouchers, an end date with no stand-in, the same currency and date or the same tax code listed twice, a currency code that isn't 3 to 10 capital letters or is BDT, a rate for a currency not in the list, removing a currency that still has rates, a rate that isn't whole paisa or basis points, a tax code that isn't capitals, digits or underscores)
+`homeCurrency` is always `BDT`: the books are kept in taka. `defaultCurrency` is the currency new documents, such as invoices and bills, start in: `BDT` or one of `currencies` (`BDT` until set). People can still choose another currency on each document, and a foreign-currency document uses that currency's rate on its date. It is a field of the setting resource like the others, so a profile can hide or lock it.
 
-Changes to the stand-in and rates are kept in the record history, and each save writes `setting.updated`.
+**Errors:** `403 field_not_editable` (a part the profile can't edit), `409 version_conflict`, `422 validation_failed` (a stand-in who isn't an active person able to open journal vouchers, an end date with no stand-in, the same currency and date or the same tax code listed twice, a currency code that isn't 3 to 10 capital letters or is BDT, a rate for a currency not in the list, removing a currency that still has rates, a `defaultCurrency` that isn't BDT or a listed currency, removing the currency that is the default, a rate that isn't whole paisa or basis points, a tax code that isn't capitals, digits or underscores)
+
+Changes to the stand-in, default currency and rates are kept in the record history, and each save writes `setting.updated`.
 
 ### `GET /accounts/settings/approver-candidates`
 
@@ -211,9 +215,19 @@ Changes to the stand-in and rates are kept in the record history, and each save 
 
 **Returns:** `people` (`id`, `name`, `email`): active super admins and holders of a profile that grants anything on journal vouchers.
 
-## Journal vouchers
+## Vouchers: journal, payment and receipt
 
-A manual journal entry that a second person approves before it reaches the ledger.
+A voucher is an entry that a second person approves before it reaches the ledger. There are three types, in one list with one approval flow and the same `journalVoucher` permissions:
+
+| `voucherType` | Numbered | Made with | Lines |
+|---|---|---|---|
+| `journal` | `JV-0001` | `POST /accounts/journal-vouchers` | Any balanced debit and credit lines |
+| `payment` | `PV-0001` | `POST /accounts/payment-vouchers` | Items debited (what was paid for, such as `2100 Accounts payable`), and one credit to the cash or bank account `moneyAccountId`, which the API adds |
+| `receipt` | `RV-0001` | `POST /accounts/receipt-vouchers` | Items credited (what the money was for, such as `1300 Accounts receivable`), and one debit to the cash or bank account, which the API adds |
+
+Each type is created and edited on its own path; listing, reading, submitting, approving, returning, reversing and history use the `/accounts/journal-vouchers` paths for every type. Vouchers saved before types existed are `journal`.
+
+**Every edit to a draft needs a `reason`**, saved with the change in the voucher's history (`reason` on the history entry).
 
 | Status | Means | Next |
 |---|---|---|
@@ -222,21 +236,25 @@ A manual journal entry that a second person approves before it reaches the ledge
 | `recorded` | In the ledger; never edited again | Reverse |
 | `reversed` | A reversal has cancelled it in the ledger | None |
 
-A voucher is checked like a ledger entry when it is saved and again when it is submitted: lines balance, amounts are whole paisa, accounts exist, are active and aren't groups. Numbers run `JV-0001`, `JV-0002` and so on and are never reused. Every step writes the record history and the activity log (`journalVoucher.created`, `.updated`, `.submitted`, `.approved`, `.returned`, `.reversed`); approving also writes `ledgerEntry.posted`, and reversing `ledgerEntry.reversed`.
+A voucher is checked like a ledger entry when it is saved and again when it is submitted: lines balance, amounts are whole paisa, accounts exist, are active and aren't groups. Each type has its own number series, and a number is never reused. Every step writes the record history and the activity log (`journalVoucher.created`, `.updated`, `.submitted`, `.approved`, `.returned`, `.reversed`); approving also writes `ledgerEntry.posted`, and reversing `ledgerEntry.reversed`.
 
 ### A voucher
 
 ```json
 {
   "id": "jv_6f1c…",
-  "number": "JV-0001",
-  "voucherDate": "2026-11-02",
-  "memo": "November office rent",
+  "voucherType": "payment",
+  "number": "PV-0001",
+  "voucherDate": "2026-11-10",
+  "memo": "Paying Desh Furniture",
+  "party": "Desh Furniture",
+  "reference": "Cheque 004512",
+  "moneyAccountId": "la_1100",
   "lines": [
-    { "accountId": "la_5300", "debit": 2500000, "credit": 0 },
-    { "accountId": "la_1100", "debit": 0, "credit": 2500000 }
+    { "accountId": "la_2100", "debit": 1800000, "credit": 0, "memo": "Bill DF-221" },
+    { "accountId": "la_1100", "debit": 0, "credit": 1800000, "memo": "Paid out" }
   ],
-  "total": 2500000,
+  "total": 1800000,
   "status": "recorded",
   "createdBy": { "id": "u_04", "name": "Rahim" },
   "submittedBy": { "id": "u_04", "name": "Rahim" },
@@ -252,7 +270,7 @@ A voucher is checked like a ledger entry when it is saved and again when it is s
 
 **Access:** `private`, needs `journalVoucher.read`
 
-**Query:** `page`, `pageSize`, `status`, `from` and `to` (the first and last voucher date, `YYYY-MM-DD`, either or both), `search` (the start of a voucher number such as `JV-00`, or any part of the memo, ignoring case). Filters combine.
+**Query:** `page`, `pageSize`, `type` (`journal`, `payment` or `receipt`), `status`, `from` and `to` (the first and last voucher date, `YYYY-MM-DD`, either or both), `search` (the start of a voucher number such as `JV-00`, or any part of the memo or party, ignoring case). Filters combine.
 
 **Errors:** 422 `validation_failed` for a date that isn't real, or `to` before `from`.
 
@@ -262,11 +280,29 @@ A voucher is checked like a ledger entry when it is saved and again when it is s
 
 **Access:** `private`, needs `journalVoucher.create`
 
-**Body:** `voucherDate`, `memo`, `lines` (2 to 200, each `accountId` and either `debit` or `credit` in paisa, optional `memo`)
+**Body:** `voucherDate`, `memo`, optional `party` and `reference`, `lines` (2 to 200, each `accountId` and either `debit` or `credit` in paisa, optional `memo`)
 
 **Returns:** `201` with the draft.
 
 **Errors:** `422 unbalanced_entry`, `422 validation_failed`
+
+### `POST /accounts/payment-vouchers` and `POST /accounts/receipt-vouchers`
+
+**Access:** `private`, needs `journalVoucher.create`
+
+**Body:** `voucherDate`, `memo`, `party` (who was paid, or who paid; required), optional `reference` (such as a cheque number), `moneyAccountId` (an active account marked cash or bank), `lines` (1 to 199 items, each `accountId`, `amount` in paisa above zero, optional `memo`). The API adds the cash or bank line for the total.
+
+**Returns:** `201` with the draft.
+
+**Errors:** `422 validation_failed` when `moneyAccountId` isn't an active cash or bank account, or an item names it; `422` from the ledger checks, as for a journal voucher
+
+### `PATCH /accounts/payment-vouchers/:id` and `PATCH /accounts/receipt-vouchers/:id`
+
+**Access:** `private`, needs `journalVoucher.update`
+
+**Body:** `reason` (required) and at least one of `voucherDate`, `memo`, `party`, `reference` (empty removes it), `moneyAccountId`, `lines` (items, as on create); optional `version`. A new `moneyAccountId` alone keeps the items; new `lines` alone keep the money account.
+
+**Errors:** `409 voucher_not_draft`, `409 wrong_voucher_type` (the id is another type of voucher), `409 version_conflict`, `422 validation_failed`, `422 unbalanced_entry`
 
 ### `GET /accounts/journal-vouchers/:id`
 
@@ -278,9 +314,9 @@ A voucher is checked like a ledger entry when it is saved and again when it is s
 
 **Access:** `private`, needs `journalVoucher.update`
 
-**Body:** at least one of `voucherDate`, `memo`, `lines`; optional `version`
+**Body:** `reason` (required) and at least one of `voucherDate`, `memo`, `party`, `reference` (empty removes it), `lines`; optional `version`. Journal vouchers only.
 
-**Errors:** `409 voucher_not_draft`, `409 version_conflict`, `422 unbalanced_entry`, `422 validation_failed`
+**Errors:** `409 voucher_not_draft`, `409 wrong_voucher_type`, `409 version_conflict`, `422 unbalanced_entry`, `422 validation_failed`
 
 ### `POST /accounts/journal-vouchers/:id/submit`
 
@@ -358,7 +394,7 @@ Each request returns `id`, `number` (`UR-0001`), `recordType` (`journalVoucher`)
 
 **Access:** `private`, needs `updateRequest.create`, and `journalVoucher.read` (checked in the service)
 
-**Body:** `recordType` (`journalVoucher`), `recordId`, `reason` (1 to 1000 characters), `changes` with at least one of `voucherDate`, `memo`, `lines` (checked like a new voucher's: balanced, active accounts that group nothing). Parts left out stay as recorded.
+**Body:** `recordType` (`journalVoucher`), `recordId`, `reason` (1 to 1000 characters), `changes` with at least one of `voucherDate`, `memo`, `lines` (checked like a new voucher's: balanced, active accounts that group nothing; a payment's lines must still credit its cash or bank account, and a receipt's still debit it, or `422 validation_failed` on `changes.lines`). Parts left out stay as recorded.
 
 **Returns:** `201` with the request, `waiting`.
 

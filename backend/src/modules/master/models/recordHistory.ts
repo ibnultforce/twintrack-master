@@ -21,6 +21,8 @@ export interface RecordHistoryDoc {
   recordId: string;
   action: (typeof HISTORY_ACTIONS)[number];
   changes: FieldChange[];
+  /** Why the person made the change, when the record asks for one, such as an edit to a draft voucher. */
+  reason?: string;
   actorId: string;
   actorName: string;
 }
@@ -33,6 +35,7 @@ const recordHistorySchema = new Schema<RecordHistoryDoc>(
     recordId: { type: String, required: true },
     action: { type: String, enum: HISTORY_ACTIONS, required: true },
     changes: { type: Schema.Types.Mixed, default: [] },
+    reason: String,
     actorId: { type: String, required: true },
     actorName: { type: String, required: true },
   },

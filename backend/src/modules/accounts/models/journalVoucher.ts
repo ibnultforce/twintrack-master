@@ -11,14 +11,32 @@ import type { LedgerLine } from './ledgerEntry.js';
 export const JOURNAL_VOUCHER_STATUSES = ['draft', 'submitted', 'recorded', 'reversed'] as const;
 export type JournalVoucherStatus = (typeof JOURNAL_VOUCHER_STATUSES)[number];
 
+/**
+ * journal: any balanced lines, numbered JV.
+ * payment: money paid out of one cash or bank account, numbered PV. Its lines debit what was paid for.
+ * receipt: money received into one cash or bank account, numbered RV. Its lines credit what it was received for.
+ * All three share one collection, one approval flow and the journalVoucher permissions.
+ */
+export const VOUCHER_TYPES = ['journal', 'payment', 'receipt'] as const;
+export type VoucherType = (typeof VOUCHER_TYPES)[number];
+
 /** A manual journal entry that needs a second person's approval before it reaches the ledger. */
 export interface JournalVoucherDoc extends RecordFields {
   _id: string;
-  /** JV-0001 and so on, handed out once and never reused. */
+  /** Vouchers saved before payment and receipt vouchers existed have none, and are journal vouchers. */
+  voucherType: VoucherType;
+  /** JV-0001, PV-0001 or RV-0001, one series per type, handed out once and never reused. */
   number: string;
   /** The accounting date, YYYY-MM-DD. */
   voucherDate: string;
   memo: string;
+  /** Who was paid, or who paid. Required on payment and receipt vouchers. */
+  party?: string;
+  /** The outside document it refers to, such as a cheque or bill number. */
+  reference?: string;
+  /** The cash or bank account a payment came out of or a receipt went into. Set on payment and receipt vouchers only. */
+  moneyAccountId?: string;
+  /** The full balanced ledger lines, including the cash or bank line of a payment or receipt. */
   lines: LedgerLine[];
   /** The sum of the debits, which equals the sum of the credits. */
   total: number;
@@ -43,9 +61,13 @@ const lineSchema = new Schema<LedgerLine>(
 const journalVoucherSchema = new Schema<JournalVoucherDoc>(
   {
     _id: { type: String, required: true },
+    voucherType: { type: String, enum: VOUCHER_TYPES, required: true, default: 'journal', index: true },
     number: { type: String, required: true, unique: true },
     voucherDate: { type: String, required: true },
     memo: { type: String, required: true },
+    party: String,
+    reference: String,
+    moneyAccountId: String,
     lines: { type: [lineSchema], required: true },
     total: { type: Number, required: true },
     status: { type: String, enum: JOURNAL_VOUCHER_STATUSES, required: true, index: true },
