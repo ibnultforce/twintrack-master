@@ -15,6 +15,20 @@ export const POSTING_ACCOUNTS = {
   /** A contra asset: depreciation builds up here instead of lowering the asset's cost. */
   accumulatedDepreciation: 'la_1650',
   depreciationExpense: 'la_5600',
+  bonusExpense: 'la_5200',
+  commissionExpense: 'la_5250',
   exchangeGain: 'la_4200',
   exchangeLoss: 'la_5800',
 } as const;
+
+/**
+ * Expense accounts that aren't office running costs: people costs and book entries. The Office expenses screen
+ * shows every other expense account.
+ */
+export const NOT_OFFICE_EXPENSES: readonly string[] = [
+  POSTING_ACCOUNTS.salaryExpense,
+  POSTING_ACCOUNTS.bonusExpense,
+  POSTING_ACCOUNTS.commissionExpense,
+  POSTING_ACCOUNTS.depreciationExpense,
+  POSTING_ACCOUNTS.exchangeLoss,
+];

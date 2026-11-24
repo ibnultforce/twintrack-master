@@ -8,6 +8,8 @@ import { JournalVoucher } from '../models/journalVoucher.js';
 import { LedgerEntry } from '../models/ledgerEntry.js';
 import { NORMAL_BALANCE } from '../models/ledgerAccount.js';
 import { PayrollRun } from '../models/payrollRun.js';
+import { LedgerAccount } from '../models/ledgerAccount.js';
+import { NOT_OFFICE_EXPENSES } from '../postingAccounts.js';
 
 /*
  * The general ledger: every line posted to one account in a period, oldest first, with the balance after each line.
@@ -29,7 +31,7 @@ const SOURCE_NUMBERS: Record<string, (ids: string[]) => Promise<{ _id: string; n
   payrollRun: (ids) => PayrollRun.find({ _id: { $in: ids } }).select('number').lean(),
 };
 
-async function sourceNumbers(sources: { type: string; id: string }[]): Promise<Map<string, string>> {
+export async function sourceNumbers(sources: { type: string; id: string }[]): Promise<Map<string, string>> {
   const byType = new Map<string, string[]>();
   for (const source of sources) byType.set(source.type, [...(byType.get(source.type) ?? []), source.id]);
   const found = await Promise.all([...byType].map(async ([type, ids]) => (SOURCE_NUMBERS[type] ? SOURCE_NUMBERS[type](ids) : [])));
@@ -117,4 +119,42 @@ export async function getGeneralLedger({ accountId, from, to, ...page }: General
 export async function getTrialBalanceView(to?: string) {
   const balance = await getTrialBalance(to);
   return { to, ...balance };
+}
+
+/**
+ * Office running costs in a period: every expense account except people costs and book entries, with each line that
+ * reached it (from bills, payments or journal vouchers), newest first. Read from the ledger, so reversals net out.
+ */
+export async function getOfficeExpenses(from: string, to: string) {
+  const accounts = await LedgerAccount.find({ type: 'expense', _id: { $nin: NOT_OFFICE_EXPENSES } }).sort({ code: 1 }).lean();
+  const accountIds = accounts.map((account) => account._id);
+  const rows = await LedgerEntry.aggregate<{ _id: string; entryDate: string; memo: string; source: { type: string; id: string }; reversalOf?: string; line: { accountId: string; debit: number; credit: number; memo?: string } }>([
+    { $match: { 'lines.accountId': { $in: accountIds }, entryDate: { $gte: from, $lte: to } } },
+    { $unwind: '$lines' },
+    { $match: { 'lines.accountId': { $in: accountIds } } },
+    { $sort: { entryDate: -1, createdAt: -1 } },
+    { $project: { entryDate: 1, memo: 1, source: 1, reversalOf: 1, line: '$lines' } },
+  ]);
+  const numbers = await sourceNumbers(rows.map((row) => row.source));
+  const byAccount = new Map<string, number>();
+  for (const row of rows) byAccount.set(row.line.accountId, (byAccount.get(row.line.accountId) ?? 0) + row.line.debit - row.line.credit);
+  const categories = accounts
+    .map((account) => ({ accountId: account._id, code: account.code, name: account.name, amount: byAccount.get(account._id) ?? 0 }))
+    .filter((category) => category.amount !== 0);
+  return {
+    from,
+    to,
+    total: categories.reduce((sum, category) => sum + category.amount, 0),
+    categories,
+    lines: rows.map((row) => ({
+      entryId: row._id,
+      entryDate: row.entryDate,
+      accountId: row.line.accountId,
+      memo: row.line.memo ?? row.memo,
+      entryMemo: row.memo,
+      source: { ...row.source, number: numbers.get(row.source.id) },
+      isReversal: Boolean(row.reversalOf),
+      amount: row.line.debit - row.line.credit,
+    })),
+  };
 }

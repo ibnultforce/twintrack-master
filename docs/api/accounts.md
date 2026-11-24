@@ -27,6 +27,7 @@ Built so far: a status check, settings, the chart of accounts, the ledger core, 
 | `payrollRun.approve` | Record, return or cancel other people's runs |
 | `fixedAsset.read` / `.create` / `.update` | See the asset register; add assets; change them and run depreciation |
 | `inventoryItem.read` / `.create` / `.update` | See stock; add items; change them and record movements |
+| `bankReconciliation.read` / `.create` / `.update` | See statements; load one from CSV; match lines and sign it off |
 | `auditLog.read` | Read the Accounts activity log |
 
 No resource is scoped: each is one list for the whole organisation. Only a super admin holds these until a profile grants them.
@@ -686,6 +687,54 @@ What each client was billed, paid and still owes, worked out from issued invoice
 **Returns:** `client`, the same summary as above, `lines` (invoices and receipts by date: `kind`, `number`, `currency`, `amount` in the invoice currency, `charge` and `payment` in taka, `balance` owed after it) and `dueSoon` (invoice numbers due within 30 days).
 
 **Errors:** `404 unknown_client`
+
+## Bank reconciliation
+
+A bank's statement, loaded from its CSV (decision 8), matched line by line against the account's ledger entries. The books are never changed here: a line the books don't have yet, such as a bank charge, is recorded with an ordinary voucher, then matched. A sample statement is in `docs/samples/city-bank-statement-november-2026.csv`.
+
+**The CSV:** a header row decides the columns: a date (`Date`, `Transaction date`, `Value date`…), a description (`Description`, `Narration`, `Particulars`…), an optional reference (`Reference`, `Cheque No`…), and either one signed `Amount` column or separate money in (`Credit`, `Deposit`) and money out (`Debit`, `Withdrawal`) columns. Dates may be `2026-11-03`, `03/11/2026` or `03-11-2026` (day first). Amounts may use commas, `Tk`, or brackets for minus. Rows with no amount (a balance line) are skipped; any other bad row refuses the file, naming it (`422 invalid_statement`).
+
+**Matching:** a statement line matches a ledger entry on the account that moves exactly the same amount (money in as a debit), the nearest in date within 7 days. An entry matches one line on one statement only.
+
+**The summary:** `closingBalance` should equal `bookBalance` (the ledger at `to`) plus `inBankNotBooks` (unmatched statement lines) less `inBooksNotBank` (unmatched entries in the period, such as a cheque not yet presented). `difference` is what is left unexplained.
+
+### `GET /accounts/bank-reconciliations`
+
+**Access:** `private`, needs `bankReconciliation.read`. **Query:** optional `accountId`. **Returns:** `statements` (`id`, `number` BR-0001, `accountId`, `from`, `to`, `closingBalance`, `lineCount`, `matchedCount`, `status`) and `lastReconciled` (account id to the last reconciled statement's end date).
+
+### `POST /accounts/bank-reconciliations`
+
+**Access:** `private`, needs `bankReconciliation.create`
+
+**Body:** `accountId` (cash or bank), `from`, `to`, `openingBalance` and `closingBalance` (paisa, as the statement says), `csv` (the file's text), optional `fileName`. Opening plus the lines must equal closing, and every line must fall in the period.
+
+**Returns:** `201` with the statement as below, already matched where it can be.
+
+**Errors:** `422 statement_does_not_add_up`, `422 invalid_statement`, `422 validation_failed`
+
+### `GET /accounts/bank-reconciliations/:id`
+
+**Access:** `private`, needs `bankReconciliation.read`. **Returns:** the statement, its `lines` (each with `matchedEntryId` and `matchedEntry` when matched), `unmatchedBookItems`, `summary` (`bookBalance`, `inBankNotBooks`, `inBooksNotBank`, `adjustedBookBalance`, `difference`, `matchedCount`, `unmatchedCount`) and `canComplete`.
+
+### `POST /accounts/bank-reconciliations/:id/lines/:lineId/match`, `/unmatch`, `POST /accounts/bank-reconciliations/:id/rematch`
+
+**Access:** `private`, needs `bankReconciliation.update`. Match takes `entryId`: an entry on the account for the same amount, not matched elsewhere. Rematch matches unmatched lines again, such as after recording a bank charge.
+
+**Errors:** `404 unknown_statement_line`, `409 line_matched`, `409 line_not_matched`, `409 entry_matched`, `409 statement_reconciled`, `422 validation_failed`
+
+### `POST /accounts/bank-reconciliations/:id/complete`
+
+**Access:** `private`, needs `bankReconciliation.update`. Signs it off once every line is matched and `difference` is 0. Entries the bank hasn't cleared may remain. A reconciled statement never changes.
+
+**Errors:** `409 statement_has_unmatched_lines`, `409 reconciliation_difference`, `409 statement_reconciled`
+
+## Office expenses
+
+### `GET /accounts/office-expenses`
+
+**Access:** `private`, needs `ledgerAccount.read`. **Query:** `from`, `to`.
+
+**Returns:** `categories` (expense accounts with their net amount in the period), `total`, and `lines` newest first (`entryDate`, `accountId`, `memo`, `source` with its number, `isReversal`, `amount`). Every expense account counts except salaries, bonus and incentives, commission, depreciation and exchange loss (`NOT_OFFICE_EXPENSES` in `postingAccounts.ts`). Read from the ledger, so a reversal nets out. Expenses are added with a bill or a payment voucher.
 
 ## Activity log
 
