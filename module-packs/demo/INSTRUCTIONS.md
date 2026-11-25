@@ -6,7 +6,7 @@ A small app for the TwinTrack **Demo** module (key `demo`): a list of notes peop
 
 ## 2. Stack and setup
 
-Next.js (App Router) with TypeScript, no UI library. Use `design.css` as the global stylesheet, unchanged. The API address comes from `NEXT_PUBLIC_API_URL`, the portal's from `NEXT_PUBLIC_PORTAL_URL`. Run it on `http://localhost:3000` in development.
+Next.js (App Router) with TypeScript, no UI library. Styling is Tailwind CSS v4: add `tailwindcss`, `@tailwindcss/postcss` and `postcss`, and a `postcss.config.mjs` holding `export default { plugins: { '@tailwindcss/postcss': {} } };`. Use `design.css` (written with Tailwind) as the global stylesheet, unchanged. The API address comes from `NEXT_PUBLIC_API_URL`, the portal's from `NEXT_PUBLIC_PORTAL_URL`. Run it on `http://localhost:3000` in development.
 
 ## 3. Signing in and the API client
 
@@ -41,7 +41,7 @@ Every route is in `api/demo.md`; the shapes are in `DATA_MODEL.md` and `schema.j
 
 ## 6. Look and feel
 
-Only the classes in `design.css` (`card`, `btn`, `btn-primary`, `table-box`, `field`, `input`, `dialog-actions`). No new colours, fonts or inline styles.
+Only the classes in `design.css` (`card`, `btn`, `btn-primary`, `table-box`, `field`, `input`, `dialog-actions`) and Tailwind utilities that use its theme colour names (such as `bg-surface`). No new colours, fonts or inline styles.
 
 ## 7. Words
 

@@ -3,6 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { useTestDatabase } from './helpers/database.js';
+import { seededModules } from './helpers/manifestModules.js';
 import { addPerson, importSeedManifests, requestsAs, signIn } from './helpers/signedIn.js';
 import { createTestConfig } from './helpers/testConfig.js';
 
@@ -69,6 +70,13 @@ describe('Try samples filled from the database', () => {
     const response = await (await as('farhana')).get('/me/permissions/master');
     const rename = (response.body.guides['PATCH /users/:id'].examples as { choices: { field: string; list: string }[] }[])[0]!;
     expect(rename.choices).toContainEqual({ field: 'managerId', location: 'body', list: 'User', isMany: false });
+  });
+
+  it('answers for every module the seed loads, so no module\'s API bodies break the Try dialog', async () => {
+    const farhana = await as('farhana');
+    for (const { key } of seededModules()) {
+      expect((await farhana.get(`/me/permissions/${key}`)).status, key).toBe(200);
+    }
   });
 
   it('keeps the example data for anyone else, so they learn no ids beyond their reach', async () => {

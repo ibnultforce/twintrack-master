@@ -12,3 +12,9 @@ export const minorUnitsField = z.number().int('must be whole paisa or cents').mi
 export const versionField = z.number().int().min(0);
 
 export const recordIdField = z.string().min(1, 'is required').max(100);
+
+/** A month, YYYY-MM. */
+export const monthField = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'must be a month as YYYY-MM');
+
+/** A financial year, named by the calendar year it starts in (2026 is July 2026 to June 2027). Optional: the current one. */
+export const financialYearQuerySchema = z.object({ year: z.coerce.number().int().min(2000).max(2100).optional() });

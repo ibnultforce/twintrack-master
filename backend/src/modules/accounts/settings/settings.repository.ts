@@ -6,7 +6,7 @@ import { User, type UserDoc } from '../../master/models/user.js';
 import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
 import { ACCOUNTS_SETTINGS_ID, AccountsSettings, type AccountsSettingsDoc } from '../models/accountsSettings.js';
 
-export type SettingsChanges = Partial<Pick<AccountsSettingsDoc, 'currencies' | 'defaultCurrency' | 'exchangeRates' | 'taxRates'>> & {
+export type SettingsChanges = Partial<Pick<AccountsSettingsDoc, 'currencies' | 'defaultCurrency' | 'exchangeRates' | 'taxRates' | 'providentFundBasisPoints' | 'gratuityBasisPoints'>> & {
   /** null clears it. */
   standInApproverId?: string | null;
   standInUntil?: string | null;

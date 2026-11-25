@@ -38,6 +38,8 @@ const resourceSchema = z.looseObject({
   recordFields: z.array(z.string().regex(FIELD_NAME, 'must be a field name')).optional(),
   /** Fields hidden from anyone not given read, create or edit access to them through fieldAccess, such as amount. */
   protectedFields: z.array(z.string().regex(FIELD_NAME, 'must be a field name')).optional(),
+  /** Names people see for fields whose key doesn't say what they hold, such as lines: "Salary per person". Display only. */
+  fieldLabels: z.record(z.string(), z.string().min(1)).optional(),
   /** Who sees a record nobody has shared: only those whose scope reaches it, everyone who can read, or everyone who can edit. */
   sharingModel: z.enum(SHARING_MODELS).optional(),
   /** Set on objects an admin defined in the app. Their records are in custom_records, and their fields are below. */
@@ -215,6 +217,14 @@ export function checkGrants(rawGrants: unknown, resources: unknown[], pathPrefix
   return errors;
 }
 
+/** A label for a field the resource doesn't control would never be shown, so it's most likely a typo. */
+function checkFieldLabels(resource: Record<string, unknown>, index: number): FieldError[] {
+  const accessFields = listAccessFields(resource as Partial<ManifestResource>);
+  return Object.keys(asRecord(resource.fieldLabels))
+    .filter((field) => !accessFields.includes(field))
+    .map((field) => ({ path: `resources.${index}.fieldLabels.${field}`, message: `"${field}" is not a field that field access controls` }));
+}
+
 /** Checks that span sections, such as a route naming a permission no resource offers. */
 function crossChecks(raw: unknown): FieldError[] {
   const manifest = asRecord(raw);
@@ -225,6 +235,7 @@ function crossChecks(raw: unknown): FieldError[] {
     ...findDuplicateKeys(resources, 'resources', 'Resource'),
     ...checkRoutes(routes, readActionsByResource(resources)),
     ...resources.flatMap((item, index) => [
+      ...checkFieldLabels(asRecord(item), index),
       ...(asRecord(item).grantable !== undefined ? [{ path: `resources.${index}.grantable`, message: 'grantable was removed: people get access through their profile' }] : []),
       ...(asRecord(item).managesAccessOf !== undefined ? [{ path: `resources.${index}.managesAccessOf`, message: 'managesAccessOf was removed: people get access through their profile' }] : []),
     ]),

@@ -34,6 +34,8 @@ Open http://twintrack.localhost:3100 and sign in with a sample account from `see
 
 The Next.js app in `frontend/` is the portal and admin console. It runs entirely in the browser against the API.
 
+Styling is Tailwind CSS v4 (`@tailwindcss/postcss`, configured in `frontend/postcss.config.mjs`). `frontend/src/app/globals.css` holds the theme variables that switch for dark mode, maps them to Tailwind names such as `bg-surface` and `text-ink-muted`, and defines the shared component classes (`.btn`, `.card`, ...) with `@apply`. Every module frontend is set up the same way: see "Frontend styling" in `CLAUDE.md`.
+
 | Screens | Who sees them |
 |---|---|
 | Sign in, set password from an emailed link, Your modules, Directory, Your permissions, Your profile, Apps and API tokens | Anyone signed in |

@@ -4,7 +4,7 @@ import type { ApiRoute } from '../../../lib/apiRoute.js';
 import { paginationQueryFields } from '../../../lib/query.js';
 import { parseRequestBody, parseRequestQuery } from '../../../lib/validation.js';
 import { getActor } from '../../master/access/caller.js';
-import { accountingDateField, minorUnitsField, recordIdField, versionField } from '../accountsFields.js';
+import { accountingDateField, minorUnitsField, monthField, recordIdField, versionField } from '../accountsFields.js';
 import type { ApprovalSource } from '../approvals/approvalQueue.service.js';
 import { LOAN_KINDS, LOAN_STATUSES } from '../models/employeeLoan.js';
 import {
@@ -25,8 +25,6 @@ import {
 const MAX_NOTE = 1000;
 /** A month's unpaid leave can't be more days than the month has. */
 const MAX_LEAVE_DAYS = 31;
-
-const monthField = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'must be a month as YYYY-MM');
 
 const createBodySchema = z.strictObject({
   employeeId: recordIdField,

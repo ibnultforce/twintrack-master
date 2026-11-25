@@ -40,6 +40,7 @@ const STEP_VALUE_SOURCES: Record<string, RecordSource> = {
   otherTaskId: { model: 'Task' },
   attachmentId: { model: 'TaskAttachment' },
   credentialId: { model: 'ProjectCredential' },
+  vendorId: { model: 'AccountsVendor' },
 };
 
 // Body fields that always name one kind of record, for fields a sample doesn't set, such as leadId on a project.
@@ -59,9 +60,7 @@ const FIELD_SOURCES: Record<string, { source: RecordSource; isMany: boolean }> =
   clientId: { source: STEP_VALUE_SOURCES.clientId!, isMany: false },
   projectId: { source: STEP_VALUE_SOURCES.projectId!, isMany: false },
   taskIds: { source: STEP_VALUE_SOURCES.taskId!, isMany: true },
-  categoryId: { source: STEP_VALUE_SOURCES.categoryId!, isMany: false },
   vendorId: { source: STEP_VALUE_SOURCES.vendorId!, isMany: false },
-  bankAccountId: { source: STEP_VALUE_SOURCES.bankAccountId!, isMany: false },
 };
 
 /** Pickers for id fields the API's body schema names but the sample leaves out. */

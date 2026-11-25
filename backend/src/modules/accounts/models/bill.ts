@@ -4,7 +4,7 @@ import { addRecordFields, type RecordFields } from '../../../lib/records/recordF
 /**
  * draft: being written; may be edited.
  * submitted: waiting for someone other than its maker.
- * recorded: approved, and recorded as owed to the vendor (expense against accounts payable and tax payable).
+ * recorded: approved, and recorded as owed to the vendor (expense and VAT to claim against accounts payable and tax payable).
  * cancelled: a draft given up, or a recorded bill reversed in the ledger.
  * Paid and overdue are worked out from the payments linked to it and its due date, never stored.
  */
@@ -23,6 +23,12 @@ export interface BillLine {
   amount: number;
 }
 
+/** A bill made from a regular expense, for one period: a month as YYYY-MM. */
+export interface RegularExpenseLink {
+  id: string;
+  period: string;
+}
+
 /** A vendor's bill. Bills are kept in taka. */
 export interface BillDoc extends RecordFields {
   _id: string;
@@ -37,15 +43,28 @@ export interface BillDoc extends RecordFields {
   billDate: string;
   dueDate: string;
   lines: BillLine[];
-  /** Paisa: the sum of the lines. */
+  /** Paisa: the sum of the lines, before VAT. */
   amount: number;
+  /** The Settings tax rate charged as VAT, by its code. Bills saved before VAT, or without it, have none. */
+  vatCode?: string;
+  /** That rate when the bill was last saved, in basis points. */
+  vatBasisPoints?: number;
+  /** Paisa: VAT on the amount before tax, which the company may claim back. Missing means none. */
+  vat?: number;
   /** The vendor's TDS rate when the bill was last saved, in basis points. */
   tdsBasisPoints: number;
   /** Paisa withheld and owed to the tax authority instead of the vendor. */
   tds: number;
-  /** Paisa owed to the vendor: amount minus TDS. */
+  /** Paisa owed to the vendor: amount plus VAT, minus TDS. */
   netPayable: number;
   status: BillStatus;
+  /** The regular expense and period it was made for, so a period never gets two bills. */
+  regularExpense?: RegularExpenseLink;
+  /**
+   * `${regularExpense.id}:${period}` while the bill is live, unique, so a period never gets two bills even when two
+   * people make them at once. Cancelling the bill removes it, so the period can be billed again.
+   */
+  regularExpenseKey?: string;
   submittedBy?: string;
   submittedAt?: Date;
   returnNote?: string;
@@ -79,10 +98,15 @@ const billSchema = new Schema<BillDoc>(
     dueDate: { type: String, required: true },
     lines: { type: [lineSchema], required: true },
     amount: { type: Number, required: true },
+    vatCode: String,
+    vatBasisPoints: Number,
+    vat: Number,
     tdsBasisPoints: { type: Number, required: true },
     tds: { type: Number, required: true },
     netPayable: { type: Number, required: true },
     status: { type: String, enum: BILL_STATUSES, required: true, index: true },
+    regularExpenseKey: String,
+    regularExpense: { type: new Schema<RegularExpenseLink>({ id: { type: String, required: true }, period: { type: String, required: true } }, { _id: false }), default: undefined },
     submittedBy: String,
     submittedAt: Date,
     returnNote: String,
@@ -97,5 +121,7 @@ const billSchema = new Schema<BillDoc>(
 );
 
 addRecordFields(billSchema);
+
+billSchema.index({ regularExpenseKey: 1 }, { unique: true, partialFilterExpression: { regularExpenseKey: { $exists: true } } });
 
 export const Bill = model<BillDoc>('AccountsBill', billSchema, 'accounts_bills');

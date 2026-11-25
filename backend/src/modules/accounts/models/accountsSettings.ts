@@ -47,6 +47,13 @@ export interface AccountsSettingsDoc extends RecordFields {
   defaultCurrency?: string;
   exchangeRates: ExchangeRate[];
   taxRates: TaxRate[];
+  /**
+   * Provident fund, in basis points of each person's gross pay: payroll takes this share from their pay, and the
+   * company adds the same again. Missing or 0 means no provident fund.
+   */
+  providentFundBasisPoints?: number;
+  /** Gratuity the company sets aside each month, in basis points of gross pay (833 is about a month's pay a year). Missing or 0 means none. */
+  gratuityBasisPoints?: number;
 }
 
 const accountsSettingsSchema = new Schema<AccountsSettingsDoc>(
@@ -72,6 +79,8 @@ const accountsSettingsSchema = new Schema<AccountsSettingsDoc>(
       type: [new Schema<TaxRate>({ code: { type: String, required: true }, name: { type: String, required: true }, basisPoints: { type: Number, required: true } }, { _id: false })],
       default: [],
     },
+    providentFundBasisPoints: Number,
+    gratuityBasisPoints: Number,
   },
   { timestamps: true },
 );

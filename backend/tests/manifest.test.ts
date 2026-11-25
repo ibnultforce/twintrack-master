@@ -86,6 +86,12 @@ describe('validateManifest', () => {
     expect(text).toMatch(/permissionSets: permission sets were removed/);
   });
 
+  it('accepts labels for fields the resource controls, and refuses one for any other field', () => {
+    const resource = { key: 'thing', label: 'Things', actions: ['read', 'approve'], scoped: true, recordFields: ['month'], protectedFields: ['lines'] };
+    expect(validateManifest(minimal({ resources: [{ ...resource, fieldLabels: { lines: 'Salary per person' } }] })).ok).toBe(true);
+    expect(messages(minimal({ resources: [{ ...resource, fieldLabels: { line: 'Salary per person' } }] }))).toMatch(/resources\.0\.fieldLabels\.line: "line" is not a field/);
+  });
+
   it('accepts dotted field resources and survives non-object input', () => {
     const resources = [{ key: 'payslip.net', label: 'Net pay', actions: ['read'] }];
     const routes = [{ method: 'GET', path: '/net', access: 'private', permission: 'payslip.net.read' }];

@@ -248,6 +248,14 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "providentFundBasisPoints": {
+          "type": "integer",
+          "description": "Provident fund, basis points of gross pay taken from pay; the company adds the same. 0 is none"
+        },
+        "gratuityBasisPoints": {
+          "type": "integer",
+          "description": "Gratuity set aside each month, basis points of gross pay. 0 is none"
         }
       }
     },
@@ -1238,6 +1246,30 @@
         "version": {
           "type": "integer",
           "minimum": 0
+        },
+        "vatCode": {
+          "type": "string",
+          "description": "A Settings tax rate code charged as VAT"
+        },
+        "vatBasisPoints": {
+          "type": "integer"
+        },
+        "vat": {
+          "type": "integer",
+          "description": "Paisa: VAT on the amount before tax, claimed back (1700)"
+        },
+        "regularExpense": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "period": {
+              "type": "string",
+              "description": "YYYY-MM"
+            }
+          },
+          "description": "The regular expense and period this bill was made for"
         }
       }
     },
@@ -1342,6 +1374,14 @@
                 "type": "integer",
                 "minimum": 0,
                 "description": "Paisa paid: gross less loan repayments"
+              },
+              "providentFund": {
+                "type": "integer",
+                "description": "Paisa: employee provident fund share taken from pay"
+              },
+              "gratuity": {
+                "type": "integer",
+                "description": "Paisa: gratuity set aside, not taken from pay"
               }
             }
           }
@@ -1391,6 +1431,12 @@
           "type": "integer",
           "minimum": 0,
           "description": "Paisa paid from the bank: gross less loan repayments"
+        },
+        "providentFundBasisPoints": {
+          "type": "integer"
+        },
+        "gratuityBasisPoints": {
+          "type": "integer"
         }
       }
     },
@@ -1684,6 +1730,127 @@
         },
         "version": {
           "type": "integer"
+        }
+      }
+    },
+    "RegularExpense": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "category",
+        "vendorId",
+        "accountId",
+        "frequency",
+        "amount",
+        "dayOfMonth",
+        "startMonth",
+        "isActive",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "rent",
+            "cloud_software",
+            "utilities",
+            "office_services",
+            "food_events",
+            "travel",
+            "insurance",
+            "government_fees"
+          ]
+        },
+        "vendorId": {
+          "type": "string"
+        },
+        "vendorName": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string",
+          "description": "The expense account each bill is charged to"
+        },
+        "frequency": {
+          "enum": [
+            "monthly",
+            "yearly"
+          ]
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Paisa per period, before VAT"
+        },
+        "vatCode": {
+          "type": "string"
+        },
+        "dayOfMonth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 28
+        },
+        "startMonth": {
+          "type": "string"
+        },
+        "endMonth": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "nextDue": {
+          "type": "object",
+          "properties": {
+            "period": {
+              "type": "string"
+            },
+            "date": {
+              "type": "string"
+            }
+          }
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "Budget": {
+      "type": "object",
+      "required": [
+        "year",
+        "lines"
+      ],
+      "properties": {
+        "year": {
+          "type": "integer",
+          "description": "Calendar year the July-June financial year starts in"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "accountId",
+              "amount"
+            ],
+            "properties": {
+              "accountId": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paisa for the year"
+              }
+            }
+          }
         }
       }
     }
