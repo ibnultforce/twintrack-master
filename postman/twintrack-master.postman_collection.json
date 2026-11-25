@@ -17145,6 +17145,177 @@
           ]
         },
         {
+          "name": "Read profit and loss",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/reports/profit-and-loss?from=2026-11-01&to=2026-11-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "reports",
+                "profit-and-loss"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has a net profit', () => pm.expect(pm.response.json()).to.have.property('netProfit'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the balance sheet",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/reports/balance-sheet?to=2026-11-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "reports",
+                "balance-sheet"
+              ],
+              "query": [
+                {
+                  "key": "to",
+                  "value": "2026-11-30"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('balances', () => pm.expect(pm.response.json().difference).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the cash flow",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/reports/cash-flow?from=2026-11-01&to=2026-11-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "reports",
+                "cash-flow"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('closes on the cash balance', () => pm.expect(pm.response.json().difference).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read the Accounts dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/dashboard?month=2026-11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "2026-11"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has the cash total', () => pm.expect(pm.response.json().cash).to.have.property('total'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "List client accounts",
           "request": {
             "method": "GET",

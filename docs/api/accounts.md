@@ -676,6 +676,26 @@ Office stock counted in units: quantities only, since what it cost reaches the b
 
 **Returns:** `rows` (`accountId`, `code`, `name`, `type`, `debit`, `credit`, `balance`), `totalDebit`, `totalCredit`, `difference` (always 0).
 
+## Reports and dashboard
+
+The four financial reports and the Accounts dashboard, read straight from ledger lines, so they always agree with the trial balance and a reversed entry nets out. Amounts are paisa on each account's normal side (income, liabilities and equity as positive credits; assets and expenses as positive debits). All need `ledgerAccount.read`, like the trial balance, so no new permission is needed. The financial year runs July to June. Each report section is `key`, `label`, `rows` (`accountId`, `code`, `name`, `amount`, accounts with nothing on them left out) and `total`.
+
+### `GET /accounts/reports/profit-and-loss`
+
+**Query:** `from`, `to` (entry dates, inclusive). **Returns:** `income` and `expenses` sections, `netProfit` (income less expenses). **Errors:** `422 validation_failed` (a missing date, or `to` before `from`).
+
+### `GET /accounts/reports/balance-sheet`
+
+**Query:** `to`. **Returns:** `financialYear`, `assets`, `liabilities`, `equity` (the equity accounts' rows, plus `profitRows`: `earlierProfit` and `yearProfit`, profit not yet closed into equity, left out when zero; `total` includes them), `totalLiabilitiesAndEquity`, and `difference` (assets less liabilities and equity, always 0). **Errors:** `422 validation_failed`.
+
+### `GET /accounts/reports/cash-flow`
+
+**Query:** `from`, `to`. **Returns:** `opening` (cash and bank before `from`), `sections` (`operating` "Running the business", `investing` "Buying and selling assets" for fixed assets, `financing` "Owners and financing" for equity), `netChange`, `closing`, and `difference` (closing less opening less the net change, always 0). The direct method: each movement in a cash or bank account is listed under the account on the other side of its entry, money in positive. Transfers between cash and bank accounts drop out. **Errors:** `422 validation_failed`.
+
+### `GET /accounts/dashboard`
+
+**Query:** `month` (YYYY-MM). **Returns:** `from`, `to` (the month's days), `financialYear`, `cash` (`accounts`: each cash and bank account's balance at the month end, and `total`), `receivable` (1300) and `payable` (2100) at the month end, `thisMonth` and `yearToDate` (`income`, `expenses`, `profit`), `trend` (each month of the financial year up to this one, with the same three figures) and `topExpenses` (the month's five largest expense accounts). **Errors:** `422 validation_failed`.
+
 ## Client accounts
 
 What each client was billed, paid and still owes, worked out from issued invoices and the recorded receipts linked to them. Amounts are in taka at each invoice's issue rate, as the books recorded them, so the total outstanding equals the 1300 Accounts receivable balance.

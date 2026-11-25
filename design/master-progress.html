@@ -381,6 +381,10 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>25 November 2026: Accounts reports and dashboard (manifest 1.20.0)</h3>
+      <ul>
+        <li><code>/accounts/reports/profit-and-loss</code>, <code>/accounts/reports/balance-sheet</code>, <code>/accounts/reports/cash-flow</code> and <code>/accounts/dashboard</code>, read straight from the ledger with <code>ledgerAccount.read</code>, so no new permission. The balance sheet shows unclosed profit as its own equity lines and always balances; the cash flow lists each cash movement under the account on the other side. Day 5 gate met: the seeded month matches hand-worked figures in every report.</li>
+      </ul>
       <h3>25 November 2026: Field labels on manifest resources (Accounts manifest 1.19.0)</h3>
       <ul>
         <li>Resources can give fields a display name with <code>fieldLabels</code>; a label for a field the resource doesn't control is refused. The Profiles field picker shows it. Payroll runs' protected <code>lines</code> field now reads "Salary per person", so it's clear which field opens salaries on Employee payments and payroll runs. Display only: the API, records and history still use <code>lines</code>.</li>

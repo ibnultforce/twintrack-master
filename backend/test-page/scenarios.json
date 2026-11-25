@@ -14361,6 +14361,174 @@
           ]
         },
         {
+          "id": "GET /accounts/reports/profit-and-loss",
+          "method": "GET",
+          "path": "/accounts/reports/profit-and-loss",
+          "purpose": "Income and expense accounts in a period, with the net profit.",
+          "input": "from, to",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The month",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/profit-and-loss?from=2026-11-01&to=2026-11-30",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/profit-and-loss?from=2026-11-01&to=2026-11-30",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Period ends before it starts",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/profit-and-loss?from=2026-11-30&to=2026-11-01",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/reports/balance-sheet",
+          "method": "GET",
+          "path": "/accounts/reports/balance-sheet",
+          "purpose": "Assets, liabilities and equity on a date, with unclosed profit as equity lines.",
+          "input": "to",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "On a date",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/balance-sheet?to=2026-11-30",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/balance-sheet?to=2026-11-30",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not a real date",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/balance-sheet?to=2026-02-30",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/reports/cash-flow",
+          "method": "GET",
+          "path": "/accounts/reports/cash-flow",
+          "purpose": "Cash and bank movements in a period by the account on the other side: running the business, assets, owners.",
+          "input": "from, to",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "The month",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/cash-flow?from=2026-11-01&to=2026-11-30",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/cash-flow?from=2026-11-01&to=2026-11-30",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No end date",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/reports/cash-flow?from=2026-11-01",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/dashboard",
+          "method": "GET",
+          "path": "/accounts/dashboard",
+          "purpose": "A month at a glance: cash and bank, receivable, payable, profit for the month and year, trend and largest costs.",
+          "input": "month",
+          "access": "Needs ledgerAccount.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "November",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/dashboard?month=2026-11",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/dashboard?month=2026-11",
+                "as": "karim@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not a month",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/dashboard?month=2026-13",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
           "id": "GET /accounts/client-accounts",
           "method": "GET",
           "path": "/accounts/client-accounts",

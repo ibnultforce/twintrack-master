@@ -90,3 +90,50 @@ export function sumLinesForAccounts(accountIds: string[]): Promise<AccountTotals
     { $project: { _id: 0, accountId: '$_id', debit: 1, credit: 1 } },
   ]);
 }
+
+/** Debit and credit totals per account for entries dated in a range. Leaving out `from` starts at the first entry. */
+export function sumLinesByAccountInRange({ from, to }: { from?: string; to: string }): Promise<AccountTotals[]> {
+  return LedgerEntry.aggregate<AccountTotals>([
+    { $match: { entryDate: { ...(from && { $gte: from }), $lte: to } } },
+    { $unwind: '$lines' },
+    { $group: { _id: '$lines.accountId', debit: { $sum: '$lines.debit' }, credit: { $sum: '$lines.credit' } } },
+    { $project: { _id: 0, accountId: '$_id', debit: 1, credit: 1 } },
+  ]);
+}
+
+/** One account's debits and credits in one month (YYYY-MM). */
+export interface MonthTotals extends AccountTotals {
+  month: string;
+}
+
+/** Debit and credit totals per account and month, for these accounts and entries dated from `from` to `to`. */
+export function sumLinesByAccountAndMonth(accountIds: string[], from: string, to: string): Promise<MonthTotals[]> {
+  return LedgerEntry.aggregate<MonthTotals>([
+    { $match: { 'lines.accountId': { $in: accountIds }, entryDate: { $gte: from, $lte: to } } },
+    { $unwind: '$lines' },
+    { $match: { 'lines.accountId': { $in: accountIds } } },
+    {
+      $group: {
+        _id: { accountId: '$lines.accountId', month: { $substrCP: ['$entryDate', 0, 7] } },
+        debit: { $sum: '$lines.debit' },
+        credit: { $sum: '$lines.credit' },
+      },
+    },
+    { $project: { _id: 0, accountId: '$_id.accountId', month: '$_id.month', debit: 1, credit: 1 } },
+  ]);
+}
+
+/**
+ * For entries in the range that move money in or out of these cash and bank accounts: each other account's credits
+ * minus debits on them. Each entry balances, so an account's figure is the cash it brought in (positive) or paid out
+ * (negative). A transfer between two cash accounts has no other line and drops out.
+ */
+export function sumCashCounterparts(cashAccountIds: string[], from: string, to: string): Promise<{ accountId: string; amount: number }[]> {
+  return LedgerEntry.aggregate<{ accountId: string; amount: number }>([
+    { $match: { 'lines.accountId': { $in: cashAccountIds }, entryDate: { $gte: from, $lte: to } } },
+    { $unwind: '$lines' },
+    { $match: { 'lines.accountId': { $nin: cashAccountIds } } },
+    { $group: { _id: '$lines.accountId', amount: { $sum: { $subtract: ['$lines.credit', '$lines.debit'] } } } },
+    { $project: { _id: 0, accountId: '$_id', amount: 1 } },
+  ]);
+}
