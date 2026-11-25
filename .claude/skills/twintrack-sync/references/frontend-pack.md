@@ -24,7 +24,8 @@ A pack is ready only when `grep FILL\ IN` finds nothing in it. A change to the p
 
 ## Keeping the design the same as Master
 
-- No new colours, fonts, icons, UI libraries or inline styles. Module-only styles go at the end of `globals.css` under "Module additions", using the existing variables.
+- No new colours, fonts, icons, UI libraries or inline styles. Styling is Tailwind CSS v4, the one styling dependency: screens use the component classes plus Tailwind utilities with the theme colour names (`bg-surface`, `text-ink-muted`), and no `dark:` variants. A module-only style that repeats across screens goes at the end of `globals.css` under "Module additions", written with `@apply`.
+- The starter needs the same Tailwind setup as the packs: `tailwindcss`, `@tailwindcss/postcss` and `postcss`, a `postcss.config.mjs`, and `design.css` as its `globals.css`.
 - Screens use only the pieces in section 6 of `INSTRUCTIONS.md` (`PageHead`, `Card`, `Pill`, `Loaded`, dialogs, tables and so on) and the same list layout: 25 per page, a filters card, a table card, an empty state, pagination.
 - Wording rules (sentence case, verb buttons, date and money formats, the four gates) are copied unchanged from the projects pack.
 - A design change for every app goes into `../twintrack-module-starter/` first, then each pack's `design.css` and each built frontend.

@@ -45,6 +45,14 @@ Use this form for name filters: `npm test -- <file> -t <name>` fails under Power
 
 **How a route goes live.** Each feature exports `ApiRoute` declarations (`*.routes.ts`). Each module has one list (`master.routes.ts`, `hr.routes.ts`). `app.ts` passes each list to `registerRoutes` in `lib/apiRoute.ts` with an access middleware bound to that module's key, which builds each route's access checks from its declaration and decides which module's permissions they read. Routes are registered directly on the app. Don't use mounted routers: the Postman coverage test can't see inside them, and a test fails if one exists. The one exception is the MCP SDK's OAuth protocol handlers, in `modules/master/oauth/oauthProtocol.ts`. The public `/files/parts` and `/files/content` routes (`modules/master/storage/`) serve task files from the local disk in development, checked by signed tokens instead of a session, and answer 404 when files are in R2.
 
+**Frontend styling is Tailwind CSS v4.** Master's `frontend/` and every module frontend (`twintrack-projects`, `twintrack-accounts`, and new ones) use `tailwindcss` with `@tailwindcss/postcss` (a `postcss.config.mjs` beside `package.json`), and each app's `src/app/globals.css` is laid out the same way:
+
+- The theme variables in `:root`, with their two dark-mode blocks, are the one place colours, fonts and the shadow are defined. `@theme inline` maps them to Tailwind names, so `bg-surface`, `text-ink-muted`, `border-border-strong`, `text-danger` and the like follow dark mode with no `dark:` variants.
+- The component classes (`.btn`, `.card`, `.input`, `.pill`, `.table-box`, ...) are `@apply` rules in `@layer components`, and the app's own reset is in `@layer base`. Tailwind's preflight is deliberately not imported, so browser defaults are what they always were.
+- For a new screen, write utilities in `className` for layout and anything particular to that screen. Add a component class only for something that repeats across screens, and write it with `@apply`, not raw declarations, wherever a utility exists. Don't hard-code hex colours (use the theme names), add `dark:` variants, use inline styles, or start another stylesheet.
+- A class built from data, such as `pill-${tone}` or `notice-${tone}`, must exist as a component class: Tailwind only generates utilities it can read written out in full.
+- The cascade is part of the design: the Accounts stylesheet restyles the shared one by overriding earlier rules further down, so keep rules in their current order. Check a change in light and dark mode and at phone width.
+
 **Master extensions:** other modules give Master `userReferenceChecks` (what still names a person, so they can't be deleted) and `mcpToolProviders` (their MCP tools), passed in `app.ts`. Master never imports a module's data.
 
 **Access checks.** A route declares `access` as one of the following, and `access/access.middleware.ts` enforces it:

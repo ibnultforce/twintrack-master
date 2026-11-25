@@ -9,7 +9,7 @@ These are the instructions for building the **Project management** frontend of T
 | `INSTRUCTIONS.md` | This file: what to build and how |
 | `DATA_MODEL.md` | Every record, field, allowed value and rule, explained |
 | `schema.json` | The same data model as JSON Schema. Generate the TypeScript types from it |
-| `design.css` | The shared TwinTrack stylesheet. Use it unchanged |
+| `design.css` | The shared TwinTrack stylesheet, written with Tailwind CSS. Use it unchanged |
 | `api/projects.md` | Every route: what it takes, what it returns, and its errors |
 | `api/README.md` | Signing in, tokens, the error format and errors any route returns |
 | `api/manifest.json` | Routes, permissions and field rules, as the backend loads them |
@@ -26,7 +26,8 @@ It has **no backend of its own**. Everything comes from the TwinTrack API (the M
 ## 2. Stack and project setup
 
 - **Next.js (App Router), React and TypeScript** with `strict: true` and `noUncheckedIndexedAccess: true`. Node 22 or later.
-- **No other dependencies.** No UI kits, CSS frameworks, icon packs, state, form, date, data-fetching or upload libraries. Write small pieces by hand.
+- **Tailwind CSS v4 is the one styling dependency:** `tailwindcss`, `@tailwindcss/postcss` and `postcss`, with a `postcss.config.mjs` beside `package.json` that holds `export default { plugins: { '@tailwindcss/postcss': {} } };`.
+- **No other dependencies.** No UI kits, other CSS frameworks, icon packs, state, form, date, data-fetching or upload libraries. Write small pieces by hand.
 - Scripts: `dev` (port 3300), `build`, `typecheck`.
 - Settings, in `.env.local` (with a matching `.env.example`):
 
@@ -136,7 +137,9 @@ Month picker (default this month). Table: person, completed hours, rate, payout,
 
 ## 6. Look and feel
 
-- Use `design.css` **unchanged** as the start of `globals.css`. It holds the colours (light and dark), fonts, spacing and every component class. Add module-only styles in a "Module additions" section at the end, using its colour variables (`var(--accent)` and so on). No inline styles, no new colours, no new fonts, no icons.
+- Use `design.css` **unchanged** as the start of `globals.css`. It turns on Tailwind, defines the colours (light and dark) as theme variables and maps them to Tailwind names (`bg-surface`, `text-ink`, `text-ink-muted`, `border-border`, `bg-accent-soft`, `text-danger` and so on), and holds every component class (`.btn`, `.card`, `.input`, ...) as `@apply` rules.
+- Build each screen from those component classes plus Tailwind utilities in `className`: utilities for layout and anything particular to one screen. A module-only style that repeats across screens goes in a "Module additions" section at the end of `globals.css`, written with `@apply`. A class built from data (such as `pill-${tone}`) must exist there too, because Tailwind only generates utilities it can see written out in full.
+- Use the theme colour names only: no hex colours, no `dark:` variants (the theme variables already switch for dark mode), no inline styles, no new fonts, no icons.
 - Layout: a 216px sidebar and the page beside it (`.shell`, `.sidebar`), collapsing at phone width as `design.css` does.
 - Build every screen from these pieces (in `components/ui.tsx`), using the class names from `design.css`:
 
