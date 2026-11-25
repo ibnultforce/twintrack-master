@@ -19,6 +19,7 @@ import {
   findSharedRecordIds,
   findSharingModel,
   listRecordShares,
+  shareAllowance,
   shareRecord,
   unshareRecord,
   type RecordNeed,
@@ -132,8 +133,43 @@ function parseValues(fields: FieldDefinition[], raw: unknown, { isNew }: { isNew
 const historyRef = (context: ObjectContext, recordId: string) => ({ module: context.moduleKey, object: context.objectKey, recordId });
 const scopedRecord = (context: ObjectContext, record: CustomRecordDoc) => ({ ...historyRef(context, record._id), peopleIds: [record.ownerId] });
 
+/** What this person may do with one record, so a screen offers only what the API will allow. */
+export interface RecordAllowed {
+  edit: boolean;
+  delete: boolean;
+  share: boolean;
+}
+
+/** Whether a reach from peopleInScope includes the person: null reaches everyone, undefined means no permission. */
+const reachIncludes = (reach: string[] | null | undefined, personId: string) => reach === null || Boolean(reach?.includes(personId));
+
+/**
+ * Works out, once per request, what this person may do with records of the object: the same rules the update, delete
+ * and share routes apply, so a page of records needs no further queries per record.
+ */
+async function recordAllowances(context: ObjectContext): Promise<(record: CustomRecordDoc) => RecordAllowed> {
+  const { actor, moduleKey, objectKey } = context;
+  const reachFor = (action: 'update' | 'delete') => {
+    const scope = actor.permissions[`${objectKey}.${action}`];
+    return scope ? peopleInScope(actor.user._id, scope) : Promise.resolve(undefined);
+  };
+  const mayUpdate = Boolean(actor.permissions[`${objectKey}.update`]);
+  const [updateReach, deleteReach, sharingModel, editShares, mayShare] = await Promise.all([
+    reachFor('update'),
+    reachFor('delete'),
+    findSharingModel(moduleKey, objectKey),
+    mayUpdate ? findSharedRecordIds(actor.user, moduleKey, objectKey, 'edit') : Promise.resolve([] as string[]),
+    shareAllowance(actor, objectKey),
+  ]);
+  return (record) => ({
+    edit: mayUpdate && (reachIncludes(updateReach, record.ownerId) || sharingModel === 'publicReadWrite' || editShares.includes(record._id)),
+    delete: reachIncludes(deleteReach, record.ownerId),
+    share: mayShare([record.ownerId]),
+  });
+}
+
 /** The record as this person may see it: values of removed fields and of hidden protected fields are left out. */
-function toRecordView(context: ObjectContext, record: CustomRecordDoc) {
+function toRecordView(context: ObjectContext, record: CustomRecordDoc, allowed?: RecordAllowed) {
   const known = new Set(context.fields.map((field) => field.key));
   const values = Object.fromEntries(Object.entries(record.values ?? {}).filter(([key]) => known.has(key) && !context.rules.hidden.includes(key)));
   return {
@@ -148,6 +184,7 @@ function toRecordView(context: ObjectContext, record: CustomRecordDoc) {
     updatedBy: record.updatedBy,
     updatedAt: record.updatedAt,
     ...(record.deletedAt && { deletedAt: record.deletedAt, deletedBy: record.deletedBy }),
+    ...(allowed && { allowed }),
   };
 }
 
@@ -190,11 +227,13 @@ export async function listCustomRecords(context: ObjectContext, page: PageReques
     CustomRecord.find(filter).sort({ createdAt: -1, _id: 1 }).skip(pageOffset(pageRequest)).limit(pageRequest.pageSize).lean<CustomRecordDoc[]>(),
     CustomRecord.countDocuments(filter),
   ]);
-  return { scope: context.scope, total, records: records.map((record) => toRecordView(context, record)) };
+  const allowedFor = await recordAllowances(context);
+  return { scope: context.scope, total, records: records.map((record) => toRecordView(context, record, allowedFor(record))) };
 }
 
 export async function getCustomRecord(context: ObjectContext, recordId: string) {
-  return toRecordView(context, await requireRecord(context, recordId, 'read'));
+  const [record, allowedFor] = await Promise.all([requireRecord(context, recordId, 'read'), recordAllowances(context)]);
+  return toRecordView(context, record, allowedFor(record));
 }
 
 /** The caller owns the new record. */

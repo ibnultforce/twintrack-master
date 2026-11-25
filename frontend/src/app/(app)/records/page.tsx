@@ -2,9 +2,10 @@
 
 import { useState, type FormEvent } from 'react';
 import { ConfirmDialog, Dialog } from '@/components/Dialog';
+import { ShareDialog } from '@/components/ShareDialog';
 import { Card, Chips, Loaded, Notice, PageHead, Pagination } from '@/components/ui';
 import { describeError } from '@/lib/api/http';
-import { createRecord, deleteRecord, getRecordHistory, listReadableObjects, listRecords, restoreRecord, updateRecord } from '@/lib/api/records';
+import { createRecord, deleteRecord, getRecordHistory, listReadableObjects, listRecords, listRecordShares, restoreRecord, shareRecord, unshareRecord, updateRecord } from '@/lib/api/records';
 import type { CustomRecordView, ReadableObject } from '@/lib/api/types';
 import { formatTime } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
@@ -118,7 +119,13 @@ function HistoryDialog({ object, record, onClose }: { object: ReadableObject; re
   );
 }
 
-type RecordsDialog = { kind: 'new' } | { kind: 'edit' | 'history' | 'delete'; record: CustomRecordView } | null;
+type RecordsDialog = { kind: 'new' } | { kind: 'edit' | 'history' | 'delete' | 'share'; record: CustomRecordView } | null;
+
+/** A record's name for a dialog title: its first text field, such as "Team lunch after release". */
+const recordLabel = (object: ReadableObject, record: CustomRecordView) => {
+  const firstText = object.fields.find((field) => field.type === 'text');
+  return String((firstText && record.values[firstText.key]) || 'this record');
+};
 
 /** Records of the custom objects an admin defined. Everything shown and allowed here comes from the person's access. */
 export default function RecordsPage() {
@@ -171,9 +178,11 @@ export default function RecordsPage() {
                                       <button type="button" className="link" onClick={() => void restoreRecord(object.module, object.key, record.id).then(() => { setFailure(null); setOutcome('Restored.'); records.reload(); }, (error: unknown) => { setOutcome(null); setFailure(describeError(error)); })}>Restore</button>
                                     ) : (
                                       <>
-                                        {object.can.update ? <button type="button" className="link" onClick={() => setDialog({ kind: 'edit', record })}>Edit</button> : null}
+                                        {/* Each record says what this person may do with it: a record shared read-only can't be edited. */}
+                                        {(record.allowed?.edit ?? object.can.update) ? <button type="button" className="link" onClick={() => setDialog({ kind: 'edit', record })}>Edit</button> : null}
                                         <button type="button" className="link" onClick={() => setDialog({ kind: 'history', record })}>History</button>
-                                        {object.can.delete ? <button type="button" className="link" onClick={() => setDialog({ kind: 'delete', record })}>Delete</button> : null}
+                                        {record.allowed?.share ? <button type="button" className="link" onClick={() => setDialog({ kind: 'share', record })}>Sharing</button> : null}
+                                        {(record.allowed?.delete ?? object.can.delete) ? <button type="button" className="link" onClick={() => setDialog({ kind: 'delete', record })}>Delete</button> : null}
                                       </>
                                     )}
                                   </div>
@@ -192,6 +201,17 @@ export default function RecordsPage() {
 
             {dialog?.kind === 'new' ? <RecordDialog object={object} onSaved={() => { setOutcome('Record added.'); records.reload(); }} onClose={() => setDialog(null)} /> : null}
             {dialog?.kind === 'edit' ? <RecordDialog object={object} record={dialog.record} onSaved={() => { setOutcome('Saved.'); records.reload(); }} onClose={() => setDialog(null)} /> : null}
+            {dialog?.kind === 'share' ? (
+              <ShareDialog
+                recordLabel={recordLabel(object, dialog.record)}
+                objectLabel={object.label.toLowerCase()}
+                canShare={Boolean(dialog.record.allowed?.share)}
+                loadShares={() => listRecordShares(object.module, object.key, dialog.record.id)}
+                addShare={(share) => shareRecord(object.module, object.key, dialog.record.id, share)}
+                removeShare={(shareId) => unshareRecord(object.module, object.key, dialog.record.id, shareId)}
+                onClose={() => setDialog(null)}
+              />
+            ) : null}
             {dialog?.kind === 'history' ? <HistoryDialog object={object} record={dialog.record} onClose={() => setDialog(null)} /> : null}
             {dialog?.kind === 'delete' ? <ConfirmDialog title="Delete this record?" text="It moves to the recycle bin, where it can be restored." confirmLabel="Delete" isDanger onClose={() => setDialog(null)} onConfirm={async () => { await deleteRecord(object.module, object.key, dialog.record.id); setOutcome('Moved to the recycle bin.'); records.reload(); }} /> : null}
           </>

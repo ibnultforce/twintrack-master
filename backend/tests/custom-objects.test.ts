@@ -191,6 +191,37 @@ describe('custom objects', () => {
       expect((await (await as('mehedi')).get(TRAINING)).body.total).toBe(0);
     });
 
+    it('names who a record is shared with and who shared it', async () => {
+      const karim = await as('karim');
+      const created = (await karim.post(TRAINING, { values: { title: 'First aid' } })).body;
+      const share = (await karim.post(`${TRAINING}/${created.id}/shares`, { granteeType: 'user', granteeId: ID.MEHEDI, access: 'read' })).body;
+      expect(share).toMatchObject({ granteeId: ID.MEHEDI, granteeName: expect.any(String), sharedBy: ID.KARIM, sharedByName: expect.any(String) });
+      expect((await karim.get(`${TRAINING}/${created.id}/shares`)).body.shares[0]).toMatchObject({ granteeName: share.granteeName, sharedByName: share.sharedByName });
+    });
+
+    it('says on each record what this person may do with it, as the routes decide', async () => {
+      await giveHrProfile(ID.MEHEDI, 'training-reader', { training: { actions: ['read', 'update'], scope: 'own' } });
+      const karim = await as('karim');
+      const created = (await karim.post(TRAINING, { values: { title: 'First aid' } })).body;
+      // The owner may edit and share it, but not delete it: Karim has no delete.
+      expect((await karim.get(TRAINING)).body.records[0].allowed).toEqual({ edit: true, delete: false, share: true });
+      // Rahim is above Karim with delete on his team, and no update.
+      expect((await (await as('rahim')).get(`${TRAINING}/${created.id}`)).body.allowed).toEqual({ edit: false, delete: true, share: true });
+
+      // Shared with Mehedi to read: he sees it, but may not edit or share it, and the routes agree.
+      const share = (await karim.post(`${TRAINING}/${created.id}/shares`, { granteeType: 'user', granteeId: ID.MEHEDI, access: 'read' })).body;
+      const mehedi = await as('mehedi');
+      expect((await mehedi.get(TRAINING)).body.records[0].allowed).toEqual({ edit: false, delete: false, share: false });
+      expect((await mehedi.patch(`${TRAINING}/${created.id}`, { values: { hours: 1 } })).status).toBe(403);
+      expect((await mehedi.post(`${TRAINING}/${created.id}/shares`, { granteeType: 'user', granteeId: ID.JACK, access: 'read' })).status).toBe(403);
+
+      // Shared to edit, the same record becomes editable for him.
+      await karim.delete(`${TRAINING}/${created.id}/shares/${share.id}`);
+      await karim.post(`${TRAINING}/${created.id}/shares`, { granteeType: 'user', granteeId: ID.MEHEDI, access: 'edit' });
+      expect((await mehedi.get(TRAINING)).body.records[0].allowed.edit).toBe(true);
+      expect((await mehedi.patch(`${TRAINING}/${created.id}`, { values: { hours: 1 } })).status).toBe(200);
+    });
+
     it('lists the objects someone can read, without protected fields they can not see', async () => {
       const objects = (await (await as('rahim')).get('/records')).body.objects;
       expect(objects).toEqual([expect.objectContaining({ module: 'hr', key: 'training', can: { create: false, update: false, delete: true } })]);

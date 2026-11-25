@@ -1,5 +1,5 @@
 import { apiRequest } from './http';
-import type { CustomFieldDefinition, CustomRecordView, HistoryEntry, ReadableObject } from './types';
+import type { CustomFieldDefinition, CustomRecordView, HistoryEntry, ReadableObject, RecordShare, ShareGranteeType } from './types';
 
 const segment = encodeURIComponent;
 const objectPath = (moduleKey: string, objectKey: string) => `/records/${segment(moduleKey)}/${segment(objectKey)}`;
@@ -29,6 +29,17 @@ export const restoreRecord = (moduleKey: string, objectKey: string, recordId: st
 export async function getRecordHistory(moduleKey: string, objectKey: string, recordId: string): Promise<HistoryEntry[]> {
   return (await apiRequest<{ entries: HistoryEntry[] }>(`${recordPath(moduleKey, objectKey, recordId)}/history`, { query: { page: 1, pageSize: 50 } })).entries;
 }
+
+export async function listRecordShares(moduleKey: string, objectKey: string, recordId: string): Promise<RecordShare[]> {
+  return (await apiRequest<{ shares: RecordShare[] }>(`${recordPath(moduleKey, objectKey, recordId)}/shares`)).shares;
+}
+
+/** Shares a record, or changes the access of an existing share with the same person or role. */
+export const shareRecord = (moduleKey: string, objectKey: string, recordId: string, share: { granteeType: ShareGranteeType; granteeId: string; access: 'read' | 'edit'; expiresAt?: string }) =>
+  apiRequest<RecordShare>(`${recordPath(moduleKey, objectKey, recordId)}/shares`, { method: 'POST', body: share });
+
+export const unshareRecord = (moduleKey: string, objectKey: string, recordId: string, shareId: string) =>
+  apiRequest(`${recordPath(moduleKey, objectKey, recordId)}/shares/${segment(shareId)}`, { method: 'DELETE' });
 
 export interface ObjectDefinition {
   label: string;

@@ -381,6 +381,10 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>25 November 2026: Sharing on the Records screen</h3>
+      <ul>
+        <li>Records screen: a <strong>Sharing</strong> link on each record you may share opens who it is shared with (person, org role, or a role and everything below; read or edit; until a date) and lets you add or remove a share. Edit and Delete now show only where they will work, so a record shared read-only no longer offers Edit. The API adds <code>allowed</code> (<code>edit</code>, <code>delete</code>, <code>share</code>) to each custom record and names on shares (<code>granteeName</code>, <code>sharedByName</code>, also on salary shares). No route or permission changed.</li>
+      </ul>
       <h3>25 November 2026: Accounts Export center and assistant tools (manifest 1.21.0)</h3>
       <ul>
         <li><code>GET /accounts/exports</code> and <code>/accounts/exports/:dataset</code>: 18 lists and reports as CSV, each behind its screen's read permission. Columns for fields the profile hides are left out, salary per person needs the payroll lines field, formulas in text are defused, and every download is audited. Six read-only <code>accounts_*</code> MCP tools (dashboard, cash and bank, trial balance, profit and loss, balance sheet, cash flow) for Claude, needing <code>ledgerAccount.read</code>.</li>

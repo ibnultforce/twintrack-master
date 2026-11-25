@@ -79,31 +79,57 @@ export async function assertCanReachRecord(actor: Actor, scope: Scope, record: S
 }
 
 /**
- * Who may share a record: a super admin, the people it belongs to, anyone above them (whom a team scope reaches),
- * or someone holding the object's share permission with a scope that reaches it.
+ * Who may share records of one object: a super admin, the people a record belongs to, anyone above them (whom a team
+ * scope reaches), or someone holding the object's share permission with a scope that reaches them. Worked out once, so
+ * a page of records can each say whether the person may share it, the same way the share routes decide.
  */
+export async function shareAllowance(actor: Actor, objectKey: string): Promise<(peopleIds: string[]) => boolean> {
+  if (actor.user.superAdmin) return () => true;
+  const shareScope = actor.permissions[`${objectKey}.share`];
+  const [teamReach, shareReach] = await Promise.all([
+    peopleInScope(actor.user._id, 'team'),
+    shareScope ? peopleInScope(actor.user._id, shareScope) : Promise.resolve(undefined),
+  ]);
+  return (peopleIds) => {
+    const owner = peopleIds[0];
+    if (owner && reachesAnyOf(teamReach, [owner])) return true;
+    return shareReach !== undefined && reachesAnyOf(shareReach, peopleIds);
+  };
+}
+
 async function assertMayShare(actor: Actor, record: ScopedRecord): Promise<void> {
-  if (actor.user.superAdmin) return;
-  const owner = record.peopleIds[0];
-  if (owner && reachesAnyOf(await peopleInScope(actor.user._id, 'team'), [owner])) return;
-  const shareScope = actor.permissions[`${record.object}.share`];
-  if (shareScope && reachesAnyOf(await peopleInScope(actor.user._id, shareScope), record.peopleIds)) return;
+  if ((await shareAllowance(actor, record.object))(record.peopleIds)) return;
   throw new ApiError(403, 'may_not_share', `Only the owner, someone above them, or someone with ${record.object}.share can share this.`);
 }
 
-const toShareView = (share: RecordShareDoc) => ({
+const toShareView = (share: RecordShareDoc, names: Map<string, string>) => ({
   id: share._id,
   granteeType: share.granteeType,
   granteeId: share.granteeId,
+  /** The person's or org role's name, for showing; missing if it has since been removed. */
+  granteeName: names.get(`${share.granteeType === 'user' ? 'user' : 'orgRole'}:${share.granteeId}`),
   access: share.access,
   expiresAt: share.expiresAt,
   sharedBy: share.sharedBy,
+  sharedByName: names.get(`user:${share.sharedBy}`),
   createdAt: share.createdAt,
 });
 
+/** The names of the people and org roles a set of shares names, keyed "user:<id>" or "orgRole:<id>". */
+async function namesForShares(shares: RecordShareDoc[]): Promise<Map<string, string>> {
+  const userIds = [...new Set(shares.flatMap((share) => [share.sharedBy, ...(share.granteeType === 'user' ? [share.granteeId] : [])]))];
+  const roleIds = [...new Set(shares.filter((share) => share.granteeType !== 'user').map((share) => share.granteeId))];
+  const [users, roles] = await Promise.all([
+    userIds.length ? User.find({ _id: { $in: userIds } }).select('name').lean() : [],
+    roleIds.length ? OrgRole.find({ _id: { $in: roleIds } }).select('name').lean() : [],
+  ]);
+  return new Map([...users.map((user) => [`user:${user._id}`, user.name] as const), ...roles.map((role) => [`orgRole:${role._id}`, role.name] as const)]);
+}
+
 export async function listRecordShares(ref: RecordRef) {
   const shares = await RecordShare.find({ module: ref.module, object: ref.object, recordId: ref.recordId }).sort({ createdAt: 1, _id: 1 }).lean();
-  return { shares: shares.map(toShareView) };
+  const names = await namesForShares(shares);
+  return { shares: shares.map((share) => toShareView(share, names)) };
 }
 
 const invalidGrantee = (message: string) => new ApiError(422, 'validation_failed', 'Some fields are invalid.', [{ path: 'granteeId', message }]);
@@ -151,7 +177,7 @@ export async function shareRecord(actor: Actor, record: ScopedRecord, input: Sha
       await recordAudit({ action: 'record.shared', ...auditFields(actor, record, input) }, session);
       return share!;
     });
-    return toShareView(saved);
+    return toShareView(saved, await namesForShares([saved]));
   } catch (error) {
     // Two requests sharing with the same person at once: the unique index lets one in, and the other can simply retry.
     if (isDuplicateKeyError(error)) throw new ApiError(409, 'share_conflict', 'That share was just changed. Try again.');

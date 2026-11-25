@@ -603,7 +603,9 @@ All are `signed`: the module comes from the path, so the service checks the perm
 | `GET .../:id/history` | `<object>.read` | What changed, who changed it and when. |
 | `GET`, `POST .../:id/shares`, `DELETE .../:id/shares/:shareId` | `<object>.read` | List, add and remove shares, as for salaries. |
 
-A record has `id`, `module`, `object`, `ownerId`, `values`, `version`, `createdBy`, `createdAt`, `updatedBy`, `updatedAt`, and `deletedAt` and `deletedBy` while it's in the recycle bin.
+A record has `id`, `module`, `object`, `ownerId`, `values`, `version`, `createdBy`, `createdAt`, `updatedBy`, `updatedAt`, and `deletedAt` and `deletedBy` while it's in the recycle bin. Outside the recycle bin, the list and the single record also carry `allowed` (`edit`, `delete`, `share`): what you may do with that record, by the same rules the routes apply. A record shared with you to read has `edit: false`, so screens can leave out Edit instead of offering a save that fails.
+
+A share has `id`, `granteeType` (`user`, `orgRole`, `orgRoleAndBelow`), `granteeId`, `granteeName`, `access` (`read` or `edit`), `expiresAt`, `sharedBy`, `sharedByName` and `createdAt`. A name is missing if the person or org role has since been removed. Adding a share needs the right to share: the owner, someone above them, or `<object>.share` with a scope that reaches the owner (`403 may_not_share` otherwise). The Records screen shows this as **Sharing** on each record you may share.
 
 ## Activity log
 

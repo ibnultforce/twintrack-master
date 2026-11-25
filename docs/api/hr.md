@@ -77,7 +77,7 @@ A share has `id`, `granteeType` (`user`, `orgRole`, or `orgRoleAndBelow` for a r
 
 **Access:** `private`, needs `salary.read`, reaching the salary
 
-**Returns:** `shares`
+**Returns:** `shares`, each with `granteeName` and `sharedByName` beside the ids (see the share shape in `master.md`, Records)
 
 ### `POST /hr/salaries/:id/shares`
 

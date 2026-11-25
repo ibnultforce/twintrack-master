@@ -315,6 +315,23 @@ export interface CustomRecordView {
   updatedBy?: string;
   updatedAt: string;
   deletedAt?: string;
+  /** What you may do with this record, as the API decides. Missing on records from the recycle bin. */
+  allowed?: { edit: boolean; delete: boolean; share: boolean };
+}
+
+/** Who a share opens a record to: one person, everyone in an org role, or a role and every role below it. */
+export type ShareGranteeType = 'user' | 'orgRole' | 'orgRoleAndBelow';
+
+export interface RecordShare {
+  id: string;
+  granteeType: ShareGranteeType;
+  granteeId: string;
+  granteeName?: string;
+  access: 'read' | 'edit';
+  expiresAt?: string;
+  sharedBy: string;
+  sharedByName?: string;
+  createdAt: string;
 }
 
 export interface HistoryEntry {
