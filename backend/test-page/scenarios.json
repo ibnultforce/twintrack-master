@@ -15413,6 +15413,517 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /accounts/employee-loans",
+          "method": "GET",
+          "path": "/accounts/employee-loans",
+          "purpose": "Loans and advances to employees, with what is still owed from repayments in recorded payroll runs.",
+          "input": "page, pageSize, status, employeeId",
+          "access": "Needs employeeLoan.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every loan",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/employee-loans",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/employee-loans",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/employee-loans",
+          "method": "POST",
+          "path": "/accounts/employee-loans",
+          "purpose": "Makes a draft loan or advance with its monthly instalment and first repayment month.",
+          "input": "employeeId, kind, purpose, issueDate, amount, monthlyInstallment, firstRepaymentMonth",
+          "access": "Needs employeeLoan.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A salary advance over 3 months",
+              "expected": 201,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans",
+                "as": "farhana@twintrack.test",
+                "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "An instalment above the amount",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans",
+                "as": "farhana@twintrack.test",
+                "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":7000000,\"firstRepaymentMonth\":\"2026-11\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/employee-loans/:id",
+          "method": "GET",
+          "path": "/accounts/employee-loans/:id",
+          "purpose": "One loan with its planned schedule beside what payroll took, payments out, and actions.",
+          "input": "",
+          "access": "Needs employeeLoan.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "An advance",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/employee-loans/{{loanId}}",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such loan",
+              "expected": 404,
+              "code": "unknown_employee_loan",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/employee-loans/ln_nobody",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/employee-loans/:id/submit",
+          "method": "POST",
+          "path": "/accounts/employee-loans/:id/submit",
+          "purpose": "Sends a draft for approval.",
+          "input": "version",
+          "access": "Needs employeeLoan.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Already submitted",
+              "expected": 409,
+              "code": "loan_not_draft",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans/{{loanId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/submit",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/employee-loans/:id/approve",
+          "method": "POST",
+          "path": "/accounts/employee-loans/:id/approve",
+          "purpose": "Records it: owed by the employee (1400) against what the company must pay them (2200). Never by its maker.",
+          "input": "version",
+          "access": "Needs employeeLoan.read; the service needs employeeLoan.approve or the stand-in",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own loan",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans/{{loanId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Still a draft",
+              "expected": 409,
+              "code": "loan_not_submitted",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/approve",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/employee-loans/:id/return",
+          "method": "POST",
+          "path": "/accounts/employee-loans/:id/return",
+          "purpose": "Sends a submitted loan back to its maker with a note.",
+          "input": "note, version",
+          "access": "As approve",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "Your own loan",
+              "expected": 403,
+              "code": "own_record",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans/{{loanId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{\"note\":\"Check the instalment\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No note",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans/{{loanId}}/submit",
+                  "as": "farhana@twintrack.test"
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/return",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/employee-loans/:id/cancel",
+          "method": "POST",
+          "path": "/accounts/employee-loans/:id/cancel",
+          "purpose": "Gives up a draft, or reverses a recorded loan never paid out or repaid.",
+          "input": "reason, version",
+          "access": "As approve for a recorded loan; employeeLoan.update for a draft",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A draft",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{\"reason\":\"Not needed\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No reason",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/cancel",
+                "as": "farhana@twintrack.test",
+                "body": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/employee-loans/:id/pay",
+          "method": "POST",
+          "path": "/accounts/employee-loans/:id/pay",
+          "purpose": "Pays the loan out to the employee with a draft payment voucher.",
+          "input": "paymentDate, moneyAccountId, amount, reference",
+          "access": "Needs journalVoucher.create and loan read access",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A loan not yet recorded",
+              "expected": 409,
+              "code": "loan_not_recorded",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/{{loanId}}/pay",
+                "as": "farhana@twintrack.test",
+                "body": "{\"paymentDate\":\"2026-10-05\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/employee-loans/ln_nobody/pay",
+                "as": "karim@twintrack.test",
+                "body": "{\"paymentDate\":\"2026-10-05\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/employee-loans/:id/history",
+          "method": "GET",
+          "path": "/accounts/employee-loans/:id/history",
+          "purpose": "The changes to a loan, newest first.",
+          "input": "page, pageSize",
+          "access": "Needs employeeLoan.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "An advance",
+              "expected": 200,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/employee-loans",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"employeeId\":\"emp_01\",\"kind\":\"advance\",\"purpose\":\"Salary advance\",\"issueDate\":\"2026-10-05\",\"amount\":6000000,\"monthlyInstallment\":2000000,\"firstRepaymentMonth\":\"2026-11\"}",
+                  "save": {
+                    "loanId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/employee-loans/{{loanId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such loan",
+              "expected": 404,
+              "code": "unknown_employee_loan",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/employee-loans/ln_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/unpaid-leave",
+          "method": "GET",
+          "path": "/accounts/unpaid-leave",
+          "purpose": "Each active employee unpaid leave for a month, a day of pay, and what payroll will take off.",
+          "input": "month",
+          "access": "Needs unpaidLeave.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "November 2026",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/unpaid-leave?month=2026-11",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No month",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/unpaid-leave",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PUT /accounts/unpaid-leave/:employeeId/:month",
+          "method": "PUT",
+          "path": "/accounts/unpaid-leave/:employeeId/:month",
+          "purpose": "Sets a person unpaid leave days for a month (0 removes it), until the month has a payroll run.",
+          "input": "days (whole or half), note",
+          "access": "Needs unpaidLeave.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Two days in December 2099",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "PUT",
+                "path": "/accounts/unpaid-leave/emp_01/2099-12",
+                "as": "farhana@twintrack.test",
+                "body": "{\"days\":2,\"note\":\"Family matter\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A third of a day",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PUT",
+                "path": "/accounts/unpaid-leave/emp_01/2099-12",
+                "as": "farhana@twintrack.test",
+                "body": "{\"days\":0.3}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such employee",
+              "expected": 404,
+              "code": "unknown_employee",
+              "request": {
+                "method": "PUT",
+                "path": "/accounts/unpaid-leave/emp_nobody/2099-12",
+                "as": "farhana@twintrack.test",
+                "body": "{\"days\":1}"
+              }
+            }
+          ]
         }
       ]
     }

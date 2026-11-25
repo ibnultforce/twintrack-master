@@ -17,6 +17,8 @@ import { findVouchersLinkedTo, sumSettledAmounts } from '../journalVoucher/journ
 import { createLinkedVoucher } from '../journalVoucher/journalVoucher.service.js';
 import { postEntry, reverseEntry, type NewLedgerLine } from '../ledger/ledger.service.js';
 import { AccountsEmployee, type AccountsEmployeeDoc } from '../models/accountsEmployee.js';
+import { UnpaidLeave } from '../models/employeeLoan.js';
+import { findDueRepayments } from '../employeeLoan/loanRepayments.js';
 import { PayrollRun, type PayrollLine, type PayrollRunDoc, type PayrollRunStatus } from '../models/payrollRun.js';
 import { POSTING_ACCOUNTS } from '../postingAccounts.js';
 
@@ -59,32 +61,77 @@ export function grossForMonth(employee: Pick<AccountsEmployeeDoc, 'monthlySalary
   return Math.round((employee.monthlySalary * daysWorked) / days);
 }
 
-/** Every active employee with pay for the month, by employee code. */
+/** A day's pay for unpaid leave: a thirtieth of the monthly salary, whatever the month's length. */
+const DAYS_IN_PAY_MONTH = 30;
+
+/** Pay taken off for unpaid leave, rounded to the paisa, never more than the gross. */
+export const leaveDeductionFor = (monthlySalary: number, days: number, gross: number) => Math.min(gross, Math.round((monthlySalary * days) / DAYS_IN_PAY_MONTH));
+
+/** What each person nets: gross less their loan repayments. */
+const netOf = (line: Pick<PayrollLine, 'gross' | 'loanRepayments'>) => line.gross - (line.loanRepayments ?? []).reduce((sum, repayment) => sum + repayment.amount, 0);
+
+/**
+ * Every active employee with pay for the month, by employee code: their gross after a part month and unpaid leave,
+ * and this month's instalment on each loan they still owe, never more than they earn.
+ */
 async function linesForMonth(month: string): Promise<PayrollLine[]> {
   const employees = await AccountsEmployee.find({ isActive: true }).sort({ employeeCode: 1 }).lean();
+  const [leave, dueRepayments] = await Promise.all([
+    UnpaidLeave.find({ month }).lean(),
+    findDueRepayments(month),
+  ]);
+  const leaveByEmployee = new Map(leave.map((entry) => [entry.employeeId, entry]));
   return employees.flatMap((employee) => {
-    const gross = grossForMonth(employee, month);
-    if (gross <= 0) return [];
-    const isPartMonth = gross !== employee.monthlySalary;
-    return [{
+    const earned = grossForMonth(employee, month);
+    if (earned <= 0) return [];
+    const unpaid = leaveByEmployee.get(employee._id);
+    const leaveDeduction = unpaid ? leaveDeductionFor(employee.monthlySalary, unpaid.days, earned) : 0;
+    const gross = earned - leaveDeduction;
+    let left = gross;
+    const loanRepayments = (dueRepayments.get(employee._id) ?? []).flatMap((repayment) => {
+      const amount = Math.min(repayment.amount, left);
+      left -= amount;
+      return amount > 0 ? [{ ...repayment, amount }] : [];
+    });
+    const notes = [
+      ...(earned !== employee.monthlySalary ? [`Joined ${employee.joinDate}`] : []),
+      ...(unpaid ? [`${unpaid.days} unpaid leave day${unpaid.days === 1 ? '' : 's'}`] : []),
+    ];
+    const line: PayrollLine = {
       employeeId: employee._id,
       employeeCode: employee.employeeCode,
       name: employee.name,
       department: employee.department,
       gross,
-      ...(isPartMonth && { note: `Joined ${employee.joinDate}` }),
-    }];
+      ...(unpaid && { unpaidLeaveDays: unpaid.days, leaveDeduction }),
+      ...(loanRepayments.length > 0 && { loanRepayments }),
+      ...(notes.length > 0 && { note: notes.join('; ') }),
+      net: 0,
+    };
+    return [{ ...line, net: netOf(line) }];
   });
 }
 
 const totalOf = (lines: PayrollLine[]) => lines.reduce((sum, line) => sum + line.gross, 0);
 
-/** Salary expense per person against salaries payable: what recording the run writes. */
-function ledgerLinesFor(run: Pick<PayrollRunDoc, 'lines' | 'total' | 'month' | 'number'>): NewLedgerLine[] {
-  return [
+/** Paid from the bank: the lines' net. Lines saved before deductions existed have no net, and pay their gross. */
+const netTotalOf = (lines: PayrollLine[]) => lines.reduce((sum, line) => sum + (line.net ?? line.gross), 0);
+
+/** What the run owes from the bank. Runs saved before deductions have no netTotal, and owe their total. */
+const amountToPay = (run: Pick<PayrollRunDoc, 'netTotal' | 'total'>) => run.netTotal ?? run.total;
+
+/**
+ * Salary expense per person; the bank owes each person their net (salaries payable); loan repayments lower what the
+ * employee owes (1400 Employee advances and loans), one line per loan so each loan's balance can be read back.
+ */
+function ledgerLinesFor(run: Pick<PayrollRunDoc, 'lines' | 'total' | 'netTotal' | 'month' | 'number'>): NewLedgerLine[] {
+  const lines: NewLedgerLine[] = [
     ...run.lines.map((line) => ({ accountId: POSTING_ACCOUNTS.salaryExpense, debit: line.gross, memo: `${line.employeeCode} ${line.name}` })),
-    { accountId: POSTING_ACCOUNTS.salariesPayable, credit: run.total, memo: `${run.number} salaries, ${monthLabel(run.month)}` },
+    ...run.lines.flatMap((line) => (line.loanRepayments ?? []).map((repayment) => ({ accountId: POSTING_ACCOUNTS.employeeLoans, credit: repayment.amount, memo: `${repayment.number} ${line.name}` }))),
+    { accountId: POSTING_ACCOUNTS.salariesPayable, credit: amountToPay(run), memo: `${run.number} salaries, ${monthLabel(run.month)}` },
   ];
+  // A person whose loan repayments take all their pay leaves nothing payable for that line.
+  return lines.filter((line) => (line.debit ?? line.credit ?? 0) > 0);
 }
 
 function assertStatus(run: PayrollRunDoc, allowed: PayrollRunStatus, action: string): void {
@@ -114,9 +161,10 @@ async function viewsOf(runs: PayrollRunDoc[], rules: FieldRules) {
     payDate: run.payDate,
     lines: run.lines,
     total: run.total,
+    netTotal: amountToPay(run),
     headcount: run.headcount,
     status: run.status,
-    ...(run.status === 'recorded' && paymentStateOf(run.total, run.payDate, settled.get(run._id))),
+    ...(run.status === 'recorded' && paymentStateOf(amountToPay(run), run.payDate, settled.get(run._id))),
     returnNote: run.returnNote,
     createdBy: personRef(run.createdBy, names),
     createdAt: run.createdAt,
@@ -195,7 +243,7 @@ export async function createPayrollRun(actor: Actor, request: { month: string; p
   try {
     const run = await runInTransaction(async (session) => {
       const [created] = await PayrollRun.create([{
-        _id: `pr_${randomUUID()}`, number, month: request.month, payDate: request.payDate, lines, total: totalOf(lines), headcount: lines.length,
+        _id: `pr_${randomUUID()}`, number, month: request.month, payDate: request.payDate, lines, total: totalOf(lines), netTotal: netTotalOf(lines), headcount: lines.length,
         status: 'draft', createdBy: actor.user._id, updatedBy: actor.user._id,
       }], { session });
       if (!created) throw new Error('Creating the payroll run returned nothing.');
@@ -232,12 +280,17 @@ export async function updatePayrollRun(
     }
     lines = lines.flatMap((line) => {
       if (line.employeeId !== adjustment.employeeId) return [line];
-      return adjustment.gross > 0 ? [{ ...line, gross: adjustment.gross, ...(adjustment.note && { note: adjustment.note }) }] : [];
+      if (adjustment.gross <= 0) return [];
+      const changed = { ...line, gross: adjustment.gross, ...(adjustment.note && { note: adjustment.note }) };
+      if (netOf(changed) < 0) {
+        throw new ApiError(422, 'validation_failed', 'Some adjustments are invalid.', [{ path: `adjustments.${index}.gross`, message: `is less than ${line.name}'s loan repayments this month` }]);
+      }
+      return [{ ...changed, net: netOf(changed) }];
     });
   }
   if (lines.length === 0) throw new ApiError(422, 'validation_failed', 'Some adjustments are invalid.', [{ path: 'adjustments', message: 'would leave nobody on the run' }]);
   const saved = await changeRun(actor, existing, 'payrollRun.updated', async () => ({
-    $set: { ...(request.payDate && { payDate: request.payDate }), lines, total: totalOf(lines), headcount: lines.length },
+    $set: { ...(request.payDate && { payDate: request.payDate }), lines, total: totalOf(lines), netTotal: netTotalOf(lines), headcount: lines.length },
   }), { version: request.version, reason: request.reason });
   return viewFor(actor, saved);
 }
@@ -308,9 +361,9 @@ export async function payPayrollRun(actor: Actor, runId: string, request: { paym
   const run = await requireRun(runId);
   assertStatus(run, 'recorded', 'paid');
   const settled = (await sumSettledAmounts([run._id])).get(run._id);
-  const amount = request.amount ?? run.total - (settled?.committed ?? 0);
+  const amount = request.amount ?? amountToPay(run) - (settled?.committed ?? 0);
   if (amount <= 0) throw new ApiError(409, 'nothing_owed', `Nothing is open on ${run.number}: it is paid, or payments for the rest are waiting for approval.`);
-  assertWithinOpenAmount(amount, run.total, settled, run.number);
+  assertWithinOpenAmount(amount, amountToPay(run), settled, run.number);
   return createLinkedVoucher(actor, 'payment', {
     voucherDate: request.paymentDate,
     memo: `Salaries, ${monthLabel(run.month)} (${run.number})`,

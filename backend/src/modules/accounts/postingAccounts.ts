@@ -11,6 +11,8 @@ export const POSTING_ACCOUNTS = {
   serviceIncome: 'la_4100',
   salaryExpense: 'la_5100',
   salariesPayable: 'la_2200',
+  /** What employees owe the company: loans and advances, repaid through payroll. */
+  employeeLoans: 'la_1400',
   fixedAssets: 'la_1600',
   /** A contra asset: depreciation builds up here instead of lowering the asset's cost. */
   accumulatedDepreciation: 'la_1650',

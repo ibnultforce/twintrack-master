@@ -21,7 +21,7 @@ export const VOUCHER_TYPES = ['journal', 'payment', 'receipt'] as const;
 export type VoucherType = (typeof VOUCHER_TYPES)[number];
 
 /** What a voucher settles or comes from: an invoice, a bill or a payroll run it pays, or a month's depreciation run. */
-export const LINKED_DOCUMENT_TYPES = ['invoice', 'bill', 'payrollRun', 'staffPayout', 'depreciation'] as const;
+export const LINKED_DOCUMENT_TYPES = ['invoice', 'bill', 'payrollRun', 'staffPayout', 'employeeLoan', 'depreciation'] as const;
 export type LinkedDocumentType = (typeof LINKED_DOCUMENT_TYPES)[number];
 
 export interface LinkedDocument {

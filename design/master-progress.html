@@ -381,6 +381,13 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>24 November 2026: Accounts loans, advances and unpaid leave (manifest 1.17.0)</h3>
+      <ul>
+        <li>New resources <code>employeeLoan</code> (read, create, update, approve) and <code>unpaidLeave</code> (read, update). <code>/accounts/employee-loans</code>: a loan or advance approved by someone else is recorded as owed by the employee (1400) and paid out with a linked voucher; each payroll run takes its monthly instalment, so what is owed falls with each payroll and is read back from recorded runs. <code>/accounts/unpaid-leave</code>: leave days per person and month, which payroll takes off at monthly salary ÷ 30. Payroll lines now show unpaid leave, loan repayments and net pay, and the run pays its <code>netTotal</code>. New Loans and advances, and Leave and its cost screens in the Accounts app.</li>
+        <li>25 November: payroll repays only what a loan has actually paid out, so an approved loan not yet handed over takes nothing. Accounts app: summary tiles on Invoices, Bills and Disbursements, and lists loaded in full, now add up every page instead of the newest 100; Leave and its cost no longer clears someone's leave when Save is pressed on an empty box; New payment is hidden from profiles that can't make vouchers.</li>
+      </ul>
+    </div>
+    <div class="log-entry">
       <h3>24 November 2026: Accounts bonus, incentive, commission and employee payments (manifest 1.16.0)</h3>
       <ul>
         <li>New resources <code>staffPayout</code> (read, create, update, approve) and <code>commissionRule</code> (read, create, update). <code>/accounts/staff-payouts</code>: a month of Project management incentives, a typed bonus, or unpaid commission, recorded as expense against salaries payable on approval and paid with a linked payment voucher; approving incentives marks them paid in Project management in the same transaction, so an incentive is paid once. <code>/accounts/commission-rules</code>: an employee's rate on money received from a client, with earnings per receipt. <code>GET /accounts/employee-payments</code>: salary, bonus and commission per employee, salaries only with the payroll lines field. New Employee payments, Bonus and incentive, and Commission screens in the Accounts app.</li>

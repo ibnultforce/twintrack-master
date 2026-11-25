@@ -30,6 +30,8 @@ Built so far: a status check, settings, the chart of accounts, the ledger core, 
 | `bankReconciliation.read` / `.create` / `.update` | See statements; load one from CSV; match lines and sign it off |
 | `staffPayout.read` / `.create` / `.update` / `.approve` | Bonus, incentive and commission payouts, as for payroll runs |
 | `commissionRule.read` / `.create` / `.update` | See commission rules and earnings; add and change rules |
+| `employeeLoan.read` / `.create` / `.update` / `.approve` | Loans and advances, as for payroll runs |
+| `unpaidLeave.read` / `.update` | See and set unpaid leave days that payroll deducts |
 | `auditLog.read` | Read the Accounts activity log |
 
 No resource is scoped: each is one list for the whole organisation. Only a super admin holds these until a profile grants them.
@@ -553,13 +555,13 @@ The accounts these post to are the starting chart's 1300, 2100, 2300, 4100, 4200
 
 ## Payroll
 
-Monthly payroll on the dummy employees (`seed/accounts-employees.json`) until HR is built. A run (`PR-0001`) is made from the active employees for one month: each is paid their monthly salary, or for someone who joined during the month, the share of calendar days from their join date, rounded to the paisa. Gross only for now; tax and provident fund deductions come with Day 5. One run per month that isn't cancelled (`409 payroll_month_taken`).
+Monthly payroll on the dummy employees (`seed/accounts-employees.json`) until HR is built. A run (`PR-0001`) is made from the active employees for one month: each is paid their monthly salary, or for someone who joined during the month, the share of calendar days from their join date, rounded to the paisa. Each person's unpaid leave comes off their gross, and each loan instalment due comes off their pay (see Loans and advances); the run's `netTotal` is what the bank pays. Tax and provident fund deductions come later in Day 5. One run per month that isn't cancelled (`409 payroll_month_taken`).
 
 | Status | Means | Next |
 |---|---|---|
 | `draft` | Made from the employees | Edit (with a reason), submit, cancel |
 | `submitted` | Waiting for someone other than its maker | Approve, return with a note |
-| `recorded` | Dr 5100 Salaries and wages per person; Cr 2200 Salaries payable the total, dated the pay date | Pay; cancel with a reversal while it has no payments |
+| `recorded` | Dr 5100 Salaries and wages per person (gross); Cr 1400 Employee advances and loans per loan repaid; Cr 2200 Salaries payable the net, dated the pay date | Pay; cancel with a reversal while it has no payments |
 | `cancelled` | Given up, or reversed; the month can be run again | None |
 
 **Protected field:** `payrollRun.lines` (each person's pay) is hidden in runs and their history unless the grant's `fieldAccess` names it; changing a person's pay needs `edit` on it. `total` and `headcount` show to anyone who can read payroll. A recorded run shows `paid`, `outstanding`, `pending` and `paymentStatus`, worked out from linked payment vouchers, overdue from the day after the pay date.
@@ -777,6 +779,36 @@ Commission is earned on **money received**, not on invoices: each recorded recei
 **Access:** `private`, needs `payrollRun.read` or `staffPayout.read`. **Query:** optional `employeeId`, `from`, `to` (pay dates).
 
 **Returns:** `employees` (the payroll employee list), `payments` newest first (`employeeId`, `employeeName`, `type` salary, bonus or commission, `forWhat`, `date`, `amount`, `record` with its number, `isPaid` when the whole run or payout is paid from the bank), `totals` per type, and `maySeeSalaries`. Salaries come from recorded payroll runs and show only with read access to the payroll run's protected `lines` field.
+
+## Loans and advances
+
+Money lent to an employee (`loan`, such as a house or laptop loan) or advanced on salary or for travel (`advance`), numbered `LN-0001`, repaid **only through payroll**. Approving records Dr 1400 Employee advances and loans, Cr 2200 Salaries payable; **Pay** makes a linked payment voucher that hands the money over. From `firstRepaymentMonth`, each payroll run takes `monthlyInstallment` from the person's pay (the last instalment takes what is left, and never more than they earn), crediting 1400 one line per loan. Only money actually paid out (recorded payment vouchers) is repaid: a loan approved but not yet handed over takes nothing from pay. `outstanding` is the amount less repayments in recorded payroll runs, so it always equals what 1400 says for the loan.
+
+### `GET /accounts/employee-loans`, `GET /accounts/employee-loans/:id`, `GET /accounts/employee-loans/:id/history`
+
+**Access:** `private`, needs `employeeLoan.read`. The list takes `page`, `pageSize`, `status`, `employeeId`. Each loan shows `lastRepaymentMonth`, `payout` (paid out to the employee), `repaid`, `repaymentPending` (in runs not yet recorded), `outstanding` and `repayments` (run, month, amount). One loan adds `schedule` (each planned month and amount, with `taken` from the run that repaid it), `payments` and `allowedActions`.
+
+### `POST /accounts/employee-loans`
+
+**Access:** `private`, needs `employeeLoan.create`. **Body:** `employeeId` (active), `kind`, `purpose`, `issueDate`, `amount` and `monthlyInstallment` (paisa; the instalment not above the amount), `firstRepaymentMonth` (`YYYY-MM`, not before the issue month).
+
+### `POST /accounts/employee-loans/:id/submit`, `/approve`, `/return`, `/cancel`, `/pay`
+
+As for payroll runs, with `employeeLoan.update` and `employeeLoan.approve`; never by the maker. Cancelling a recorded loan reverses it, and is refused once anything is paid out or repaid (`409 loan_in_use`). Errors use `loan_not_draft`, `loan_not_submitted`, `loan_not_recorded`.
+
+## Unpaid leave
+
+Kept in Accounts until HR is built. A month's payroll run takes each person's unpaid leave off their gross at a day's pay: monthly salary ÷ 30, rounded to the paisa, never more than they earn. The run's line shows `unpaidLeaveDays` and `leaveDeduction`.
+
+### `GET /accounts/unpaid-leave`
+
+**Access:** `private`, needs `unpaidLeave.read`. **Query:** `month`. **Returns:** `employees` (each active employee's `days`, `dailyRate`, `deduction`, `note`) and `total`.
+
+### `PUT /accounts/unpaid-leave/:employeeId/:month`
+
+**Access:** `private`, needs `unpaidLeave.update`. **Body:** `days` (whole or half days, 0 removes it), optional `note`. Refused once the month has a payroll run that isn't cancelled (`409 payroll_run_exists`): cancel the run, change the leave, make it again.
+
+**Errors:** `404 unknown_employee`, `409 payroll_run_exists`, `422 validation_failed`
 
 ## Activity log
 

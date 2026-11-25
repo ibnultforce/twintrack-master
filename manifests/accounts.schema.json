@@ -482,6 +482,8 @@
                 "invoice",
                 "bill",
                 "payrollRun",
+                "staffPayout",
+                "employeeLoan",
                 "depreciation"
               ]
             },
@@ -1303,6 +1305,43 @@
               },
               "note": {
                 "type": "string"
+              },
+              "unpaidLeaveDays": {
+                "type": "number",
+                "minimum": 0
+              },
+              "leaveDeduction": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paisa taken off for unpaid leave"
+              },
+              "loanRepayments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "loanId",
+                    "number",
+                    "amount"
+                  ],
+                  "properties": {
+                    "loanId": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              },
+              "net": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paisa paid: gross less loan repayments"
               }
             }
           }
@@ -1347,6 +1386,11 @@
         "version": {
           "type": "integer",
           "minimum": 0
+        },
+        "netTotal": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paisa paid from the bank: gross less loan repayments"
         }
       }
     },
@@ -1560,6 +1604,86 @@
               }
             }
           }
+        }
+      }
+    },
+    "EmployeeLoan": {
+      "type": "object",
+      "required": [
+        "id",
+        "number",
+        "employeeId",
+        "employeeName",
+        "kind",
+        "purpose",
+        "issueDate",
+        "amount",
+        "monthlyInstallment",
+        "firstRepaymentMonth",
+        "status",
+        "outstanding",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string",
+          "pattern": "^LN-\\d{4,}$"
+        },
+        "employeeId": {
+          "type": "string"
+        },
+        "employeeName": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "loan",
+            "advance"
+          ]
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "issueDate": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "monthlyInstallment": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "firstRepaymentMonth": {
+          "type": "string"
+        },
+        "lastRepaymentMonth": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "submitted",
+            "recorded",
+            "cancelled"
+          ]
+        },
+        "repaid": {
+          "type": "integer"
+        },
+        "repaymentPending": {
+          "type": "integer"
+        },
+        "outstanding": {
+          "type": "integer",
+          "description": "Paisa still owed: amount less repayments in recorded payroll runs"
+        },
+        "version": {
+          "type": "integer"
         }
       }
     }

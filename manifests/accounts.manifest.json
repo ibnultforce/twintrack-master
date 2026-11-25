@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.16.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, the general ledger, client accounts, bank reconciliation, office expenses, bonus, incentive and commission payouts, employee payments, and the Accounts activity log.",
+    "version": "1.17.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, the general ledger, client accounts, bank reconciliation, office expenses, bonus, incentive and commission payouts, employee payments, loans and advances repaid through payroll, unpaid leave, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -256,14 +256,16 @@
         "total",
         "headcount",
         "status",
-        "returnNote"
+        "returnNote",
+        "netTotal"
       ],
       "recordFields": [
         "month",
         "payDate",
         "lines",
         "total",
-        "headcount"
+        "headcount",
+        "netTotal"
       ],
       "protectedFields": [
         "lines"
@@ -384,6 +386,45 @@
         "startDate",
         "isActive"
       ]
+    },
+    {
+      "key": "employeeLoan",
+      "label": "Loans and advances",
+      "actions": [
+        "read",
+        "create",
+        "update",
+        "approve"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "kind",
+        "purpose",
+        "issueDate",
+        "amount",
+        "monthlyInstallment",
+        "firstRepaymentMonth",
+        "status",
+        "returnNote"
+      ],
+      "recordFields": [
+        "employeeId",
+        "kind",
+        "purpose",
+        "issueDate",
+        "amount",
+        "monthlyInstallment",
+        "firstRepaymentMonth"
+      ]
+    },
+    {
+      "key": "unpaidLeave",
+      "label": "Unpaid leave",
+      "actions": [
+        "read",
+        "update"
+      ],
+      "scoped": false
     }
   ],
   "routes": [
@@ -580,6 +621,7 @@
         "bill.read",
         "payrollRun.read",
         "staffPayout.read",
+        "employeeLoan.read",
         "updateRequest.read"
       ]
     },
@@ -1041,6 +1083,72 @@
         "payrollRun.read",
         "staffPayout.read"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/employee-loans",
+      "access": "private",
+      "permission": "employeeLoan.read"
+    },
+    {
+      "method": "POST",
+      "path": "/employee-loans",
+      "access": "private",
+      "permission": "employeeLoan.create"
+    },
+    {
+      "method": "GET",
+      "path": "/employee-loans/:id",
+      "access": "private",
+      "permission": "employeeLoan.read"
+    },
+    {
+      "method": "POST",
+      "path": "/employee-loans/:id/submit",
+      "access": "private",
+      "permission": "employeeLoan.update"
+    },
+    {
+      "method": "POST",
+      "path": "/employee-loans/:id/approve",
+      "access": "private",
+      "permission": "employeeLoan.read"
+    },
+    {
+      "method": "POST",
+      "path": "/employee-loans/:id/return",
+      "access": "private",
+      "permission": "employeeLoan.read"
+    },
+    {
+      "method": "POST",
+      "path": "/employee-loans/:id/cancel",
+      "access": "private",
+      "permission": "employeeLoan.read"
+    },
+    {
+      "method": "POST",
+      "path": "/employee-loans/:id/pay",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "GET",
+      "path": "/employee-loans/:id/history",
+      "access": "private",
+      "permission": "employeeLoan.read"
+    },
+    {
+      "method": "GET",
+      "path": "/unpaid-leave",
+      "access": "private",
+      "permission": "unpaidLeave.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/unpaid-leave/:employeeId/:month",
+      "access": "private",
+      "permission": "unpaidLeave.update"
     }
   ]
 }
