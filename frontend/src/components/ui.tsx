@@ -1,6 +1,7 @@
 'use client';
 
-import type { KeyboardEvent, ReactNode } from 'react';
+import { useEffect, type KeyboardEvent, type ReactNode } from 'react';
+import { useScrollRow } from './useScrollRow';
 import type { ClientStatus, Contract, UserStatus } from '@/lib/api/types';
 import { humanize, initials } from '@/lib/format';
 import type { LoadState } from '@/lib/useLoad';
@@ -60,7 +61,8 @@ export function Notice({ tone, children }: { tone: 'good' | 'danger' | 'warning'
 
 /**
  * A row of tabs that switches what's shown below it. Arrow keys move between tabs, as screen readers expect.
- * The panel it controls should have id `${id}-panel` and role="tabpanel".
+ * The panel it controls should have id `${id}-panel` and role="tabpanel". When there are more tabs than fit, the row
+ * can be dragged or wheeled sideways, and arrow buttons appear at the ends that have more.
  */
 export function Tabs<Value extends string>({ id, label, options, value, onChange }: {
   id: string;
@@ -77,8 +79,23 @@ export function Tabs<Value extends string>({ id, label, options, value, onChange
     onChange(next.value);
     document.getElementById(`${id}-tab-${next.value}`)?.focus();
   };
+  const { rowRef, canScrollLeft, canScrollRight, scrollByStep, dragHandlers } = useScrollRow<HTMLDivElement>();
+
+  useEffect(() => {
+    // Brings the chosen tab into view by moving the row only, never the page.
+    const row = rowRef.current;
+    const tab = document.getElementById(`${id}-tab-${value}`);
+    if (!row || !tab) return;
+    // Leaves room for the arrow that may sit over each end.
+    const arrowRoom = 40;
+    if (tab.offsetLeft - arrowRoom < row.scrollLeft) row.scrollLeft = tab.offsetLeft - arrowRoom;
+    else if (tab.offsetLeft + tab.offsetWidth + arrowRoom > row.scrollLeft + row.clientWidth) row.scrollLeft = tab.offsetLeft + tab.offsetWidth + arrowRoom - row.clientWidth;
+  }, [id, value, rowRef]);
+
   return (
-    <div className="tabs" role="tablist" aria-label={label}>
+    <div className="tabs-scroller">
+      {canScrollLeft ? <button type="button" className="tabs-arrow is-left" aria-label="Show earlier tabs" tabIndex={-1} onClick={() => scrollByStep(-1)}>‹</button> : null}
+    <div className="tabs" role="tablist" aria-label={label} ref={rowRef} {...dragHandlers}>
       {options.map((option, index) => {
         const isSelected = option.value === value;
         return (
@@ -99,6 +116,8 @@ export function Tabs<Value extends string>({ id, label, options, value, onChange
           </button>
         );
       })}
+    </div>
+      {canScrollRight ? <button type="button" className="tabs-arrow is-right" aria-label="Show more tabs" tabIndex={-1} onClick={() => scrollByStep(1)}>›</button> : null}
     </div>
   );
 }

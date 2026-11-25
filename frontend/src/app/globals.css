@@ -160,10 +160,10 @@ main { min-width: 0; padding: 24px; display: grid; gap: 16px; align-content: sta
 .stack { display: grid; gap: 16px; align-content: start; min-width: 0; }
 .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 16px; align-items: start; }
 .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr)); gap: 16px; }
-.module-card { display: flex; flex-direction: column; gap: 8px; min-height: 170px; }
+.module-card { display: flex; flex-direction: column; gap: 8px; min-height: 170px; overflow: hidden; }
 .module-card h2 { font-size: 17px; font-weight: 600; }
 .module-card .card-head { margin: 0; align-items: flex-start; }
-.module-card p { color: var(--ink-muted); }
+.module-card p { color: var(--ink-muted); max-height: 120px; overflow: auto; text-overflow: ellipsis; }
 .module-card .bottom { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Tables and rows */
@@ -430,7 +430,16 @@ button.org-tree-toggle:hover { background: var(--neutral-soft); }
 /* Your permissions: one block per record, one line per API with a coloured method badge, the path and Try. */
 .card + .card { margin-top: 14px; }
 /* Tabs: an underlined row that scrolls sideways when there are many. */
-.tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.tabs-scroller { position: relative; margin-bottom: 12px; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: none; cursor: grab; user-select: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs.is-dragging { cursor: grabbing; }
+.tabs.is-dragging .tab { pointer-events: none; }
+/* The arrows sit over the row's ends, on a fade, so the tab beside them stays readable. */
+.tabs-arrow { position: absolute; top: 0; bottom: 1px; z-index: 1; display: grid; place-items: center; width: 36px; padding: 0; border: 0; color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; }
+.tabs-arrow.is-left { left: 0; padding-right: 8px; background: linear-gradient(to right, var(--surface) 60%, transparent); }
+.tabs-arrow.is-right { right: 0; padding-left: 8px; background: linear-gradient(to left, var(--surface) 60%, transparent); }
+.tabs-arrow:hover { color: var(--accent); }
 .tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--ink-muted); font: inherit; font-size: 13.5px; white-space: nowrap; cursor: pointer; }
 .tab:hover { color: var(--ink); }
 .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
