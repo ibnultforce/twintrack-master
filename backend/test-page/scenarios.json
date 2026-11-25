@@ -15924,6 +15924,459 @@
               }
             }
           ]
+        },
+        {
+          "id": "GET /accounts/provident-fund",
+          "method": "GET",
+          "path": "/accounts/provident-fund",
+          "purpose": "A financial year of provident fund month by month, with each person fund and gratuity, from recorded payroll runs.",
+          "input": "year (optional, the year July starts in)",
+          "access": "Needs providentFund.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "This financial year",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/provident-fund",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/provident-fund",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/provident-fund/:month/deposit",
+          "method": "POST",
+          "path": "/accounts/provident-fund/:month/deposit",
+          "purpose": "Deposits a month of provident fund with a draft payment voucher someone else approves.",
+          "input": "paymentDate, moneyAccountId, reference",
+          "access": "Needs journalVoucher.create",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A month with no recorded payroll run",
+              "expected": 404,
+              "code": "unknown_fund_month",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/provident-fund/2099-12/deposit",
+                "as": "farhana@twintrack.test",
+                "body": "{\"paymentDate\":\"2099-12-28\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/provident-fund/2099-12/deposit",
+                "as": "karim@twintrack.test",
+                "body": "{\"paymentDate\":\"2099-12-28\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/regular-expenses",
+          "method": "GET",
+          "path": "/accounts/regular-expenses",
+          "purpose": "Regular expenses with the next period to bill and the latest bill.",
+          "input": "category, isActive",
+          "access": "Needs regularExpense.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Every regular expense",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/regular-expenses",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/regular-expenses",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/regular-expenses",
+          "method": "POST",
+          "path": "/accounts/regular-expenses",
+          "purpose": "Adds a monthly or yearly expense that makes a draft bill each period.",
+          "input": "name, category, vendorId, accountId (expense), frequency, amount, vatCode, dayOfMonth (1 to 28), startMonth, endMonth",
+          "access": "Needs regularExpense.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Office rent each month",
+              "expected": 201,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"City Properties\",\"category\":\"rent\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/regular-expenses",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Office rent\",\"category\":\"rent\",\"vendorId\":\"{{vendorId}}\",\"accountId\":\"la_5300\",\"frequency\":\"monthly\",\"amount\":12000000,\"dayOfMonth\":5,\"startMonth\":\"2099-01\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Day 31, which some months lack",
+              "expected": 422,
+              "code": "validation_failed",
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"City Properties\",\"category\":\"rent\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "path": "/accounts/regular-expenses",
+                "as": "farhana@twintrack.test",
+                "body": "{\"name\":\"Office rent\",\"category\":\"rent\",\"vendorId\":\"{{vendorId}}\",\"accountId\":\"la_5300\",\"frequency\":\"monthly\",\"amount\":12000000,\"dayOfMonth\":31,\"startMonth\":\"2099-01\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/regular-expenses/bills",
+          "method": "POST",
+          "path": "/accounts/regular-expenses/bills",
+          "purpose": "Makes the draft bill for each active expense due in the month that has none yet. Running it again makes nothing new.",
+          "input": "month",
+          "access": "Needs bill.create",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "December 2099",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "POST",
+                "path": "/accounts/regular-expenses/bills",
+                "as": "farhana@twintrack.test",
+                "body": "{\"month\":\"2099-12\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not a month",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/regular-expenses/bills",
+                "as": "farhana@twintrack.test",
+                "body": "{\"month\":\"2099-13\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PATCH /accounts/regular-expenses/:id",
+          "method": "PATCH",
+          "path": "/accounts/regular-expenses/:id",
+          "purpose": "Changes or stops a regular expense. Bills already made keep what they were made with.",
+          "input": "any field, isActive, version",
+          "access": "Needs regularExpense.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Stops it",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"City Properties\",\"category\":\"rent\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/regular-expenses",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"category\":\"rent\",\"vendorId\":\"{{vendorId}}\",\"accountId\":\"la_5300\",\"frequency\":\"monthly\",\"amount\":12000000,\"dayOfMonth\":5,\"startMonth\":\"2099-01\"}",
+                  "save": {
+                    "expenseId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/regular-expenses/{{expenseId}}",
+                "as": "farhana@twintrack.test",
+                "body": "{\"isActive\":false}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such expense",
+              "expected": 404,
+              "code": "unknown_regular_expense",
+              "request": {
+                "method": "PATCH",
+                "path": "/accounts/regular-expenses/re_nobody",
+                "as": "farhana@twintrack.test",
+                "body": "{\"isActive\":false}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/regular-expenses/:id/history",
+          "method": "GET",
+          "path": "/accounts/regular-expenses/:id/history",
+          "purpose": "Every change to a regular expense.",
+          "input": "page, pageSize",
+          "access": "Needs regularExpense.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "A new expense",
+              "expected": 200,
+              "changesData": true,
+              "setup": [
+                {
+                  "method": "POST",
+                  "path": "/accounts/vendors",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"City Properties\",\"category\":\"rent\",\"tdsBasisPoints\":500}",
+                  "save": {
+                    "vendorId": "id"
+                  }
+                },
+                {
+                  "method": "POST",
+                  "path": "/accounts/regular-expenses",
+                  "as": "farhana@twintrack.test",
+                  "body": "{\"name\":\"Office rent\",\"category\":\"rent\",\"vendorId\":\"{{vendorId}}\",\"accountId\":\"la_5300\",\"frequency\":\"monthly\",\"amount\":12000000,\"dayOfMonth\":5,\"startMonth\":\"2099-01\"}",
+                  "save": {
+                    "expenseId": "id"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "path": "/accounts/regular-expenses/{{expenseId}}/history",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such expense",
+              "expected": 404,
+              "code": "unknown_regular_expense",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/regular-expenses/re_nobody/history",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/office-rent",
+          "method": "GET",
+          "path": "/accounts/office-rent",
+          "purpose": "Rent agreements (regular expenses in the rent category) and their bills for a financial year.",
+          "input": "year",
+          "access": "Needs bill.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "This financial year",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/office-rent",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/office-rent",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/tax-filings",
+          "method": "GET",
+          "path": "/accounts/tax-filings",
+          "purpose": "TDS withheld from vendors and VAT on purchases, month by month, from recorded bills.",
+          "input": "year",
+          "access": "Needs taxFiling.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "This financial year",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/tax-filings",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/tax-filings",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "POST /accounts/tax-filings/:month/pay",
+          "method": "POST",
+          "path": "/accounts/tax-filings/:month/pay",
+          "purpose": "Pays a month of vendor TDS with a draft payment voucher carrying the challan number.",
+          "input": "paymentDate, moneyAccountId, challanNumber",
+          "access": "Needs journalVoucher.create",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "A month with no TDS",
+              "expected": 409,
+              "code": "nothing_owed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/tax-filings/2099-12/pay",
+                "as": "farhana@twintrack.test",
+                "body": "{\"paymentDate\":\"2100-01-05\",\"moneyAccountId\":\"la_1100\",\"challanNumber\":\"CH-1\"}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No challan number",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/tax-filings/2099-12/pay",
+                "as": "farhana@twintrack.test",
+                "body": "{\"paymentDate\":\"2100-01-05\",\"moneyAccountId\":\"la_1100\"}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/budgets/:year",
+          "method": "GET",
+          "path": "/accounts/budgets/:year",
+          "purpose": "A financial year budget against recorded spending and bills waiting, per expense account, warning at 90%.",
+          "input": "year in the path",
+          "access": "Needs budget.read",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "July 2026 to June 2027",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/budgets/2026",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/budgets/2026",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "PUT /accounts/budgets/:year",
+          "method": "PUT",
+          "path": "/accounts/budgets/:year",
+          "purpose": "Sets a year of budget, one amount per expense account. The lines replace the old ones.",
+          "input": "lines (accountId, amount), version",
+          "access": "Needs budget.update",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Rent for 2099",
+              "expected": 200,
+              "changesData": true,
+              "request": {
+                "method": "PUT",
+                "path": "/accounts/budgets/2099",
+                "as": "farhana@twintrack.test",
+                "body": "{\"lines\":[{\"accountId\":\"la_5300\",\"amount\":144000000}]}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Not an expense account",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "PUT",
+                "path": "/accounts/budgets/2099",
+                "as": "farhana@twintrack.test",
+                "body": "{\"lines\":[{\"accountId\":\"la_1100\",\"amount\":1}]}"
+              }
+            }
+          ]
         }
       ]
     }

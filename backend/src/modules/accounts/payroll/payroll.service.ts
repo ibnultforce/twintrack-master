@@ -21,6 +21,8 @@ import { UnpaidLeave } from '../models/employeeLoan.js';
 import { findDueRepayments } from '../employeeLoan/loanRepayments.js';
 import { PayrollRun, type PayrollLine, type PayrollRunDoc, type PayrollRunStatus } from '../models/payrollRun.js';
 import { POSTING_ACCOUNTS } from '../postingAccounts.js';
+import { findOrCreateSettings } from '../settings/settings.repository.js';
+import { shareOfGross, type ContributionRates } from './contributions.js';
 
 const PAYROLL_RESOURCE = 'payrollRun';
 const APPROVE_PERMISSION = 'payrollRun.approve';
@@ -67,14 +69,28 @@ const DAYS_IN_PAY_MONTH = 30;
 /** Pay taken off for unpaid leave, rounded to the paisa, never more than the gross. */
 export const leaveDeductionFor = (monthlySalary: number, days: number, gross: number) => Math.min(gross, Math.round((monthlySalary * days) / DAYS_IN_PAY_MONTH));
 
-/** What each person nets: gross less their loan repayments. */
-const netOf = (line: Pick<PayrollLine, 'gross' | 'loanRepayments'>) => line.gross - (line.loanRepayments ?? []).reduce((sum, repayment) => sum + repayment.amount, 0);
+/** What each person nets: gross less their provident fund share and loan repayments. */
+const netOf = (line: Pick<PayrollLine, 'gross' | 'providentFund' | 'loanRepayments'>) =>
+  line.gross - (line.providentFund ?? 0) - (line.loanRepayments ?? []).reduce((sum, repayment) => sum + repayment.amount, 0);
+
+/** A line's provident fund and gratuity at the run's rates; none when the rate is 0. */
+function contributionsOf(gross: number, rates: ContributionRates): Pick<PayrollLine, 'providentFund' | 'gratuity'> {
+  const providentFund = shareOfGross(gross, rates.providentFundBasisPoints);
+  const gratuity = shareOfGross(gross, rates.gratuityBasisPoints);
+  return { ...(providentFund > 0 && { providentFund }), ...(gratuity > 0 && { gratuity }) };
+}
+
+const ratesOf = (run: Pick<PayrollRunDoc, 'providentFundBasisPoints' | 'gratuityBasisPoints'>): ContributionRates => ({
+  providentFundBasisPoints: run.providentFundBasisPoints ?? 0,
+  gratuityBasisPoints: run.gratuityBasisPoints ?? 0,
+});
 
 /**
  * Every active employee with pay for the month, by employee code: their gross after a part month and unpaid leave,
- * and this month's instalment on each loan they still owe, never more than they earn.
+ * their provident fund share and gratuity at the given rates, and this month's instalment on each loan they still
+ * owe, never more than is left of their pay.
  */
-async function linesForMonth(month: string): Promise<PayrollLine[]> {
+async function linesForMonth(month: string, rates: ContributionRates): Promise<PayrollLine[]> {
   const employees = await AccountsEmployee.find({ isActive: true }).sort({ employeeCode: 1 }).lean();
   const [leave, dueRepayments] = await Promise.all([
     UnpaidLeave.find({ month }).lean(),
@@ -87,7 +103,8 @@ async function linesForMonth(month: string): Promise<PayrollLine[]> {
     const unpaid = leaveByEmployee.get(employee._id);
     const leaveDeduction = unpaid ? leaveDeductionFor(employee.monthlySalary, unpaid.days, earned) : 0;
     const gross = earned - leaveDeduction;
-    let left = gross;
+    const contributions = contributionsOf(gross, rates);
+    let left = gross - (contributions.providentFund ?? 0);
     const loanRepayments = (dueRepayments.get(employee._id) ?? []).flatMap((repayment) => {
       const amount = Math.min(repayment.amount, left);
       left -= amount;
@@ -104,6 +121,7 @@ async function linesForMonth(month: string): Promise<PayrollLine[]> {
       department: employee.department,
       gross,
       ...(unpaid && { unpaidLeaveDays: unpaid.days, leaveDeduction }),
+      ...contributions,
       ...(loanRepayments.length > 0 && { loanRepayments }),
       ...(notes.length > 0 && { note: notes.join('; ') }),
       net: 0,
@@ -123,10 +141,18 @@ const amountToPay = (run: Pick<PayrollRunDoc, 'netTotal' | 'total'>) => run.netT
 /**
  * Salary expense per person; the bank owes each person their net (salaries payable); loan repayments lower what the
  * employee owes (1400 Employee advances and loans), one line per loan so each loan's balance can be read back.
+ * The company's provident fund share and gratuity are staff costs too (5100); the fund holds both provident fund
+ * shares until deposited (2400), and gratuity waits until people leave (2500).
  */
 function ledgerLinesFor(run: Pick<PayrollRunDoc, 'lines' | 'total' | 'netTotal' | 'month' | 'number'>): NewLedgerLine[] {
+  const providentFund = run.lines.reduce((sum, line) => sum + (line.providentFund ?? 0), 0);
+  const gratuity = run.lines.reduce((sum, line) => sum + (line.gratuity ?? 0), 0);
   const lines: NewLedgerLine[] = [
     ...run.lines.map((line) => ({ accountId: POSTING_ACCOUNTS.salaryExpense, debit: line.gross, memo: `${line.employeeCode} ${line.name}` })),
+    { accountId: POSTING_ACCOUNTS.salaryExpense, debit: providentFund, memo: `${run.number} company provident fund share` },
+    { accountId: POSTING_ACCOUNTS.salaryExpense, debit: gratuity, memo: `${run.number} gratuity set aside` },
+    { accountId: POSTING_ACCOUNTS.providentFundPayable, credit: providentFund * 2, memo: `${run.number} provident fund, ${monthLabel(run.month)}` },
+    { accountId: POSTING_ACCOUNTS.gratuityPayable, credit: gratuity, memo: `${run.number} gratuity, ${monthLabel(run.month)}` },
     ...run.lines.flatMap((line) => (line.loanRepayments ?? []).map((repayment) => ({ accountId: POSTING_ACCOUNTS.employeeLoans, credit: repayment.amount, memo: `${repayment.number} ${line.name}` }))),
     { accountId: POSTING_ACCOUNTS.salariesPayable, credit: amountToPay(run), memo: `${run.number} salaries, ${monthLabel(run.month)}` },
   ];
@@ -237,13 +263,17 @@ export async function getPayrollRun(actor: Actor, runId: string) {
 /** Makes a month's draft run from the active employees. A month already run (and not cancelled) is refused. */
 export async function createPayrollRun(actor: Actor, request: { month: string; payDate: string }) {
   if (await PayrollRun.exists({ month: request.month, status: { $ne: 'cancelled' } })) throw monthAlreadyRun(request.month);
-  const lines = await linesForMonth(request.month);
+  const settings = await findOrCreateSettings();
+  const rates: ContributionRates = { providentFundBasisPoints: settings.providentFundBasisPoints ?? 0, gratuityBasisPoints: settings.gratuityBasisPoints ?? 0 };
+  const lines = await linesForMonth(request.month, rates);
   if (lines.length === 0) throw new ApiError(422, 'no_employees', `Nobody is employed in ${monthLabel(request.month)}, so there is nothing to pay.`);
   const number = await takeNextDocumentNumber('payrollRun', 'PR-');
   try {
     const run = await runInTransaction(async (session) => {
       const [created] = await PayrollRun.create([{
         _id: `pr_${randomUUID()}`, number, month: request.month, payDate: request.payDate, lines, total: totalOf(lines), netTotal: netTotalOf(lines), headcount: lines.length,
+        ...(rates.providentFundBasisPoints > 0 && { providentFundBasisPoints: rates.providentFundBasisPoints }),
+        ...(rates.gratuityBasisPoints > 0 && { gratuityBasisPoints: rates.gratuityBasisPoints }),
         status: 'draft', createdBy: actor.user._id, updatedBy: actor.user._id,
       }], { session });
       if (!created) throw new Error('Creating the payroll run returned nothing.');
@@ -281,9 +311,10 @@ export async function updatePayrollRun(
     lines = lines.flatMap((line) => {
       if (line.employeeId !== adjustment.employeeId) return [line];
       if (adjustment.gross <= 0) return [];
-      const changed = { ...line, gross: adjustment.gross, ...(adjustment.note && { note: adjustment.note }) };
+      // The provident fund and gratuity follow the new gross, at the rates the run was made with.
+      const changed: PayrollLine = { ...line, gross: adjustment.gross, providentFund: undefined, gratuity: undefined, ...contributionsOf(adjustment.gross, ratesOf(existing)), ...(adjustment.note && { note: adjustment.note }) };
       if (netOf(changed) < 0) {
-        throw new ApiError(422, 'validation_failed', 'Some adjustments are invalid.', [{ path: `adjustments.${index}.gross`, message: `is less than ${line.name}'s loan repayments this month` }]);
+        throw new ApiError(422, 'validation_failed', 'Some adjustments are invalid.', [{ path: `adjustments.${index}.gross`, message: `is less than ${line.name}'s provident fund and loan repayments this month` }]);
       }
       return [{ ...changed, net: netOf(changed) }];
     });

@@ -64,6 +64,8 @@ async function toFullSettingsView(settings: AccountsSettingsDoc) {
       (first, second) => first.currency.localeCompare(second.currency) || second.effectiveFrom.localeCompare(first.effectiveFrom),
     ),
     taxRates: settings.taxRates,
+    providentFundBasisPoints: settings.providentFundBasisPoints ?? 0,
+    gratuityBasisPoints: settings.gratuityBasisPoints ?? 0,
     version: settings.version,
     updatedBy: settings.updatedBy,
     updatedAt: settings.updatedAt,

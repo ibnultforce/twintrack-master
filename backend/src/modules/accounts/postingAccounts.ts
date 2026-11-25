@@ -8,6 +8,13 @@ export const POSTING_ACCOUNTS = {
   payable: 'la_2100',
   /** Tax deducted at source from vendor bills, owed to the tax authority. */
   taxPayable: 'la_2300',
+  /** VAT paid on purchases, which the company may claim back. */
+  vatReceivable: 'la_1700',
+  /** Employee and company provident fund shares, held until deposited with the fund. */
+  providentFundPayable: 'la_2400',
+  /** Gratuity set aside each month, owed to staff when they leave. */
+  gratuityPayable: 'la_2500',
+  officeRent: 'la_5300',
   serviceIncome: 'la_4100',
   salaryExpense: 'la_5100',
   salariesPayable: 'la_2200',

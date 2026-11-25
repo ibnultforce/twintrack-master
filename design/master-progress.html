@@ -381,6 +381,11 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>25 November 2026: Accounts provident fund, regular expenses, office rent, VAT, tax filings and budget (manifest 1.18.0)</h3>
+      <ul>
+        <li>New resources <code>providentFund</code>, <code>regularExpense</code>, <code>taxFiling</code> and <code>budget</code>, and Settings rates <code>providentFundBasisPoints</code> and <code>gratuityBasisPoints</code>. Payroll takes each person's provident fund share and the company adds the same, with gratuity set aside (Cr 2400 and 2500); <code>/accounts/provident-fund</code> shows each month and deposits it with a linked voucher.</li>
+        <li><code>/accounts/regular-expenses</code> make one draft bill per period (decision 4), kept unique even when two people make them at once; <code>/accounts/office-rent</code> shows the rent ones. Bills take a Settings VAT rate on the amount before tax (Dr 1700). <code>/accounts/tax-filings</code> lists TDS and VAT by month and pays TDS with a challan. <code>/accounts/budgets/:year</code> sets a July to June budget per expense account against the ledger plus bills waiting, warning at 90%.</li>
+      </ul>
       <h3>24 November 2026: Accounts loans, advances and unpaid leave (manifest 1.17.0)</h3>
       <ul>
         <li>New resources <code>employeeLoan</code> (read, create, update, approve) and <code>unpaidLeave</code> (read, update). <code>/accounts/employee-loans</code>: a loan or advance approved by someone else is recorded as owed by the employee (1400) and paid out with a linked voucher; each payroll run takes its monthly instalment, so what is owed falls with each payroll and is read back from recorded runs. <code>/accounts/unpaid-leave</code>: leave days per person and month, which payroll takes off at monthly salary ÷ 30. Payroll lines now show unpaid leave, loan repayments and net pay, and the run pays its <code>netTotal</code>. New Loans and advances, and Leave and its cost screens in the Accounts app.</li>

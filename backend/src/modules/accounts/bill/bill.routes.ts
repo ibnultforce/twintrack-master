@@ -37,9 +37,11 @@ const lineSchema = z.strictObject({
 const linesField = z.array(lineSchema).min(1, 'needs at least 1 line').max(MAX_LINES);
 const referenceField = z.string().trim().max(100);
 const reasonField = z.string().trim().min(1, 'say why').max(MAX_NOTE);
+/** A tax rate code from Settings, such as VAT15. */
+const vatCodeField = z.string().trim().min(1).max(20);
 
 const createBodySchema = z
-  .strictObject({ vendorId: recordIdField, vendorReference: referenceField.optional(), billDate: accountingDateField, dueDate: accountingDateField.optional(), lines: linesField })
+  .strictObject({ vendorId: recordIdField, vendorReference: referenceField.optional(), billDate: accountingDateField, dueDate: accountingDateField.optional(), lines: linesField, vatCode: vatCodeField.optional() })
   .refine(({ billDate, dueDate }) => !dueDate || dueDate >= billDate, { message: 'must be on or after the bill date', path: ['dueDate'] });
 
 const updateBodySchema = z
@@ -50,6 +52,8 @@ const updateBodySchema = z
     billDate: accountingDateField.optional(),
     dueDate: accountingDateField.optional(),
     lines: linesField.optional(),
+    // null removes the VAT.
+    vatCode: vatCodeField.nullable().optional(),
     reason: reasonField,
     version: versionField.optional(),
   })

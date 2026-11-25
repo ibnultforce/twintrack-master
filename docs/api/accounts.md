@@ -216,7 +216,7 @@ Each part of the settings is a field of the `setting` resource (`standInApprover
 
 **Access:** `private`, needs `setting.update`
 
-**Body:** at least one of `standInApproverId` (`null` clears it, and its end date), `standInUntil` (YYYY-MM-DD, the last day; `null` for no end), `currencies`, `defaultCurrency`, `exchangeRates`, `taxRates`; optional `version`. Rate lists replace the saved list whole.
+**Body:** at least one of `standInApproverId` (`null` clears it, and its end date), `standInUntil` (YYYY-MM-DD, the last day; `null` for no end), `currencies`, `defaultCurrency`, `exchangeRates`, `taxRates`, `providentFundBasisPoints` (the employee share of gross pay taken by payroll; the company adds the same; `1000` is 10%, `0` is none), `gratuityBasisPoints` (set aside each month on gross pay; `833` is about a month's pay a year); optional `version`. Rate lists replace the saved list whole. Payroll runs keep the rates they were made with.
 
 `homeCurrency` is always `BDT`: the books are kept in taka. `defaultCurrency` is the currency new documents, such as invoices and bills, start in: `BDT` or one of `currencies` (`BDT` until set). People can still choose another currency on each document, and a foreign-currency document uses that currency's rate on its date. It is a field of the setting resource like the others, so a profile can hide or lock it.
 
@@ -517,7 +517,9 @@ A recorded bill shows `paid`, `outstanding`, `pending`, `paymentStatus` and `day
 
 **Access:** `private`, needs `bill.create`
 
-**Body:** `vendorId` (active), optional `vendorReference`, `billDate`, optional `dueDate` (on or after the bill date; defaults to it), `lines` (1 to 200, each `description`, `accountId`, `quantity`, `unitPrice` in paisa). The lines are checked as the ledger will check them.
+**Body:** `vendorId` (active), optional `vendorReference`, `billDate`, optional `dueDate` (on or after the bill date; defaults to it), `lines` (1 to 200, each `description`, `accountId`, `quantity`, `unitPrice` in paisa), optional `vatCode` (a tax rate code from Settings, such as `VAT15`). The lines are checked as the ledger will check them.
+
+VAT and TDS are each a rate on the amount before tax, rounded to the paisa: `vat` = `amount` × the rate, and `netPayable` = `amount` + `vat` − `tds`. Recording a bill with VAT also writes Dr 1700 VAT and tax receivable, as VAT paid on purchases is claimed back. A bill made from a regular expense carries `regularExpense` (`id`, `period`).
 
 **Errors:** `404 unknown_vendor`, `422 validation_failed` (an inactive vendor, an unknown or inactive account, a group account, a total of zero)
 
@@ -527,7 +529,7 @@ A recorded bill shows `paid`, `outstanding`, `pending`, `paymentStatus` and `day
 
 ### `PATCH /accounts/bills/:id`
 
-**Access:** `private`, needs `bill.update`. **Body:** `reason` (required) and at least one of `vendorId`, `vendorReference` (empty removes it), `billDate`, `dueDate`, `lines`; optional `version`. New lines or a new vendor price it again at the vendor's current TDS rate. Drafts only (`409 bill_not_draft`).
+**Access:** `private`, needs `bill.update`. **Body:** `reason` (required) and at least one of `vendorId`, `vendorReference` (empty removes it), `billDate`, `dueDate`, `lines`, `vatCode` (`null` removes the VAT); optional `version`. New lines, a new vendor or a VAT change price it again at the vendor's current TDS rate and the Settings VAT rate. Drafts only (`409 bill_not_draft`).
 
 ### `POST /accounts/bills/:id/submit`, `/approve`, `/return`, `/cancel`
 
@@ -809,6 +811,68 @@ Kept in Accounts until HR is built. A month's payroll run takes each person's un
 **Access:** `private`, needs `unpaidLeave.update`. **Body:** `days` (whole or half days, 0 removes it), optional `note`. Refused once the month has a payroll run that isn't cancelled (`409 payroll_run_exists`): cancel the run, change the leave, make it again.
 
 **Errors:** `404 unknown_employee`, `409 payroll_run_exists`, `422 validation_failed`
+
+## Provident fund and gratuity
+
+Payroll takes `providentFundBasisPoints` of each person's gross into the fund (`lines[].providentFund`) and the company adds the same; it also sets `gratuityBasisPoints` aside (`lines[].gratuity`). Recording a run writes both shares and the gratuity as staff cost (5100), Cr 2400 Provident fund payable for both shares and Cr 2500 Gratuity payable; net pay is gross less the employee share and loan repayments. Nothing is stored apart from the run lines, so the figures always agree with the books. Gratuity is paid when someone leaves, which isn't built yet.
+
+### `GET /accounts/provident-fund`
+
+**Access:** `private`, needs `providentFund.read`. **Query:** optional `year` (the calendar year the July to June financial year starts in; default the current one). Returns `months` (per recorded run: `members`, `employeeShare`, `companyShare`, `total`, `gratuity`, and `paid`, `outstanding`, `pending`, `paymentStatus` from its deposits), `employees` (each person's fund, both shares, and gratuity built up across every recorded run) and `totals`.
+
+### `POST /accounts/provident-fund/:month/deposit`
+
+**Access:** `private`, needs `journalVoucher.create`. **Body:** `paymentDate`, `moneyAccountId` (cash or bank), optional `reference`. Makes a draft payment voucher, Dr 2400, Cr the money account, linked to the month (`providentFund`), which someone else approves. **Errors:** `404 unknown_fund_month` (no recorded run), `409 nothing_owed` (deposited, or a deposit is waiting).
+
+## Regular expenses
+
+A cost that comes back each month or year, such as rent or a subscription. It never writes to the ledger itself: each period it makes a **draft bill** (decision 4), approved and paid like any bill. A period has at most one live bill: a unique key on the bill holds even when two people make bills at once, and cancelling the bill frees the period.
+
+### `GET /accounts/regular-expenses`
+
+**Access:** `private`, needs `regularExpense.read`. **Query:** optional `category`, `isActive`. Each expense has `nextDue` (the first period from this month on without a bill, with its date) and `latestBill`.
+
+### `POST /accounts/regular-expenses`
+
+**Access:** `private`, needs `regularExpense.create`. **Body:** `name`, `category` (`rent`, `cloud_software`, `utilities`, `office_services`, `food_events`, `travel`, `insurance`, `government_fees`), `vendorId` (active), `accountId` (an active expense account), `frequency` (`monthly` or `yearly`; a yearly one falls in its start month), `amount` (paisa per period, before VAT), optional `vatCode`, `dayOfMonth` (1 to 28: each bill's date and due date), `startMonth`, optional `endMonth`.
+
+### `PATCH /accounts/regular-expenses/:id`, `GET /accounts/regular-expenses/:id/history`
+
+**Access:** `private`, needs `regularExpense.update` (history: `regularExpense.read`). Any field above, `isActive` to stop or restart it, `null` for `vatCode` or `endMonth` to remove them, optional `version`. Bills already made keep what they were made with. **Errors:** `404 unknown_regular_expense`.
+
+### `POST /accounts/regular-expenses/bills`
+
+**Access:** `private`, needs `bill.create`. **Body:** `month`. Makes the draft bill for each active expense due in the month that has none. Returns `made` (the bills) and `skipped` (each with a `reason`: already billed, or an inactive vendor or unknown VAT rate). Running it again makes nothing new.
+
+## Office rent
+
+### `GET /accounts/office-rent`
+
+**Access:** `private`, needs `bill.read`. **Query:** optional `year`. The rent agreements (regular expenses in the `rent` category) and their bills dated in the financial year, with `totals`: `monthly` (active monthly rent), `charged` (recorded rent bills before VAT), `paid` and `owed`.
+
+## Tax and VAT
+
+Worked out each month from recorded bills, never stored. TDS withheld from vendors is owed to the tax authority (2300), due by the 7th of the next month, and paid with a challan. VAT on purchases (1700) is claimed back, so it is listed for the return (due by the 15th), not paid. Rates are set in Settings and per vendor; there is no challan format (decision 6). Income tax on salaries isn't built yet.
+
+### `GET /accounts/tax-filings`
+
+**Access:** `private`, needs `taxFiling.read`. **Query:** optional `year`. Returns `filings`, newest first, one `vendor_tds` and one `vat_purchases` per month up to this month (`base`, `amount`, `dueDate`; TDS also has `paid`, `outstanding`, `pending`, `paymentStatus`), the Settings `taxRates` and `totals` (`tdsWithheld`, `tdsToPay`, `vatToClaim`).
+
+### `POST /accounts/tax-filings/:month/pay`
+
+**Access:** `private`, needs `journalVoucher.create`. **Body:** `paymentDate`, `moneyAccountId`, `challanNumber` (kept as the voucher's reference). Makes a draft payment voucher, Dr 2300, Cr the money account, linked to the month (`taxFiling`), which someone else approves. **Errors:** `409 nothing_owed`.
+
+## Budget against actual
+
+One budget per financial year (July to June), an amount per expense account. Actual comes from the ledger (bills, payroll, vouchers, reversals netting out), and bills still in draft or waiting for approval count as `pending`, so spending is flagged before it is recorded. `status` is `under`, `near_limit` (90% or more used), `over`, or `unbudgeted` (spending with no budget).
+
+### `GET /accounts/budgets/:year`
+
+**Access:** `private`, needs `budget.read`. Returns `lines` (each expense account with a budget or spending: `budget`, `actual`, `pending`, `used`, `difference`, `usedBasisPoints`, `status`), `totals` and the budget's `version`.
+
+### `PUT /accounts/budgets/:year`
+
+**Access:** `private`, needs `budget.update` (the specification gives it to the CEO; that is a profile choice). **Body:** `lines` (each `accountId`, an expense account, and `amount` for the year; `0` removes it), optional `version`. Replaces the year's lines whole. **Errors:** `422 validation_failed` (not an expense account, listed twice), `409 version_conflict`.
 
 ## Activity log
 

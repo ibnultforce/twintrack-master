@@ -16,13 +16,17 @@ import { assertWithinOpenAmount, paymentStateOf, wrongDocumentStatus, type Payme
 import { findVouchersLinkedTo, sumSettledAmounts } from '../journalVoucher/journalVoucher.repository.js';
 import { createLinkedVoucher } from '../journalVoucher/journalVoucher.service.js';
 import { checkBalancedLines, postEntry, reverseEntry, type NewLedgerLine } from '../ledger/ledger.service.js';
-import { Bill, type BillDoc, type BillLine, type BillStatus } from '../models/bill.js';
+import { Bill, type BillDoc, type BillLine, type BillStatus, type RegularExpenseLink } from '../models/bill.js';
 import { POSTING_ACCOUNTS } from '../postingAccounts.js';
+import { findOrCreateSettings } from '../settings/settings.repository.js';
 import { findVendorById, vendorNotFound } from '../vendor/vendor.service.js';
 
 const BILL_RESOURCE = 'bill';
 const APPROVE_PERMISSION = 'bill.approve';
 const BASIS_POINTS_PER_WHOLE = 10_000;
+
+/** The unique key a live bill made from a regular expense holds, so a period never gets two bills. */
+export const regularExpenseKeyOf = (origin: RegularExpenseLink) => `${origin.id}:${origin.period}`;
 
 /** One line as a person writes it; its amount is worked out. */
 export interface NewBillLine {
@@ -40,6 +44,8 @@ export interface BillDetails {
   /** Defaults to the bill date: due at once. */
   dueDate?: string;
   lines: NewBillLine[];
+  /** A Settings tax rate's code, charged as VAT on the amount before tax. */
+  vatCode?: string;
 }
 
 export interface BillListFilter {
@@ -70,29 +76,47 @@ async function requireBill(billId: string): Promise<BillDoc> {
   return bill;
 }
 
-/** Each line's amount is quantity × unit price, rounded to the paisa; TDS is the vendor's rate on the total, rounded the same way. */
-export function priceBill(lines: NewBillLine[], tdsBasisPoints: number): { lines: BillLine[]; amount: number; tds: number; netPayable: number } {
+/**
+ * Each line's amount is quantity × unit price, rounded to the paisa. VAT and TDS are each a rate on the amount before
+ * tax, rounded the same way. The vendor is owed the amount plus VAT, less the TDS withheld for the tax authority.
+ */
+export function priceBill(lines: NewBillLine[], tdsBasisPoints: number, vatBasisPoints = 0): { lines: BillLine[]; amount: number; vat: number; tds: number; netPayable: number } {
   const priced = lines.map((line) => ({ ...line, amount: Math.round(line.quantity * line.unitPrice) }));
   const amount = priced.reduce((sum, line) => sum + line.amount, 0);
+  const vat = Math.round((amount * vatBasisPoints) / BASIS_POINTS_PER_WHOLE);
   const tds = Math.round((amount * tdsBasisPoints) / BASIS_POINTS_PER_WHOLE);
-  return { lines: priced, amount, tds, netPayable: amount - tds };
+  return { lines: priced, amount, vat, tds, netPayable: amount + vat - tds };
 }
 
-/** What recording the bill writes: each line charged to its account, the vendor owed the net, and the TDS owed to the tax authority. */
-function ledgerLinesFor(bill: Pick<BillDoc, 'lines' | 'netPayable' | 'tds' | 'vendorName' | 'number'>): NewLedgerLine[] {
+/**
+ * What recording the bill writes: each line charged to its account, VAT to claim back, the vendor owed the net, and
+ * the TDS owed to the tax authority.
+ */
+function ledgerLinesFor(bill: Pick<BillDoc, 'lines' | 'vat' | 'netPayable' | 'tds' | 'vendorName' | 'number'>): NewLedgerLine[] {
+  const vat = bill.vat ?? 0;
   return [
     ...bill.lines.map((line) => ({ accountId: line.accountId, debit: line.amount, memo: line.description })),
+    ...(vat > 0 ? [{ accountId: POSTING_ACCOUNTS.vatReceivable, debit: vat, memo: `VAT on ${bill.number}` }] : []),
     { accountId: POSTING_ACCOUNTS.payable, credit: bill.netPayable, memo: `${bill.vendorName}, ${bill.number}` },
     ...(bill.tds > 0 ? [{ accountId: POSTING_ACCOUNTS.taxPayable, credit: bill.tds, memo: `TDS on ${bill.number}` }] : []),
   ];
 }
 
+/** The VAT rate a Settings tax rate code names, in basis points; refused when Settings has no such rate. */
+async function vatRateFor(vatCode: string | undefined): Promise<number> {
+  if (!vatCode) return 0;
+  const rate = (await findOrCreateSettings()).taxRates.find((candidate) => candidate.code === vatCode);
+  if (!rate) throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', [{ path: 'vatCode', message: 'is not one of the tax rates in Settings' }]);
+  return rate.basisPoints;
+}
+
 /** Prices the lines for a vendor and checks them as the ledger will, so a bill that could never be recorded is refused when saved. */
-async function priceForVendor(vendorId: string, lines: NewBillLine[]) {
+async function priceForVendor(vendorId: string, lines: NewBillLine[], vatCode: string | undefined) {
   const vendor = await findVendorById(vendorId);
   if (!vendor) throw vendorNotFound();
   if (!vendor.isActive) throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', [{ path: 'vendorId', message: `${vendor.name} is inactive` }]);
-  const priced = priceBill(lines, vendor.tdsBasisPoints);
+  const vatBasisPoints = await vatRateFor(vatCode);
+  const priced = { ...priceBill(lines, vendor.tdsBasisPoints, vatBasisPoints), vatCode, vatBasisPoints };
   if (priced.amount <= 0) throw new ApiError(422, 'validation_failed', 'Some fields are invalid.', [{ path: 'lines', message: 'the bill must be above zero' }]);
   await checkBalancedLines(ledgerLinesFor({ ...priced, vendorName: vendor.name, number: 'new bill' }));
   return { vendor, ...priced, tdsBasisPoints: vendor.tdsBasisPoints };
@@ -117,10 +141,14 @@ async function viewsOf(bills: BillDoc[], rules: FieldRules) {
     dueDate: bill.dueDate,
     lines: bill.lines,
     amount: bill.amount,
+    vatCode: bill.vatCode,
+    vatBasisPoints: bill.vatBasisPoints ?? 0,
+    vat: bill.vat ?? 0,
     tdsBasisPoints: bill.tdsBasisPoints,
     tds: bill.tds,
     netPayable: bill.netPayable,
     status: bill.status,
+    regularExpense: bill.regularExpense,
     // Only a recorded bill is owed; drafts and cancelled bills have nothing to pay.
     ...(bill.status === 'recorded' && paymentStateOf(bill.netPayable, bill.dueDate, settled.get(bill._id))),
     returnNote: bill.returnNote,
@@ -192,6 +220,12 @@ export async function listBills(actor: Actor, { status, paymentStatus, vendorId,
   return { total, page: page.page, pageSize: page.pageSize, bills: await viewsOf(bills, rules) };
 }
 
+/** Bills by id, newest first, as the caller may see them: for screens that pick bills another way, such as Office rent. */
+export async function listBillsByIds(actor: Actor, billIds: string[]) {
+  const bills = await Bill.find({ _id: { $in: billIds } }).sort({ billDate: -1, number: -1 }).lean();
+  return viewsOf(bills, await fieldRulesFor(actor));
+}
+
 /** One bill, with its payments and what the caller may do next, so a screen shows only buttons that will work. */
 export async function getBill(actor: Actor, billId: string) {
   const bill = await requireBill(billId);
@@ -213,9 +247,13 @@ export async function getBill(actor: Actor, billId: string) {
   };
 }
 
-export async function createBill(actor: Actor, details: BillDetails) {
+/**
+ * Saves a draft bill. `origin` names the regular expense and period it was made for. People never send it: only the
+ * regular expenses feature does, and a period that already has a live bill is refused by the unique key.
+ */
+export async function createBill(actor: Actor, details: BillDetails, origin?: RegularExpenseLink) {
   assertMayWriteFields(await fieldRulesFor(actor), Object.keys(details), 'create');
-  const priced = await priceForVendor(details.vendorId, details.lines);
+  const priced = await priceForVendor(details.vendorId, details.lines, details.vatCode);
   const number = await takeNextDocumentNumber('bill', 'B-');
   const bill = await runInTransaction(async (session) => {
     const [created] = await Bill.create([{
@@ -228,9 +266,11 @@ export async function createBill(actor: Actor, details: BillDetails) {
       dueDate: details.dueDate ?? details.billDate,
       lines: priced.lines,
       amount: priced.amount,
+      ...(priced.vatCode && { vatCode: priced.vatCode, vatBasisPoints: priced.vatBasisPoints, vat: priced.vat }),
       tdsBasisPoints: priced.tdsBasisPoints,
       tds: priced.tds,
       netPayable: priced.netPayable,
+      ...(origin && { regularExpense: origin, regularExpenseKey: regularExpenseKeyOf(origin) }),
       status: 'draft',
       createdBy: actor.user._id,
       updatedBy: actor.user._id,
@@ -245,14 +285,16 @@ export async function createBill(actor: Actor, details: BillDetails) {
 }
 
 /** Edits a draft, with a reason kept in its history. New lines or a new vendor price it again at the vendor's TDS rate. */
-export async function updateBill(actor: Actor, billId: string, request: Partial<BillDetails> & { reason: string; version?: number }) {
+export async function updateBill(actor: Actor, billId: string, request: Partial<Omit<BillDetails, 'vatCode'>> & { vatCode?: string | null; reason: string; version?: number }) {
   const { version, reason, ...changes } = request;
   const existing = await requireBill(billId);
   assertStatus(existing, 'draft', 'edited');
   assertMayWriteFields(await fieldRulesFor(actor), Object.keys(changes), 'update');
 
-  const repriced = changes.lines || changes.vendorId
-    ? await priceForVendor(changes.vendorId ?? existing.vendorId, changes.lines ?? existing.lines)
+  // null removes the VAT; leaving it out keeps the bill's rate code.
+  const vatCode = changes.vatCode === undefined ? existing.vatCode : (changes.vatCode ?? undefined);
+  const repriced = changes.lines || changes.vendorId || changes.vatCode !== undefined
+    ? await priceForVendor(changes.vendorId ?? existing.vendorId, changes.lines ?? existing.lines, vatCode)
     : undefined;
   const $set = {
     ...(changes.billDate && { billDate: changes.billDate }),
@@ -263,13 +305,17 @@ export async function updateBill(actor: Actor, billId: string, request: Partial<
       vendorName: repriced.vendor.name,
       lines: repriced.lines,
       amount: repriced.amount,
+      ...(repriced.vatCode && { vatCode: repriced.vatCode, vatBasisPoints: repriced.vatBasisPoints, vat: repriced.vat }),
       tdsBasisPoints: repriced.tdsBasisPoints,
       tds: repriced.tds,
       netPayable: repriced.netPayable,
     }),
   };
-  const $unset = changes.vendorReference === '' ? { vendorReference: 1 } : undefined;
-  const saved = await changeBill(actor, existing, 'bill.updated', async () => ({ $set, ...($unset && { $unset }) }), { version, reason });
+  const $unset = {
+    ...(changes.vendorReference === '' && { vendorReference: 1 }),
+    ...(repriced && !repriced.vatCode && { vatCode: 1, vatBasisPoints: 1, vat: 1 }),
+  };
+  const saved = await changeBill(actor, existing, 'bill.updated', async () => ({ $set, ...(Object.keys($unset).length > 0 && { $unset }) }), { version, reason });
   return viewFor(actor, saved);
 }
 
@@ -323,7 +369,7 @@ export async function cancelBill(actor: Actor, billId: string, request: { reason
   const cancelled = { status: 'cancelled', cancelledBy: actor.user._id, cancelledAt: new Date() };
   if (existing.status === 'draft') {
     if (!actor.permissions['bill.update']) throw new ApiError(403, 'forbidden', "Your profile doesn't let you change bills.");
-    const saved = await changeBill(actor, existing, 'bill.cancelled', async () => ({ $set: cancelled }), { version: request.version, reason: request.reason });
+    const saved = await changeBill(actor, existing, 'bill.cancelled', async () => ({ $set: cancelled, $unset: { regularExpenseKey: 1 } }), { version: request.version, reason: request.reason });
     return viewFor(actor, saved);
   }
   await assertMayDecide(actor, existing, APPROVE_PERMISSION);
@@ -333,7 +379,8 @@ export async function cancelBill(actor: Actor, billId: string, request: { reason
   if (!ledgerEntryId) throw new Error(`Recorded bill ${existing._id} has no ledger entry.`);
   const saved = await changeBill(actor, existing, 'bill.cancelled', async (session) => {
     const reversal = await reverseEntry(actor, ledgerEntryId, session, { memo: `Cancels ${existing.number} ${existing.vendorName}: ${request.reason}` });
-    return { $set: { ...cancelled, reversalEntryId: reversal._id } };
+    // Frees the regular expense's period, so it can be billed again.
+    return { $set: { ...cancelled, reversalEntryId: reversal._id }, $unset: { regularExpenseKey: 1 } };
   }, { version: request.version, reason: request.reason });
   return viewFor(actor, saved);
 }

@@ -46,6 +46,8 @@ const updateBodySchema = z
     defaultCurrency: z.string().trim().regex(/^[A-Z]{3,10}$/, 'must be a currency code, such as BDT or USD').optional(),
     exchangeRates: z.array(exchangeRateSchema).max(MAX_RATES).optional(),
     taxRates: z.array(taxRateSchema).max(MAX_RATES).optional(),
+    providentFundBasisPoints: z.number().int('must be whole basis points (1000 is 10%)').min(0).max(MAX_BASIS_POINTS).optional(),
+    gratuityBasisPoints: z.number().int('must be whole basis points (833 is 8.33%)').min(0).max(MAX_BASIS_POINTS).optional(),
     version: versionField.optional(),
   })
   .refine(({ version: _version, ...changes }) => Object.keys(changes).length > 0, { message: 'send at least one field to change' });

@@ -3,8 +3,8 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.17.0",
-    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, the general ledger, client accounts, bank reconciliation, office expenses, bonus, incentive and commission payouts, employee payments, loans and advances repaid through payroll, unpaid leave, and the Accounts activity log.",
+    "version": "1.18.0",
+    "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, the general ledger, client accounts, bank reconciliation, office expenses, bonus, incentive and commission payouts, employee payments, loans and advances repaid through payroll, unpaid leave, provident fund and gratuity, regular expenses that make draft bills, office rent, VAT on bills, tax filings, budget against actual, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
   },
@@ -23,7 +23,9 @@
         "currencies",
         "defaultCurrency",
         "exchangeRates",
-        "taxRates"
+        "taxRates",
+        "providentFundBasisPoints",
+        "gratuityBasisPoints"
       ],
       "recordFields": [
         "standInApproverId",
@@ -31,7 +33,9 @@
         "currencies",
         "defaultCurrency",
         "exchangeRates",
-        "taxRates"
+        "taxRates",
+        "providentFundBasisPoints",
+        "gratuityBasisPoints"
       ]
     },
     {
@@ -222,6 +226,8 @@
         "dueDate",
         "lines",
         "amount",
+        "vatCode",
+        "vat",
         "tds",
         "netPayable",
         "status",
@@ -234,6 +240,9 @@
         "dueDate",
         "lines",
         "amount",
+        "vatCode",
+        "vatBasisPoints",
+        "vat",
         "tdsBasisPoints",
         "tds",
         "netPayable"
@@ -425,6 +434,73 @@
         "update"
       ],
       "scoped": false
+    },
+    {
+      "key": "providentFund",
+      "label": "Provident fund and gratuity",
+      "actions": [
+        "read"
+      ],
+      "scoped": false
+    },
+    {
+      "key": "regularExpense",
+      "label": "Regular expenses",
+      "actions": [
+        "read",
+        "create",
+        "update"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "name",
+        "category",
+        "vendorId",
+        "accountId",
+        "frequency",
+        "amount",
+        "vatCode",
+        "dayOfMonth",
+        "startMonth",
+        "endMonth",
+        "isActive"
+      ],
+      "recordFields": [
+        "name",
+        "category",
+        "vendorId",
+        "accountId",
+        "frequency",
+        "amount",
+        "vatCode",
+        "dayOfMonth",
+        "startMonth",
+        "endMonth",
+        "isActive"
+      ]
+    },
+    {
+      "key": "taxFiling",
+      "label": "Tax and VAT",
+      "actions": [
+        "read"
+      ],
+      "scoped": false
+    },
+    {
+      "key": "budget",
+      "label": "Budget against actual",
+      "actions": [
+        "read",
+        "update"
+      ],
+      "scoped": false,
+      "trackedFields": [
+        "lines"
+      ],
+      "recordFields": [
+        "lines"
+      ]
     }
   ],
   "routes": [
@@ -1149,6 +1225,78 @@
       "path": "/unpaid-leave/:employeeId/:month",
       "access": "private",
       "permission": "unpaidLeave.update"
+    },
+    {
+      "method": "GET",
+      "path": "/provident-fund",
+      "access": "private",
+      "permission": "providentFund.read"
+    },
+    {
+      "method": "POST",
+      "path": "/provident-fund/:month/deposit",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "GET",
+      "path": "/regular-expenses",
+      "access": "private",
+      "permission": "regularExpense.read"
+    },
+    {
+      "method": "POST",
+      "path": "/regular-expenses",
+      "access": "private",
+      "permission": "regularExpense.create"
+    },
+    {
+      "method": "POST",
+      "path": "/regular-expenses/bills",
+      "access": "private",
+      "permission": "bill.create"
+    },
+    {
+      "method": "PATCH",
+      "path": "/regular-expenses/:id",
+      "access": "private",
+      "permission": "regularExpense.update"
+    },
+    {
+      "method": "GET",
+      "path": "/regular-expenses/:id/history",
+      "access": "private",
+      "permission": "regularExpense.read"
+    },
+    {
+      "method": "GET",
+      "path": "/office-rent",
+      "access": "private",
+      "permission": "bill.read"
+    },
+    {
+      "method": "GET",
+      "path": "/tax-filings",
+      "access": "private",
+      "permission": "taxFiling.read"
+    },
+    {
+      "method": "POST",
+      "path": "/tax-filings/:month/pay",
+      "access": "private",
+      "permission": "journalVoucher.create"
+    },
+    {
+      "method": "GET",
+      "path": "/budgets/:year",
+      "access": "private",
+      "permission": "budget.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/budgets/:year",
+      "access": "private",
+      "permission": "budget.update"
     }
   ]
 }

@@ -34,9 +34,13 @@ export interface PayrollLine {
   /** Unpaid leave days in the month, and the pay they took off (salary ÷ 30 a day). */
   unpaidLeaveDays?: number;
   leaveDeduction?: number;
+  /** Paisa: the employee's provident fund share taken from their pay. The company adds the same again. */
+  providentFund?: number;
+  /** Paisa the company sets aside as gratuity for this person. Not taken from their pay. */
+  gratuity?: number;
   /** Loan and advance instalments taken from the pay. */
   loanRepayments?: LoanRepayment[];
-  /** Paisa the person is paid: gross less loan repayments. Runs saved before deductions existed have none: net is gross. */
+  /** Paisa the person is paid: gross less their provident fund share and loan repayments. Runs saved before deductions existed have none: net is gross. */
   net?: number;
   note?: string;
 }
@@ -56,6 +60,9 @@ export interface PayrollRunDoc extends RecordFields {
   /** Paisa paid from the bank: the sum of the lines' net. Missing on runs saved before deductions: the same as total. */
   netTotal?: number;
   headcount: number;
+  /** The Settings rates when the run was made, so editing a draft later prices it the same way. Missing means none. */
+  providentFundBasisPoints?: number;
+  gratuityBasisPoints?: number;
   status: PayrollRunStatus;
   submittedBy?: string;
   submittedAt?: Date;
@@ -81,6 +88,8 @@ const lineSchema = new Schema<PayrollLine>(
       type: [new Schema<LoanRepayment>({ loanId: { type: String, required: true }, number: { type: String, required: true }, amount: { type: Number, required: true } }, { _id: false })],
       default: undefined,
     },
+    providentFund: Number,
+    gratuity: Number,
     net: Number,
     note: String,
   },
@@ -97,6 +106,8 @@ const payrollRunSchema = new Schema<PayrollRunDoc>(
     total: { type: Number, required: true },
     netTotal: Number,
     headcount: { type: Number, required: true },
+    providentFundBasisPoints: Number,
+    gratuityBasisPoints: Number,
     status: { type: String, enum: PAYROLL_RUN_STATUSES, required: true, index: true },
     submittedBy: String,
     submittedAt: Date,
