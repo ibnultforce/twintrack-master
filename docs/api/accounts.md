@@ -696,6 +696,26 @@ The four financial reports and the Accounts dashboard, read straight from ledger
 
 **Query:** `month` (YYYY-MM). **Returns:** `from`, `to` (the month's days), `financialYear`, `cash` (`accounts`: each cash and bank account's balance at the month end, and `total`), `receivable` (1300) and `payable` (2100) at the month end, `thisMonth` and `yearToDate` (`income`, `expenses`, `profit`), `trend` (each month of the financial year up to this one, with the same three figures) and `topExpenses` (the month's five largest expense accounts). **Errors:** `422 validation_failed`.
 
+## Export center
+
+Every list and report as a CSV file, for a spreadsheet or the auditors. Each dataset loads its rows through the service its screen uses, so it holds only what the person may read, and needs that screen's read permission. A column for a protected field (such as a bank account number) is left out, header and all, when the profile hides the field; a dataset made only of a protected field (salary per person, from payroll runs' `lines`) is not offered at all. Money is taka with two decimals; text that would start a spreadsheet formula (`=`, `+`, `-`, `@`) is written with a leading `'`. Every download is written to the audit log as `accounts.exported`.
+
+### `GET /accounts/exports`
+
+**Access:** `private`, needs any one of the datasets' read permissions. **Returns:** `datasets` the person may download: `key`, `label`, `group` (Reports, Books, Receivables, Payables, People money, Tax and assets) and `period` (`range` needs `from` and `to`, `date` needs `to`, `year` takes `year` and defaults to this financial year, `none` takes nothing).
+
+### `GET /accounts/exports/:dataset`
+
+**Access:** `private`, as above, then the dataset's own permission. **Query:** `from`, `to`, `year`, as the dataset's `period` says. **Returns:** `text/csv` with a byte order mark and CRLF line ends, as an attachment named after the dataset and its period, such as `profit-and-loss-2026-11-01-to-2026-11-30.csv`.
+
+Datasets: `profit-and-loss`, `balance-sheet`, `cash-flow`, `trial-balance`, `chart-of-accounts`, `vouchers`, `invoices`, `vendors`, `bills`, `regular-expenses`, `payroll-runs`, `salaries`, `staff-payouts`, `loans`, `tax-filings`, `budget`, `fixed-assets`, `inventory`.
+
+**Errors:** `403 forbidden` (no permission for the dataset), `403 field_hidden` (the dataset is made of a field the profile hides), `404 unknown_export`, `422 validation_failed` (a missing date, or `to` before `from`).
+
+## Assistant tools (MCP)
+
+Read-only Accounts tools on Master's MCP server (`POST /mcp`), for Claude or any MCP client signed in as the person. Each needs `ledgerAccount.read` in Accounts, like the reports, and answers in paisa: `accounts_dashboard` (`month`), `accounts_cash_and_bank` (`from`, `to`, this month if left out), `accounts_trial_balance` (`to`), `accounts_profit_and_loss` (`from`, `to`), `accounts_balance_sheet` (`to`) and `accounts_cash_flow` (`from`, `to`). None of them changes anything.
+
 ## Client accounts
 
 What each client was billed, paid and still owes, worked out from issued invoices and the recorded receipts linked to them. Amounts are in taka at each invoice's issue rate, as the books recorded them, so the total outstanding equals the 1300 Accounts receivable balance.

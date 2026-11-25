@@ -3,7 +3,7 @@
   "module": {
     "key": "accounts",
     "name": "Accounts",
-    "version": "1.20.0",
+    "version": "1.21.0",
     "description": "Ledger, vouchers, bills, invoices, payroll and reports. Built so far: settings, the chart of accounts, journal, payment and receipt vouchers with approval, the approvals queue, cash and bank balances, update requests that correct recorded vouchers, change history, client billing, invoices with receipts, vendors, bills with payments, payroll on dummy employees, fixed assets with monthly depreciation, inventory, the general ledger, client accounts, bank reconciliation, office expenses, bonus, incentive and commission payouts, employee payments, loans and advances repaid through payroll, unpaid leave, provident fund and gratuity, regular expenses that make draft bills, office rent, VAT on bills, tax filings, budget against actual, and the Accounts activity log.",
     "repository": "twintrack-accounts",
     "baseUrl": "/accounts"
@@ -1045,6 +1045,46 @@
       "path": "/dashboard",
       "access": "private",
       "permission": "ledgerAccount.read"
+    },
+    {
+      "method": "GET",
+      "path": "/exports",
+      "access": "private",
+      "anyPermission": [
+        "ledgerAccount.read",
+        "journalVoucher.read",
+        "invoice.read",
+        "vendor.read",
+        "bill.read",
+        "regularExpense.read",
+        "payrollRun.read",
+        "staffPayout.read",
+        "employeeLoan.read",
+        "taxFiling.read",
+        "budget.read",
+        "fixedAsset.read",
+        "inventoryItem.read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/exports/:dataset",
+      "access": "private",
+      "anyPermission": [
+        "ledgerAccount.read",
+        "journalVoucher.read",
+        "invoice.read",
+        "vendor.read",
+        "bill.read",
+        "regularExpense.read",
+        "payrollRun.read",
+        "staffPayout.read",
+        "employeeLoan.read",
+        "taxFiling.read",
+        "budget.read",
+        "fixedAsset.read",
+        "inventoryItem.read"
+      ]
     },
     {
       "method": "GET",

@@ -14529,6 +14529,79 @@
           ]
         },
         {
+          "id": "GET /accounts/exports",
+          "method": "GET",
+          "path": "/accounts/exports",
+          "purpose": "The lists and reports this person may download as CSV, by group, with the period each needs.",
+          "input": "",
+          "access": "Needs read access to at least one exportable list or report",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Everything a super admin can export",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/exports",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but with nothing to export",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/exports",
+                "as": "karim@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
+          "id": "GET /accounts/exports/:dataset",
+          "method": "GET",
+          "path": "/accounts/exports/:dataset",
+          "purpose": "One list or report as a CSV file, without columns for fields the profile hides. Each download is audited.",
+          "input": "from, to, year (as the dataset needs)",
+          "access": "Needs the dataset's own read permission",
+          "scenarios": [
+            {
+              "kind": "success",
+              "title": "Profit and loss for November",
+              "expected": 200,
+              "request": {
+                "method": "GET",
+                "path": "/accounts/exports/profit-and-loss?from=2026-11-01&to=2026-11-30",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No such export",
+              "expected": 404,
+              "code": "unknown_export",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/exports/payslips",
+                "as": "farhana@twintrack.test"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "A period report without its dates",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "GET",
+                "path": "/accounts/exports/profit-and-loss",
+                "as": "farhana@twintrack.test"
+              }
+            }
+          ]
+        },
+        {
           "id": "GET /accounts/client-accounts",
           "method": "GET",
           "path": "/accounts/client-accounts",

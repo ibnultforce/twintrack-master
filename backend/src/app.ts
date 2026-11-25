@@ -15,6 +15,7 @@ import { HR_MODULE_KEY, hrRoutes } from './modules/hr/hr.routes.js';
 import { hrUserReferenceChecks } from './modules/hr/hrUserReferences.js';
 import { createProjectsRoutes, PROJECTS_MODULE_KEY } from './modules/projects/projects.routes.js';
 import { projectsMcpTools } from './modules/projects/projectsMcpTools.js';
+import { accountsMcpTools } from './modules/accounts/accountsMcpTools.js';
 import { projectsUserReferenceChecks } from './modules/projects/projectsUserReferences.js';
 import { createAccessMiddleware } from './modules/master/access/access.middleware.js';
 import { createMasterRoutes, MASTER_MODULE_KEY, mountMasterProtocols } from './modules/master/master.routes.js';
@@ -50,7 +51,7 @@ export function createApp(config: Config, dependencyOverrides: Partial<AppDepend
 
   if (config.isTestPageEnabled) serveTestPage(app);
   mountMasterProtocols(app, config);
-  const masterExtensions = { userReferenceChecks: [...hrUserReferenceChecks, ...projectsUserReferenceChecks], mcpToolProviders: [projectsMcpTools] };
+  const masterExtensions = { userReferenceChecks: [...hrUserReferenceChecks, ...projectsUserReferenceChecks], mcpToolProviders: [projectsMcpTools, accountsMcpTools] };
   registerRoutes(app, createMasterRoutes(config, dependencies, masterExtensions), createAccessMiddleware(config.auth, MASTER_MODULE_KEY));
   registerRoutes(app, hrRoutes, createAccessMiddleware(config.auth, HR_MODULE_KEY));
   registerRoutes(app, demoRoutes, createAccessMiddleware(config.auth, DEMO_MODULE_KEY));
