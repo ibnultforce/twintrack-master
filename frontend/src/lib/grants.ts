@@ -1,4 +1,5 @@
 import type { FieldAccessLevel, FieldAccessMap, Grants, ModuleResource, PermissionMap, ResourceAction, Scope } from './api/types';
+import { humanize } from './format';
 
 export const ALL_ACTIONS: ResourceAction[] = ['read', 'create', 'update', 'delete', 'approve', 'share'];
 
@@ -21,6 +22,11 @@ export function readResourceScopes(permissions: PermissionMap, resources: Module
 export function listAccessFields(resource: ModuleResource): string[] {
   const customFields = (resource.fields ?? []).map((field) => field.key);
   return [...new Set([...(resource.recordFields ?? []), ...(resource.protectedFields ?? []), ...customFields])];
+}
+
+/** The name people see for a field: the manifest's label, a custom field's label, or the key in words. */
+export function fieldLabelOf(resource: ModuleResource, field: string): string {
+  return resource.fieldLabels?.[field] ?? resource.fields?.find((customField) => customField.key === field)?.label ?? humanize(field);
 }
 
 /** The widest level a grant's actions make useful on any field: create needs the create action, edit needs update. */

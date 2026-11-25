@@ -1,8 +1,7 @@
 'use client';
 
 import { FIELD_ACCESS_LEVELS, type FieldAccessLevel, type FieldAccessMap, type ModuleResource } from '@/lib/api/types';
-import { humanize } from '@/lib/format';
-import { impliedFieldLevel, listAccessFields, permissionKey, widestUsefulFieldLevel } from '@/lib/grants';
+import { fieldLabelOf, impliedFieldLevel, listAccessFields, permissionKey, widestUsefulFieldLevel } from '@/lib/grants';
 
 /** The action that makes each level useful, for explaining why a level can't be picked yet. */
 const ACTION_NEEDED: Partial<Record<FieldAccessLevel, string>> = { read: 'Read', create: 'Create', edit: 'Update' };
@@ -79,13 +78,14 @@ export function FieldAccessPanel({ resource, columnCount, selectedActions, field
                 {fields.map((field) => {
                   const stated = fieldAccess[keyOf(field)];
                   const autoLevel = impliedFieldLevel(resource, field, selectedActions);
+                  const label = fieldLabelOf(resource, field);
                   return (
                     <div className="field-item" key={field}>
                       <span className="field-name">
-                        {humanize(field)}
+                        {label}
                         {resource.protectedFields?.includes(field) ? <span className="field-tag">Protected</span> : null}
                       </span>
-                      <div className="segmented" role="group" aria-label={`${humanize(field)} access`}>
+                      <div className="segmented" role="group" aria-label={`${label} access`}>
                         <button type="button" aria-pressed={!stated} disabled={!isEditable} onClick={() => setLevel(field, null)}>
                           Auto <span className="auto-result">{FIELD_LEVEL_LABELS[autoLevel]}</span>
                         </button>

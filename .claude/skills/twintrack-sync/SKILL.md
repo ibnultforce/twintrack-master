@@ -26,7 +26,7 @@ Don't skip a step because it looks small. If one can't run here (no local MongoD
 
 ## 2. Manifest, then reload it into the database
 
-- `manifests/<module>.manifest.json`: each route's `method`, `path` (relative to the module's `baseUrl`), `access`, `permission` or `anyPermission`; any new resource or action with `scoped`, `sharingModel`, `trackedFields`, `recordFields`, `protectedFields` as needed.
+- `manifests/<module>.manifest.json`: each route's `method`, `path` (relative to the module's `baseUrl`), `access`, `permission` or `anyPermission`; any new resource or action with `scoped`, `sharingModel`, `trackedFields`, `recordFields`, `protectedFields` and `fieldLabels` as needed.
 - Raise `module.version`: major when a route or action is removed or renamed, minor for new routes or actions, patch for fixes.
 - Reuse an action before adding one. Nothing is granted automatically: a new action is held only by the super admin until someone ticks it on the Profiles screen.
 - Run `npm run seed:modules`. This is what puts the change on the Modules, Profiles, Permissions, My permissions and Access screens. Without it the route grants nothing. It also removes modules whose manifest file was deleted, so a removed module leaves the Modules, Profiles and Your modules screens.

@@ -275,6 +275,8 @@ export interface ModuleResource {
   recordFields?: string[];
   /** Fields hidden unless a profile gives access to them. */
   protectedFields?: string[];
+  /** Names to show for fields whose key doesn't say what they hold, such as lines: "Salary per person". */
+  fieldLabels?: Record<string, string>;
   /** Set on objects an admin defined in the app. */
   custom?: boolean;
   fields?: CustomFieldDefinition[];
