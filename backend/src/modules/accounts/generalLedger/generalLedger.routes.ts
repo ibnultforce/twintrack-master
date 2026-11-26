@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import type { ApiRoute } from '../../../lib/apiRoute.js';
+import { getActor } from '../../master/access/caller.js';
 import { paginationQueryFields } from '../../../lib/query.js';
 import { parseRequestQuery } from '../../../lib/validation.js';
 import { accountingDateField, recordIdField } from '../accountsFields.js';
@@ -21,7 +22,7 @@ const handleOfficeExpenses: RequestHandler = async (req, res) => {
   res.json(await getOfficeExpenses(from, to));
 };
 const handleLedger: RequestHandler = async (req, res) => {
-  res.json(await getGeneralLedger(parseRequestQuery(ledgerQuerySchema, req.query)));
+  res.json(await getGeneralLedger(getActor(req), parseRequestQuery(ledgerQuerySchema, req.query)));
 };
 const handleTrialBalance: RequestHandler = async (req, res) => {
   res.json(await getTrialBalanceView(parseRequestQuery(trialBalanceQuerySchema, req.query).to));

@@ -83,11 +83,11 @@ export interface SettledAmounts {
 }
 
 /** Settled amounts per invoice or bill id, in the document's currency. Reversed vouchers count for nothing. */
-export async function sumSettledAmounts(documentIds: string[]): Promise<Map<string, SettledAmounts>> {
+export async function sumSettledAmounts(documentIds: string[], session?: ClientSession): Promise<Map<string, SettledAmounts>> {
   const rows = await JournalVoucher.aggregate<{ _id: { id: string; status: JournalVoucherStatus }; amount: number }>([
     { $match: { 'linkedDocument.id': { $in: documentIds }, status: { $in: ['draft', 'submitted', 'recorded'] }, deletedAt: { $exists: false } } },
     { $group: { _id: { id: '$linkedDocument.id', status: '$status' }, amount: { $sum: '$linkedDocument.amount' } } },
-  ]);
+  ]).session(session ?? null);
   const settled = new Map<string, SettledAmounts>(documentIds.map((id) => [id, { recorded: 0, committed: 0 }]));
   for (const row of rows) {
     const amounts = settled.get(row._id.id);

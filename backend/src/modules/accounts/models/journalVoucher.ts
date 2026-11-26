@@ -31,6 +31,12 @@ export interface LinkedDocument {
   number: string;
   /** How much of the document it settles, in the document's currency, minor units (cents or paisa). */
   amount: number;
+  /**
+   * What the document was owed in all when the voucher was made. Approval refuses the voucher if recorded payments
+   * would pass it, so two payments made at the same moment can't both reach the books. Vouchers made before this
+   * existed, and depreciation runs, have none.
+   */
+  amountDue?: number;
 }
 
 /** A manual journal entry that needs a second person's approval before it reaches the ledger. */
@@ -93,6 +99,7 @@ const journalVoucherSchema = new Schema<JournalVoucherDoc>(
           id: { type: String, required: true },
           number: { type: String, required: true },
           amount: { type: Number, required: true },
+          amountDue: Number,
         },
         { _id: false },
       ),

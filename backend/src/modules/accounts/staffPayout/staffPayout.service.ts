@@ -273,7 +273,7 @@ export async function payStaffPayout(actor: Actor, payoutId: string, request: { 
       { accountId: POSTING_ACCOUNTS.salariesPayable, debit: amount, memo: payout.number },
       { accountId: request.moneyAccountId, credit: amount, memo: 'Paid out' },
     ],
-    linkedDocument: { type: 'staffPayout', id: payout._id, number: payout.number, amount },
+    linkedDocument: { type: 'staffPayout', id: payout._id, number: payout.number, amount, amountDue: payout.total },
   });
 }
 

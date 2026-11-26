@@ -133,6 +133,40 @@ describe('bank reconciliation and office expenses', () => {
     expect((await rahim.get(BASE)).body.lastReconciled).toEqual({ [bankId]: '2026-11-30' });
   });
 
+  it('carries a cheque not yet presented to the next month, and leaves the reconciled month as it was', async () => {
+    await bookNovember();
+    await bankEntry('2026-11-30', 'Bank charge, November', BANK_CHARGES, -57_500);
+    const rahim = await as('rahim');
+    const november = await importSample();
+    expect((await rahim.post(`${BASE}/${november.body.id}/complete`, {})).status).toBe(200);
+
+    // The supplier's cheque written on 29 November reaches the bank on 3 December.
+    const decemberCsv = 'Date,Description,Cheque No,Debit,Credit,Balance\n03/12/2026,Supplier cheque,004514,"3,000.00",,"15,925.50"\n';
+    const december = await rahim.post(BASE, { accountId: bankId, from: '2026-12-01', to: '2026-12-31', openingBalance: 1_892_550, closingBalance: 1_592_550, csv: decemberCsv });
+    expect(december.status).toBe(201);
+    expect(december.body.lines[0]).toMatchObject({ matchedEntry: { date: '2026-11-29' } });
+    expect(december.body.summary).toMatchObject({ unmatchedCount: 0, inBooksNotBank: 0, difference: 0 });
+    expect(december.body.unmatchedBookItems).toEqual([]);
+    expect(december.body.canComplete).toBe(true);
+
+    // November still shows the cheque as not yet at the bank on 30 November, and still has no difference.
+    const novemberAgain = await rahim.get(`${BASE}/${november.body.id}`);
+    expect(novemberAgain.body.summary).toMatchObject({ inBooksNotBank: -300_000, difference: 0 });
+  });
+
+  it('matches a transfer between two bank accounts on each account\'s statement', async () => {
+    const farhana = await as('farhana');
+    const savings = await farhana.post('/accounts/ledger-accounts', { code: '1220', name: 'City Bank, savings', type: 'asset', parentId: 'la_1200', cashOrBank: 'bank', bankName: 'City Bank' });
+    await bankEntry('2026-11-01', 'Opening deposit', OPENING_EQUITY, 5_000_000);
+    await bankEntry('2026-11-10', 'To savings', savings.body.id as string, -1_000_000);
+    const rahim = await as('rahim');
+    const header = 'Date,Description,Cheque No,Debit,Credit,Balance\n';
+    const current = await rahim.post(BASE, { accountId: bankId, from: '2026-11-01', to: '2026-11-30', openingBalance: 0, closingBalance: 4_000_000, csv: `${header}01/11/2026,Deposit,,,"50,000.00","50,000.00"\n10/11/2026,To savings,,"10,000.00",,"40,000.00"\n` });
+    const saving = await rahim.post(BASE, { accountId: savings.body.id, from: '2026-11-01', to: '2026-11-30', openingBalance: 0, closingBalance: 1_000_000, csv: `${header}10/11/2026,From current,,,"10,000.00","10,000.00"\n` });
+    expect(current.body.summary).toMatchObject({ unmatchedCount: 0, difference: 0 });
+    expect(saving.body.summary).toMatchObject({ unmatchedCount: 0, difference: 0 });
+  });
+
   it('refuses a statement that does not add up, a line outside the period, and a non-bank account', async () => {
     const rahim = await as('rahim');
     expect((await rahim.post(BASE, { accountId: bankId, from: '2026-11-01', to: '2026-11-30', openingBalance: 0, closingBalance: 1, csv: SAMPLE_CSV })).body.error.code).toBe('statement_does_not_add_up');

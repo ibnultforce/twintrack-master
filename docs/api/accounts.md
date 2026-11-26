@@ -347,9 +347,9 @@ A voucher is checked like a ledger entry when it is saved and again when it is s
 
 **Body:** optional `version`
 
-Records the voucher in the ledger in the same transaction: if the ledger refuses the entry, nothing changes and the voucher stays submitted. Two approvals at once: one wins, the other gets `409 version_conflict`.
+Records the voucher in the ledger in the same transaction: if the ledger refuses the entry, nothing changes and the voucher stays submitted. Two approvals at once: one wins, the other gets `409 version_conflict`. A payment or receipt made from a document is refused with `409 more_than_owed` when the document's recorded payments plus this one would pass `linkedDocument.amountDue`, such as a second voucher from a double click on Pay.
 
-**Errors:** `403 own_record`, `403 forbidden`, `409 voucher_not_submitted`, `409 version_conflict`, `422` from the ledger
+**Errors:** `403 own_record`, `403 forbidden`, `409 voucher_not_submitted`, `409 version_conflict`, `409 more_than_owed`, `422` from the ledger
 
 ### `POST /accounts/journal-vouchers/:id/return`
 
@@ -551,7 +551,7 @@ As for invoices, with `bill.update` and `bill.approve`. Cancelling a recorded bi
 
 ## Payments linked to invoices and bills
 
-A receipt or payment voucher made by Receive payment or Pay carries `linkedDocument` (`type`, `id`, `number`, `amount` in the document's currency). It can't be edited (`409 linked_voucher`) or corrected by an update request (`409 linked_voucher`): a wrong one is returned to its maker or reversed, and a new one made from the document. A reversed voucher no longer counts as paid, so the document opens again.
+A receipt or payment voucher made by Receive payment or Pay carries `linkedDocument` (`type`, `id`, `number`, `amount` in the document's currency, and `amountDue`: what the document was owed in all when the voucher was made, checked again on approval). It can't be edited (`409 linked_voucher`) or corrected by an update request (`409 linked_voucher`): a wrong one is returned to its maker or reversed, and a new one made from the document. A reversed voucher no longer counts as paid, so the document opens again.
 
 The accounts these post to are the starting chart's 1300, 2100, 2300, 4100, 4200 and 5800, named in one place (`accounts/postingAccounts.ts`). Choosing them in Settings is not built yet.
 
@@ -666,7 +666,9 @@ Office stock counted in units: quantities only, since what it cost reaches the b
 
 **Query:** `accountId`, `from`, `to` (entry dates, inclusive), `page`, `pageSize`
 
-**Returns:** `account` (`id`, `code`, `name`, `type`, `normalBalance`), `opening` (the balance before `from`), `totalDebit`, `totalCredit`, `closing`, `total` (lines in the period), and `lines`, oldest first: `entryId`, `entryDate`, `memo` (the line's, or the entry's), `entryMemo`, `source` (`type`, `id`, `number` such as `PV-0001`), `isReversal`, `debit`, `credit`, `balance` (running, debits minus credits, carried across pages). Read straight from ledger entries, so an account's `closing` over all dates equals its trial balance figure.
+**Returns:** `account` (`id`, `code`, `name`, `type`, `normalBalance`), `opening` (the balance before `from`), `totalDebit`, `totalCredit`, `closing`, `payPerPersonHidden`, `total` (lines in the period), and `lines`, oldest first: `entryId`, `entryDate`, `memo` (the line's, or the entry's), `entryMemo`, `source` (`type`, `id`, `number` such as `PV-0001`), `isReversal`, `debit`, `credit`, `balance` (running, debits minus credits, carried across pages). Read straight from ledger entries, so an account's `closing` over all dates equals its trial balance figure.
+
+A payroll run records one salary line per person. When the caller's profile hides the payroll run's `lines` field (each person's pay), `payPerPersonHidden` is `true` and each payroll entry's lines on the account are added into one line, with the entry's memo (`PR-0001 salaries, November 2026`). Totals, `closing`, `total` and running balances are the same either way.
 
 **Errors:** `404 unknown_ledger_account`, `422 validation_failed` (`to` before `from`)
 
@@ -742,7 +744,9 @@ A bank's statement, loaded from its CSV (decision 8), matched line by line again
 
 **Matching:** a statement line matches a ledger entry on the account that moves exactly the same amount (money in as a debit), the nearest in date within 7 days. An entry matches one line on one statement only.
 
-**The summary:** `closingBalance` should equal `bookBalance` (the ledger at `to`) plus `inBankNotBooks` (unmatched statement lines) less `inBooksNotBank` (unmatched entries in the period, such as a cheque not yet presented). `difference` is what is left unexplained.
+**The summary:** `closingBalance` should equal `bookBalance` (the ledger at `to`) plus `inBankNotBooks` (unmatched statement lines) less `inBooksNotBank` (entries the bank hasn't cleared by `to`, such as a cheque not yet presented). `difference` is what is left unexplained.
+
+**Which entries count:** every entry on the account from the start of its earliest statement up to `to`, other than those matched on an earlier statement of the same account. So a cheque written in one month and presented in the next is matched on the next month's statement, and a reconciled statement stays as it was when a later one matches its open items. Entries before the first statement are in its opening balance. A transfer between two bank accounts is matched once on each account.
 
 ### `GET /accounts/bank-reconciliations`
 
@@ -764,7 +768,7 @@ A bank's statement, loaded from its CSV (decision 8), matched line by line again
 
 ### `POST /accounts/bank-reconciliations/:id/lines/:lineId/match`, `/unmatch`, `POST /accounts/bank-reconciliations/:id/rematch`
 
-**Access:** `private`, needs `bankReconciliation.update`. Match takes `entryId`: an entry on the account for the same amount, not matched elsewhere. Rematch matches unmatched lines again, such as after recording a bank charge.
+**Access:** `private`, needs `bankReconciliation.update`. Match takes `entryId`: an entry on the account for the same amount, not matched on another of this account's statements. Rematch matches unmatched lines again, such as after recording a bank charge.
 
 **Errors:** `404 unknown_statement_line`, `409 line_matched`, `409 line_not_matched`, `409 entry_matched`, `409 statement_reconciled`, `422 validation_failed`
 

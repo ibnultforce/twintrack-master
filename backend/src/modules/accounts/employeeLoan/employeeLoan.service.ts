@@ -234,7 +234,7 @@ export async function payEmployeeLoan(actor: Actor, loanId: string, request: { p
       { accountId: POSTING_ACCOUNTS.salariesPayable, debit: amount, memo: loan.number },
       { accountId: request.moneyAccountId, credit: amount, memo: 'Paid out' },
     ],
-    linkedDocument: { type: 'employeeLoan', id: loan._id, number: loan.number, amount },
+    linkedDocument: { type: 'employeeLoan', id: loan._id, number: loan.number, amount, amountDue: loan.amount },
   });
 }
 

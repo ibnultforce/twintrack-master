@@ -406,7 +406,7 @@ export async function payBill(actor: Actor, billId: string, request: { paymentDa
       { accountId: POSTING_ACCOUNTS.payable, debit: amount, memo: bill.number },
       { accountId: request.moneyAccountId, credit: amount, memo: 'Paid out' },
     ],
-    linkedDocument: { type: 'bill', id: bill._id, number: bill.number, amount },
+    linkedDocument: { type: 'bill', id: bill._id, number: bill.number, amount, amountDue: bill.netPayable },
   });
 }
 

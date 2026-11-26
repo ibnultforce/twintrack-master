@@ -9,6 +9,7 @@ import { assertMayWriteFields, readFieldRules, redactHistory, redactRecord, type
 import { listRecordHistory, writeRecordHistory } from '../../master/records/recordHistory.service.js';
 import { findUsersByIds } from '../../master/users/users.repository.js';
 import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
+import { paisaToTaka } from '../exports/csv.js';
 import { assertMayDecide, mayDecide } from '../approvals/approvalRules.js';
 import { checkBalancedLines, postEntry, reverseEntry, type NewLedgerLine } from '../ledger/ledger.service.js';
 import type { JournalVoucherDoc, JournalVoucherStatus, LinkedDocument, VoucherType } from '../models/journalVoucher.js';
@@ -20,6 +21,7 @@ import {
   findJournalVouchersPage,
   insertJournalVoucher,
   journalVoucherNotFound,
+  sumSettledAmounts,
   takeNextVoucherNumber,
   type JournalVoucherListFilter,
 } from './journalVoucher.repository.js';
@@ -327,6 +329,22 @@ export async function submitJournalVoucher(actor: Actor, voucherId: string, vers
   return toViewFor(actor, saved);
 }
 
+/**
+ * Refuses a payment or receipt that would take what is recorded against its document past what the document was owed.
+ * Making a voucher already checks the open amount, but two made at the same moment (a double click on Pay) could both
+ * pass that check; this check runs in the approval's transaction, so only one of them reaches the books.
+ */
+async function assertSettlesNoMoreThanOwed(linkedDocument: LinkedDocument, session: ClientSession): Promise<void> {
+  if (linkedDocument.amountDue === undefined) return;
+  const recorded = (await sumSettledAmounts([linkedDocument.id], session)).get(linkedDocument.id)?.recorded ?? 0;
+  const open = linkedDocument.amountDue - recorded;
+  if (linkedDocument.amount > open) {
+    // Amounts are in the document's currency, so they are written without a currency sign.
+    const owed = open > 0 ? `only ${paisaToTaka(open)} is still owed on it` : 'it is already paid in full';
+    throw new ApiError(409, 'more_than_owed', `Recording this would pay ${linkedDocument.number} more than it owes: ${owed}. Return this voucher to its maker.`);
+  }
+}
+
 /** Approves a submitted voucher and records it in the ledger, in one transaction: both happen, or neither does. */
 export async function approveJournalVoucher(actor: Actor, voucherId: string, version?: number) {
   const existing = await requireJournalVoucher(voucherId);
@@ -334,6 +352,7 @@ export async function approveJournalVoucher(actor: Actor, voucherId: string, ver
   await assertMayDecide(actor, existing, APPROVE_PERMISSION);
 
   const saved = await changeVoucher(actor, existing, 'journalVoucher.approved', async (session) => {
+    if (existing.linkedDocument) await assertSettlesNoMoreThanOwed(existing.linkedDocument, session);
     const entry = await postEntry(actor, {
       entryDate: existing.voucherDate,
       memo: `${existing.number} ${existing.memo}`,

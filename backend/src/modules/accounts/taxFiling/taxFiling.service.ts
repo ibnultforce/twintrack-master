@@ -122,6 +122,6 @@ export async function payVendorTds(actor: Actor, month: string, request: { payme
       { accountId: POSTING_ACCOUNTS.taxPayable, debit: amount, memo: label },
       { accountId: request.moneyAccountId, credit: amount, memo: `Challan ${request.challanNumber}` },
     ],
-    linkedDocument: { type: 'taxFiling', id: filingDocumentId(month), number: label, amount },
+    linkedDocument: { type: 'taxFiling', id: filingDocumentId(month), number: label, amount, amountDue: owed },
   });
 }

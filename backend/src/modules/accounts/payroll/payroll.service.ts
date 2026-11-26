@@ -405,7 +405,7 @@ export async function payPayrollRun(actor: Actor, runId: string, request: { paym
       { accountId: POSTING_ACCOUNTS.salariesPayable, debit: amount, memo: run.number },
       { accountId: request.moneyAccountId, credit: amount, memo: 'Paid out' },
     ],
-    linkedDocument: { type: 'payrollRun', id: run._id, number: run.number, amount },
+    linkedDocument: { type: 'payrollRun', id: run._id, number: run.number, amount, amountDue: amountToPay(run) },
   });
 }
 

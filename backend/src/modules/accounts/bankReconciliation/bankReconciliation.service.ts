@@ -43,10 +43,34 @@ async function findBookItems(accountId: string, from: string, to: string): Promi
   return rows.filter((row) => row.amount !== 0).map((row) => ({ entryId: row._id, date: row.date, memo: row.memo, amount: row.amount }));
 }
 
-/** Entries already matched to a line on any statement, other than `exceptStatementId`, so one entry never clears two lines. */
-async function findMatchedElsewhere(entryIds: string[], exceptStatementId?: string): Promise<Set<string>> {
-  const statements = await BankStatement.find({ 'lines.matchedEntryId': { $in: entryIds }, ...(exceptStatementId && { _id: { $ne: exceptStatementId } }) }).select('lines.matchedEntryId').lean();
+/**
+ * Entries matched to a line on another of this account's statements, so one entry never clears two lines on it. A
+ * transfer between two bank accounts is matched once on each account's statements. `endingBefore` counts only
+ * statements whose period ends before that date: what the bank had cleared by then.
+ */
+async function findMatchedElsewhere(accountId: string, entryIds: string[], options: { exceptStatementId?: string; endingBefore?: string } = {}): Promise<Set<string>> {
+  const statements = await BankStatement.find({
+    accountId,
+    'lines.matchedEntryId': { $in: entryIds },
+    ...(options.exceptStatementId && { _id: { $ne: options.exceptStatementId } }),
+    ...(options.endingBefore && { to: { $lt: options.endingBefore } }),
+  }).select('lines.matchedEntryId').lean();
   return new Set(statements.flatMap((statement) => statement.lines.flatMap((line) => (line.matchedEntryId ? [line.matchedEntryId] : []))));
+}
+
+/**
+ * Where reconciling the account began: the start of its earliest statement, or of the one being loaded. Entries before
+ * it are in the first statement's opening balance. Entries from it on stay open until a statement clears them, so a
+ * cheque written in one month and presented in the next is matched on the next month's statement.
+ */
+async function reconciliationStart(accountId: string, from: string): Promise<string> {
+  const first = await BankStatement.findOne({ accountId }).sort({ from: 1 }).select('from').lean();
+  return first && first.from < from ? first.from : from;
+}
+
+/** The account's entries a statement can match or still waits for: from the start of reconciling to the statement's end. */
+async function findOpenBookItems(accountId: string, from: string, to: string): Promise<BookItem[]> {
+  return findBookItems(accountId, await reconciliationStart(accountId, from), to);
 }
 
 /** The account's balance in the books at the end of a day, from the ledger alone. */
@@ -85,13 +109,14 @@ function autoMatch(lines: StatementLine[], bookItems: BookItem[], takenEntryIds:
 async function toView(statement: BankStatementDoc) {
   const [account, bookItems, bookBalance] = await Promise.all([
     findLedgerAccountById(statement.accountId),
-    findBookItems(statement.accountId, statement.from, statement.to),
+    findOpenBookItems(statement.accountId, statement.from, statement.to),
     bookBalanceAt(statement.accountId, statement.to),
   ]);
   const matchedHere = new Set(statement.lines.flatMap((line) => (line.matchedEntryId ? [line.matchedEntryId] : [])));
-  const matchedElsewhere = await findMatchedElsewhere(bookItems.map((item) => item.entryId), statement._id);
+  // Only earlier statements count as cleared: an entry a later statement matched was still with the bank at this one's end.
+  const clearedBefore = await findMatchedElsewhere(statement.accountId, bookItems.map((item) => item.entryId), { exceptStatementId: statement._id, endingBefore: statement.to });
   const itemById = new Map(bookItems.map((item) => [item.entryId, item]));
-  const unmatchedBook = bookItems.filter((item) => !matchedHere.has(item.entryId) && !matchedElsewhere.has(item.entryId));
+  const unmatchedBook = bookItems.filter((item) => !matchedHere.has(item.entryId) && !clearedBefore.has(item.entryId));
   const unmatchedLines = statement.lines.filter((line) => !line.matchedEntryId);
   const inBankNotBooks = unmatchedLines.reduce((sum, line) => sum + line.amount, 0);
   const inBooksNotBank = unmatchedBook.reduce((sum, item) => sum + item.amount, 0);
@@ -196,8 +221,8 @@ export async function importBankStatement(actor: Actor, request: StatementImport
     throw new ApiError(422, 'statement_does_not_add_up', `The opening balance plus the lines comes to ${request.openingBalance + sum} paisa, not the closing balance of ${request.closingBalance}. Check the file and the balances.`);
   }
 
-  const bookItems = await findBookItems(request.accountId, request.from, request.to);
-  const taken = await findMatchedElsewhere(bookItems.map((item) => item.entryId));
+  const bookItems = await findOpenBookItems(request.accountId, request.from, request.to);
+  const taken = await findMatchedElsewhere(request.accountId, bookItems.map((item) => item.entryId));
   const lines = autoMatch(parsed.map((line, index) => ({ id: `sl_${index + 1}`, ...line })), bookItems, taken, actor.user._id);
   const number = await takeNextDocumentNumber('bankStatement', 'BR-');
   const statement = await runInTransaction(async (session) => {
@@ -239,7 +264,7 @@ export async function matchStatementLine(actor: Actor, statementId: string, line
   if (!entry) throw invalid('entryId', 'no ledger entry on this account has that id');
   if (entry.amount !== line.amount) throw invalid('entryId', `the entry moves ${entry.amount} paisa on the account, the line ${line.amount}`);
   const usedHere = statement.lines.some((candidate) => candidate.matchedEntryId === request.entryId);
-  if (usedHere || (await findMatchedElsewhere([request.entryId], statement._id)).size > 0) throw new ApiError(409, 'entry_matched', 'That ledger entry is already matched to another statement line.');
+  if (usedHere || (await findMatchedElsewhere(statement.accountId, [request.entryId], { exceptStatementId: statement._id })).size > 0) throw new ApiError(409, 'entry_matched', 'That ledger entry is already matched to another statement line.');
   const lines = statement.lines.map((candidate) => (candidate.id === lineId ? { ...candidate, matchedEntryId: request.entryId, matchedBy: actor.user._id, matchedAt: new Date() } : candidate));
   return saveLines(actor, statement, lines, 'bankReconciliation.matched', request.version);
 }
@@ -257,8 +282,8 @@ export async function unmatchStatementLine(actor: Actor, statementId: string, li
 export async function rematchStatement(actor: Actor, statementId: string, version?: number) {
   const statement = await requireStatement(statementId);
   assertOpen(statement);
-  const bookItems = await findBookItems(statement.accountId, statement.from, statement.to);
-  const taken = await findMatchedElsewhere(bookItems.map((item) => item.entryId), statement._id);
+  const bookItems = await findOpenBookItems(statement.accountId, statement.from, statement.to);
+  const taken = await findMatchedElsewhere(statement.accountId, bookItems.map((item) => item.entryId), { exceptStatementId: statement._id });
   return saveLines(actor, statement, autoMatch(statement.lines, bookItems, taken, actor.user._id), 'bankReconciliation.matched', version);
 }
 

@@ -1,5 +1,9 @@
+import type { PipelineStage } from 'mongoose';
 import { ApiError } from '../../../lib/errors.js';
 import { pageOffset, type PageRequest } from '../../../lib/query.js';
+import type { Actor } from '../../master/access/caller.js';
+import { readFieldRules } from '../../master/records/fieldSecurity.service.js';
+import { ACCOUNTS_MODULE_KEY } from '../accountsModule.js';
 import { getTrialBalance } from '../ledger/ledger.service.js';
 import { findLedgerAccountById } from '../ledgerAccount/ledgerAccount.repository.js';
 import { Bill } from '../models/bill.js';
@@ -24,6 +28,10 @@ export interface GeneralLedgerQuery extends PageRequest {
   from: string;
   to: string;
 }
+
+/** Payroll entries name this source type, and the payroll run's protected field holding each person's pay. */
+const PAYROLL_RUN_SOURCE = 'payrollRun';
+const PAYROLL_SALARY_FIELD = 'lines';
 
 /** The record each entry came from, by type, so a line shows "PV-0001" instead of an id. */
 const SOURCE_NUMBERS: Record<string, (ids: string[]) => Promise<{ _id: string; number: string }[]>> = {
@@ -54,38 +62,87 @@ async function sumAccount(accountId: string, range: { before?: string; from?: st
   return { debit: totals?.debit ?? 0, credit: totals?.credit ?? 0 };
 }
 
+const LINE_ORDER = { entryDate: 1, createdAt: 1, _id: 1, lineIndex: 1 } as const;
+
+/**
+ * The account's lines in the period, one document per line, oldest first. A payroll run's entry has a line per person
+ * with their gross, so for someone whose profile hides payroll lines, each payroll entry's lines on the account are
+ * added into one line that shows only the entry's memo ("PR-0001 salaries, November 2026"). Doing it here, before any
+ * paging or counting, keeps pages, totals and running balances the same for everyone.
+ */
+function accountLineStages(match: Record<string, unknown>, accountId: string, hidePayPerPerson: boolean): PipelineStage[] {
+  const lines: PipelineStage[] = [
+    { $match: match },
+    { $unwind: { path: '$lines', includeArrayIndex: 'lineIndex' } },
+    { $match: { 'lines.accountId': accountId } },
+  ];
+  if (!hidePayPerPerson) return [...lines, { $sort: LINE_ORDER }];
+  const isPayroll = { $eq: ['$source.type', PAYROLL_RUN_SOURCE] };
+  return [
+    ...lines,
+    {
+      $group: {
+        // Every payroll line of one entry shares a key; any other line keeps its own.
+        _id: { entryId: '$_id', line: { $cond: [isPayroll, -1, '$lineIndex'] } },
+        entryDate: { $first: '$entryDate' },
+        createdAt: { $first: '$createdAt' },
+        memo: { $first: '$memo' },
+        source: { $first: '$source' },
+        reversalOf: { $first: '$reversalOf' },
+        lineIndex: { $min: '$lineIndex' },
+        debit: { $sum: '$lines.debit' },
+        credit: { $sum: '$lines.credit' },
+        lineMemo: { $first: '$lines.memo' },
+      },
+    },
+    {
+      $project: {
+        _id: '$_id.entryId',
+        entryDate: 1,
+        createdAt: 1,
+        memo: 1,
+        source: 1,
+        reversalOf: 1,
+        lineIndex: 1,
+        lines: {
+          debit: { $max: [0, { $subtract: ['$debit', '$credit'] }] },
+          credit: { $max: [0, { $subtract: ['$credit', '$debit'] }] },
+          memo: { $cond: [isPayroll, '$$REMOVE', '$lineMemo'] },
+        },
+      },
+    },
+    { $sort: LINE_ORDER },
+  ];
+}
+
 /**
  * One account's lines in the period, a page at a time. `opening` is the balance before `from`; each line's `balance`
  * is the running balance after it, on the debit side (debits minus credits), whatever page it is on. The account's
- * `normalBalance` says which side its balance usually sits on, for showing it.
+ * `normalBalance` says which side its balance usually sits on, for showing it. `payPerPersonHidden` says payroll
+ * entries were added into one line each, because the caller's profile hides salaries.
  */
-export async function getGeneralLedger({ accountId, from, to, ...page }: GeneralLedgerQuery) {
+export async function getGeneralLedger(actor: Actor, { accountId, from, to, ...page }: GeneralLedgerQuery) {
   const account = await findLedgerAccountById(accountId);
   if (!account) throw new ApiError(404, 'unknown_ledger_account', 'No such account in the chart of accounts.');
+  const payPerPersonHidden = (await readFieldRules(actor, ACCOUNTS_MODULE_KEY, PAYROLL_RUN_SOURCE)).hidden.includes(PAYROLL_SALARY_FIELD);
 
-  const match = { 'lines.accountId': accountId, entryDate: { $gte: from, $lte: to } };
+  const lineStages = accountLineStages({ 'lines.accountId': accountId, entryDate: { $gte: from, $lte: to } }, accountId, payPerPersonHidden);
   const [opening, period, beforePage, rows, total] = await Promise.all([
     sumAccount(accountId, { before: from }),
     sumAccount(accountId, { from, to }),
     // Lines on earlier pages, so the running balance continues across pages.
     LedgerEntry.aggregate<{ net: number }>([
-      { $match: match },
-      { $sort: { entryDate: 1, createdAt: 1, _id: 1 } },
-      { $unwind: '$lines' },
-      { $match: { 'lines.accountId': accountId } },
+      ...lineStages,
       { $limit: pageOffset(page) || 1 },
       { $group: { _id: null, net: { $sum: { $subtract: ['$lines.debit', '$lines.credit'] } } } },
     ]),
     LedgerEntry.aggregate<{ _id: string; entryDate: string; memo: string; source: { type: string; id: string }; reversalOf?: string; line: { debit: number; credit: number; memo?: string } }>([
-      { $match: match },
-      { $sort: { entryDate: 1, createdAt: 1, _id: 1 } },
-      { $unwind: '$lines' },
-      { $match: { 'lines.accountId': accountId } },
+      ...lineStages,
       { $skip: pageOffset(page) },
       { $limit: page.pageSize },
       { $project: { entryDate: 1, memo: 1, source: 1, reversalOf: 1, line: '$lines' } },
     ]),
-    LedgerEntry.aggregate<{ count: number }>([{ $match: match }, { $unwind: '$lines' }, { $match: { 'lines.accountId': accountId } }, { $count: 'count' }]),
+    LedgerEntry.aggregate<{ count: number }>([...lineStages, { $count: 'count' }]),
   ]);
 
   const openingBalance = opening.debit - opening.credit;
@@ -99,6 +156,7 @@ export async function getGeneralLedger({ accountId, from, to, ...page }: General
     totalDebit: period.debit,
     totalCredit: period.credit,
     closing: openingBalance + period.debit - period.credit,
+    payPerPersonHidden,
     total: total[0]?.count ?? 0,
     page: page.page,
     pageSize: page.pageSize,

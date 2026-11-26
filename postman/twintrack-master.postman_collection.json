@@ -500,6 +500,18 @@
     {
       "key": "exportDataset",
       "value": "profit-and-loss"
+    },
+    {
+      "key": "financeEmail",
+      "value": "rumana@twintrack.test"
+    },
+    {
+      "key": "financeUserId",
+      "value": "u_05"
+    },
+    {
+      "key": "financeProfileId",
+      "value": ""
     }
   ],
   "item": [
@@ -5291,7 +5303,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{hrAdminToken}}"
+                "value": "Bearer {{jackToken}}"
               }
             ],
             "url": {
@@ -14128,6 +14140,131 @@
           ]
         },
         {
+          "name": "Make a finance approver profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman finance approver\",\n  \"description\": \"Made by Postman, so someone other than the maker approves Accounts records\",\n  \"grants\": {\n    \"accounts\": {\n      \"payrollRun\": {\n        \"actions\": [\n          \"read\",\n          \"approve\"\n        ]\n      },\n      \"bill\": {\n        \"actions\": [\n          \"read\",\n          \"approve\"\n        ]\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/access-profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "access-profiles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('financeProfileId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Give the Finance Lead the finance approver profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accountsToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"profileId\": \"{{financeProfileId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{financeUserId}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{financeUserId}}",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as the finance approver",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{webOrigin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{financeEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('financeToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Check the Accounts module",
           "request": {
             "method": "GET",
@@ -14375,7 +14512,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"currencies\": [\n    { \"code\": \"USD\", \"name\": \"US dollar\" },\n    { \"code\": \"EUR\", \"name\": \"Euro\" }\n  ],\n  \"exchangeRates\": [\n    {\n      \"currency\": \"USD\",\n      \"effectiveFrom\": \"2026-11-01\",\n      \"paisaPerUnit\": 12250\n    },\n    {\n      \"currency\": \"EUR\",\n      \"effectiveFrom\": \"2026-11-01\",\n      \"paisaPerUnit\": 13100\n    }\n  ],\n  \"taxRates\": [\n    {\n      \"code\": \"VAT15\",\n      \"name\": \"VAT 15%\",\n      \"basisPoints\": 1500\n    }\n  ]\n}"
+              "raw": "{\n  \"currencies\": [\n    {\n      \"code\": \"USD\",\n      \"name\": \"US dollar\"\n    },\n    {\n      \"code\": \"EUR\",\n      \"name\": \"Euro\"\n    }\n  ],\n  \"exchangeRates\": [\n    {\n      \"currency\": \"USD\",\n      \"effectiveFrom\": \"2026-11-01\",\n      \"paisaPerUnit\": 12250\n    },\n    {\n      \"currency\": \"EUR\",\n      \"effectiveFrom\": \"2026-11-01\",\n      \"paisaPerUnit\": 13100\n    }\n  ],\n  \"taxRates\": [\n    {\n      \"code\": \"VAT15\",\n      \"name\": \"VAT 15%\",\n      \"basisPoints\": 1500\n    }\n  ],\n  \"providentFundBasisPoints\": 1000,\n  \"gratuityBasisPoints\": 833\n}"
             }
           },
           "event": [
@@ -15744,6 +15881,50 @@
           ]
         },
         {
+          "name": "Approve the bill as the finance approver",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{financeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/bills/{{billId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "bills",
+                "{{billId}}",
+                "approve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('records it with TDS', () => { pm.expect(pm.response.json().status).to.eql('recorded'); pm.expect(pm.response.json().tds).to.be.above(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Billable tasks of a client",
           "request": {
             "method": "GET",
@@ -16596,6 +16777,50 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve the payroll run as the finance approver",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{financeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/payroll-runs/{{runId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "payroll-runs",
+                "{{runId}}",
+                "approve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('records it', () => pm.expect(pm.response.json().status).to.eql('recorded'));"
                 ]
               }
             }

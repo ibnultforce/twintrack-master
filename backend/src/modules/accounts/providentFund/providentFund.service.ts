@@ -97,6 +97,6 @@ export async function depositProvidentFund(actor: Actor, month: string, request:
       { accountId: POSTING_ACCOUNTS.providentFundPayable, debit: amount, memo: label },
       { accountId: request.moneyAccountId, credit: amount, memo: 'Deposited' },
     ],
-    linkedDocument: { type: 'providentFund', id: fundDocumentId(month), number: label, amount },
+    linkedDocument: { type: 'providentFund', id: fundDocumentId(month), number: label, amount, amountDue: fundMonth.total },
   });
 }

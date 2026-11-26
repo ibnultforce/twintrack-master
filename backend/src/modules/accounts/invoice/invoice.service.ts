@@ -399,7 +399,7 @@ export async function receiveInvoicePayment(actor: Actor, invoiceId: string, req
     ...(request.reference && { reference: request.reference }),
     moneyAccountId: request.moneyAccountId,
     lines: receiptLines(invoice, amount, committed, rateOnReceipt, request.moneyAccountId),
-    linkedDocument: { type: 'invoice', id: invoice._id, number: invoice.number, amount },
+    linkedDocument: { type: 'invoice', id: invoice._id, number: invoice.number, amount, amountDue: invoice.total },
   });
 }
 

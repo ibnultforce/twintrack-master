@@ -13,6 +13,7 @@ import { validateChartOfAccountsFile } from '../src/modules/accounts/ledgerAccou
 import { insertMissingLedgerAccounts } from '../src/modules/accounts/ledgerAccount/ledgerAccount.repository.js';
 import { Bill } from '../src/modules/accounts/models/bill.js';
 import { Invoice } from '../src/modules/accounts/models/invoice.js';
+import { JournalVoucher } from '../src/modules/accounts/models/journalVoucher.js';
 import { LedgerEntry } from '../src/modules/accounts/models/ledgerEntry.js';
 import { AccessProfile } from '../src/modules/master/models/accessProfile.js';
 import { Client } from '../src/modules/master/models/client.js';
@@ -358,6 +359,26 @@ describe('invoices, vendors and bills', () => {
       await recordVoucher(payment.body.id);
       expect((await (await as('farhana')).post(`${VOUCHERS}/${payment.body.id}/reverse`, {})).status).toBe(200);
       expect((await (await as('rahim')).get(`${BILLS}/${created.body.id}`)).body).toMatchObject({ paid: 0, outstanding: 950_000 });
+    });
+
+    it('records only one of two payments made for the same bill at the same moment', async () => {
+      await openBank();
+      const vendorId = await makeVendor();
+      const created = await (await as('rahim')).post(BILLS, { vendorId, billDate: '2026-11-03', lines: [{ description: 'Chair', accountId: OFFICE_EXPENSES, quantity: 1, unitPrice: 1_000_000 }] });
+      await approve(BILLS, created.body.id);
+      const payment = await (await as('rahim')).post(`${BILLS}/${created.body.id}/pay`, { paymentDate: '2026-11-04', moneyAccountId: bankId });
+      expect(payment.body.linkedDocument).toMatchObject({ amount: 950_000, amountDue: 950_000 });
+      // A double click: a second voucher that passed the open-amount check before the first one was saved.
+      const first = await JournalVoucher.findById(payment.body.id).lean();
+      await JournalVoucher.create({ ...first, _id: 'jv_double_click', number: 'PV-9999' });
+
+      await recordVoucher(payment.body.id);
+      expect((await (await as('rahim')).post(`${VOUCHERS}/jv_double_click/submit`)).status).toBe(200);
+      const second = await (await as('farhana')).post(`${VOUCHERS}/jv_double_click/approve`);
+      expect(second.status).toBe(409);
+      expect(second.body.error.code).toBe('more_than_owed');
+      expect((await (await as('rahim')).get(`${BILLS}/${created.body.id}`)).body).toMatchObject({ paid: 950_000, outstanding: 0 });
+      expect(await balanceOf(bankId)).toBe(50_000_000 - 950_000);
     });
 
     it('refuses an update request on a payment made from a bill', async () => {

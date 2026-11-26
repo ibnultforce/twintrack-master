@@ -63,11 +63,13 @@ describe('payroll, fixed assets and inventory', () => {
         grants: { accounts: { payrollRun: { actions: ['read', 'approve'] }, journalVoucher: { actions: ['read', 'approve'] }, fixedAsset: { actions: ['read'] } } },
       },
       { _id: 'ap_pa_reader', name: 'Reader', grants: { accounts: { journalVoucher: { actions: ['read'] } } } },
+      { _id: 'ap_pa_books', name: 'Books reader', grants: { accounts: { ledgerAccount: { actions: ['read'] }, payrollRun: { actions: ['read'] } } } },
     ]);
     await addPerson('farhana', { superAdmin: true });
     await addPerson('rahim', { profileId: 'ap_pa_accountant' });
     await addPerson('nadia', { profileId: 'ap_pa_manager' });
     await addPerson('rumana', { profileId: 'ap_pa_reader' });
+    await addPerson('rita', { profileId: 'ap_pa_books' });
 
     const employee = (code: string, salary: number, joinDate: string, isActive = true) => ({
       _id: `emp_${code}`, employeeCode: code, name: `Person ${code}`, designation: 'Engineer', department: 'engineering', joinDate, monthlySalary: salary, isActive, version: 0,
@@ -152,6 +154,24 @@ describe('payroll, fixed assets and inventory', () => {
       expect(seen.body.runs[0].total).toBe(23_500_000);
       const history = await (await as('nadia')).get(`${PAYROLL}/${seen.body.runs[0].id}/history`);
       expect(JSON.stringify(history.body)).not.toContain('8500000');
+    });
+
+    it('shows each person\'s salary in the general ledger only to a profile that may see salaries', async () => {
+      const rahim = await as('rahim');
+      const run = await rahim.post(PAYROLL, { month: '2026-11', payDate: '2026-11-30' });
+      await rahim.post(`${PAYROLL}/${run.body.id}/submit`);
+      expect((await (await as('nadia')).post(`${PAYROLL}/${run.body.id}/approve`)).status).toBe(200);
+      const ledgerPath = `/accounts/general-ledger?accountId=${SALARY_EXPENSE}&from=2026-11-01&to=2026-11-30`;
+
+      const full = await (await as('farhana')).get(ledgerPath);
+      expect(full.body).toMatchObject({ payPerPersonHidden: false, total: 3, closing: 23_500_000 });
+      expect(full.body.lines.map((line: { memo: string; debit: number }) => [line.memo, line.debit])).toEqual([['E1 Person E1', 8_500_000], ['E2 Person E2', 12_000_000], ['E3 Person E3', 3_000_000]]);
+
+      const hidden = await (await as('rita')).get(ledgerPath);
+      expect(hidden.status).toBe(200);
+      expect(hidden.body).toMatchObject({ payPerPersonHidden: true, total: 1, closing: 23_500_000 });
+      expect(hidden.body.lines).toEqual([expect.objectContaining({ memo: 'PR-0001 salaries, November 2026', debit: 23_500_000, credit: 0, balance: 23_500_000 })]);
+      expect(JSON.stringify(hidden.body)).not.toMatch(/8500000|Person E1/);
     });
 
     it('adjusts a draft with a reason, and takes someone off with a gross of zero', async () => {

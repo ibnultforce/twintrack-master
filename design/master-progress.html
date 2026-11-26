@@ -381,6 +381,17 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>26 November 2026: Accounts Day 6, Task 21: bug fixes (manifest 1.21.1)</h3>
+      <ul>
+        <li>Review of the Accounts backend, with the bugs sorted P0, P1 and P2. No P0 is left open.</li>
+        <li><strong>Payments can't pass what is owed.</strong> A payment or receipt made from an invoice, bill, payroll run, payout, loan, provident fund month or tax filing now carries <code>linkedDocument.amountDue</code>, and approving it is refused with <code>409 more_than_owed</code> if the recorded payments would pass it. Before, two vouchers made at the same moment (a double click on Pay) could both be recorded.</li>
+        <li><strong>Bank reconciliation across months.</strong> A statement now matches and lists every entry since the account's first statement that no earlier statement cleared, so a cheque written in one month and presented in the next reconciles on the next statement. A reconciled statement no longer changes when a later one matches its open items, and a transfer between two bank accounts is matched on both.</li>
+        <li><strong>Postman runs clean again</strong> (485 requests, 0 failures). Three requests had failed since the Day 5 build: one refusal used a token signed in only later, and the provident fund deposit and TDS payment had nothing recorded to pay because nobody but the maker could approve. The collection now gives the seed Finance Lead a "Postman finance approver" profile, approves the November payroll run (with provident fund and gratuity rates set) and the TechWorld bill, then deposits and pays.</li>
+      </ul>
+      <h3>26 November 2026: Accounts general ledger hides salary per person</h3>
+      <ul>
+        <li><code>GET /accounts/general-ledger</code> showed each person's gross salary on the Salary expense account (one payroll line per person) to anyone with <code>ledgerAccount.read</code>, even when their profile hides "Salary per person". For those profiles each payroll entry is now added into one line with the run's memo, and the response says so with <code>payPerPersonHidden</code>. Totals, paging and running balances are unchanged. No route or permission change.</li>
+      </ul>
       <h3>25 November 2026: Sharing on the Records screen</h3>
       <ul>
         <li>Records screen: a <strong>Sharing</strong> link on each record you may share opens who it is shared with (person, org role, or a role and everything below; read or edit; until a date) and lets you add or remove a share. Edit and Delete now show only where they will work, so a record shared read-only no longer offers Edit. The API adds <code>allowed</code> (<code>edit</code>, <code>delete</code>, <code>share</code>) to each custom record and names on shares (<code>granteeName</code>, <code>sharedByName</code>, also on salary shares). No route or permission changed.</li>
