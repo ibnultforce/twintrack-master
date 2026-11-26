@@ -2,7 +2,7 @@
 
 Ledger, vouchers, bills, invoices, payroll and reports. Module key `accounts`, every path starts with `/accounts`. Shared rules (tokens, errors, paging) are in the [API guide](README.md).
 
-Built so far: a status check, settings, the chart of accounts, the ledger core, journal vouchers with approval, and the Accounts activity log. The rest follows the Accounts build plan.
+All of the Accounts build plan is built: the ledger and chart of accounts, vouchers and update requests, approvals, invoices and bills, cash, bank and reconciliation, payroll and the other people costs, assets and inventory, tax, budget, reports, exports and the assistant tools. Every route is listed below and in `manifests/accounts.manifest.json`.
 
 ## Permissions
 
@@ -32,6 +32,13 @@ Built so far: a status check, settings, the chart of accounts, the ledger core, 
 | `commissionRule.read` / `.create` / `.update` | See commission rules and earnings; add and change rules |
 | `employeeLoan.read` / `.create` / `.update` / `.approve` | Loans and advances, as for payroll runs |
 | `unpaidLeave.read` / `.update` | See and set unpaid leave days that payroll deducts |
+| `updateRequest.read` | See update requests; deciding on one also needs `updateRequest.approve` (or the stand-in), checked in the service |
+| `updateRequest.create` | Ask for a recorded voucher to be corrected |
+| `updateRequest.approve` | Apply or reject other people's update requests |
+| `regularExpense.read` / `.create` / `.update` | See, add and change regular expenses. Making the month's draft bills needs `bill.create`; Office rent reads with `bill.read` |
+| `providentFund.read` | See the provident fund and gratuity per month. Depositing a month needs `journalVoucher.create` |
+| `taxFiling.read` | See VAT and TDS per month. Paying a month's TDS needs `journalVoucher.create` |
+| `budget.read` / `.update` | See budget against actual; set a year's budget |
 | `auditLog.read` | Read the Accounts activity log |
 
 No resource is scoped: each is one list for the whole organisation. Only a super admin holds these until a profile grants them.
@@ -40,7 +47,7 @@ No resource is scoped: each is one list for the whole organisation. Only a super
 
 ## Approvals: the maker never decides
 
-Whoever made a record can't approve, return or reverse it, super admins included: `403 own_record`. This is a safety rule in code. Anyone else may decide if they hold the record's `approve` permission, or are the stand-in approver named in Settings and today is on or before `standInUntil`. Otherwise `403 forbidden`. Journal vouchers use it now; bills, payroll runs and update requests will too.
+Whoever made a record can't approve, return or reverse it, super admins included: `403 own_record`. This is a safety rule in code. Anyone else may decide if they hold the record's `approve` permission, or are the stand-in approver named in Settings and today is on or before `standInUntil`. Otherwise `403 forbidden`. It applies to journal, payment and receipt vouchers, invoices, bills, payroll runs, bonus and commission payouts, loans and update requests.
 
 ### `GET /accounts/status`
 

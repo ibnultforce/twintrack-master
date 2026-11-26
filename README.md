@@ -209,6 +209,30 @@ Projects and their tasks, from start through QA to approval, in `backend/src/mod
 
 A task belongs to its assignee, TL, QA person and project lead, so the scope reaches it through any of them. The rules about the assignee, the QA person and approving your own work come from the task's fields, never from role names. QA hours are protected fields. The Project management frontend is in `twintrack-projects/`.
 
+## Accounts
+
+The company's bookkeeping, in `backend/src/modules/accounts/`, one folder per feature. The full reference, with all 136 routes, is in [docs/api/accounts.md](docs/api/accounts.md). The frontend is `twintrack-accounts/`, on `accounts.twintrack.localhost:3400`.
+
+| Area | Routes | What they do |
+|---|---|---|
+| Books | `/accounts/ledger-accounts`, `/journal-vouchers`, `/payment-vouchers`, `/receipt-vouchers`, `/update-requests`, `/general-ledger`, `/trial-balance` | Chart of accounts, vouchers and their approval, corrections, the ledger |
+| Approvals and control | `/accounts/approvals`, `/change-history`, `/audit-log`, `/settings` | One queue of what waits for you, reversals and corrections, the activity log, rates and the stand-in approver |
+| Money in and out | `/accounts/client-accounts`, `/invoices`, `/vendors`, `/bills`, `/regular-expenses`, `/office-rent`, `/office-expenses` | Billing clients (in their currency, at the rate on the issue date), paying vendors with TDS and VAT |
+| Cash and bank | `/accounts/cash-bank`, `/bank-reconciliations` | Balances from the ledger, and matching a bank CSV month by month |
+| People costs | `/accounts/payroll-runs`, `/staff-payouts`, `/commission-rules`, `/employee-loans`, `/unpaid-leave`, `/provident-fund`, `/employee-payments` | Payroll on dummy employees until HR is built, bonus, incentive (from Project management), commission, loans, PF and gratuity |
+| Assets, tax and planning | `/accounts/fixed-assets`, `/inventory-items`, `/tax-filings`, `/budgets` | Depreciation, stock, VAT and TDS per month, budget against actual |
+| Reports | `/accounts/dashboard`, `/reports/*`, `/exports` | Profit and loss, balance sheet, cash flow, and CSV of every list. Six read-only `accounts_*` MCP tools answer the same questions in Claude |
+
+The rules that hold everywhere:
+
+- **Money is whole paisa or cents.** Only `ledger/` (`postEntry`, `reverseEntry`) writes ledger entries. Each entry balances, and is never edited: a mistake is reversed.
+- **One transaction per money change.** A record, its history and its ledger lines save together.
+- **The maker never approves.** This holds for every record that needs approval, super admins included (`403 own_record`). The stand-in approver in Settings covers absences.
+- **Balances are computed from the ledger, never stored.** This includes what a document still owes: approval refuses a payment that would pass it.
+- **Salaries and bank numbers are protected fields.** Each person's pay (`payrollRun.lines`) is hidden on runs, history, the general ledger and exports unless a profile names it. Bank numbers are masked even then, and shown in full only through an audited Reveal.
+
+`backend/tests/accounts-roles.test.ts` checks every route against four example profiles (accountant, approver, auditor, employee). The Claude Code skill `twintrack-accounts` (`.claude/skills/`) holds these rules for future work.
+
 ## Checks
 
 ```sh

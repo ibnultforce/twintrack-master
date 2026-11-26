@@ -138,8 +138,8 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <div class="tiles">
     <div class="tile"><b>5 of 6</b><span class="small muted">build steps finished</span></div>
     <div class="tile"><b>81</b><span class="small muted">Master routes built</span></div>
-    <div class="tile"><b>1,386</b><span class="small muted">automated tests, all passing</span></div>
-    <div class="tile"><b>665</b><span class="small muted">Postman assertions, all passing</span></div>
+    <div class="tile"><b>2,597</b><span class="small muted">automated tests, all passing</span></div>
+    <div class="tile"><b>775</b><span class="small muted">Postman assertions, all passing</span></div>
   </div>
 </section>
 
@@ -160,6 +160,7 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
       <tr><td class="nowrap">Redesign 3. Record base</td><td>Who made each change, versions that refuse stale edits, field history, and a recycle bin, for salaries</td><td><span class="pill done">Done</span></td></tr>
       <tr><td class="nowrap">Redesign 4. Sharing</td><td>Share one salary with a person, an org role, or a role and everything below it, for reading or editing</td><td><span class="pill done">Done</span></td></tr>
       <tr><td class="nowrap">Redesign 5. Field security</td><td>Every record field hidden, read-only, create-only or editable, as a profile or permission set gives. Protected fields, such as salary amounts, start hidden</td><td><span class="pill done">Done</span></td></tr>
+      <tr><td class="nowrap">Accounts module</td><td>The six-day plan: ledger, vouchers and approvals, invoices and bills, cash, bank and reconciliation, payroll and people costs, assets, tax, budget, reports, exports and assistant tools, bug fixes, role check and documents. 136 routes, manifest 1.21.1, frontend in <code>twintrack-accounts</code></td><td><span class="pill done">Done</span></td></tr>
       <tr><td class="nowrap">Redesign 6. Custom objects</td><td>Admins define objects and fields in the app. Records get scope, sharing, history, field security and a recycle bin, and a Records screen</td><td><span class="pill done">Done</span></td></tr>
     </tbody>
   </table></div>
@@ -340,8 +341,9 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <div class="table-wrap"><table>
     <thead><tr><th>Check</th><th>Result</th></tr></thead>
     <tbody>
-      <tr><td><code>npm test</code></td><td><span class="pill done">1,386 of 1,386 passed</span></td></tr>
-      <tr><td><code>npm run test:postman</code>, 409 requests against a real server, including a full OAuth connection and file uploads</td><td><span class="pill done">665 of 665 passed</span></td></tr>
+      <tr><td><code>npm test</code> (26 November)</td><td><span class="pill done">2,597 of 2,597 passed</span></td></tr>
+      <tr><td><code>npm run test:postman</code>, 485 requests against a real server, including a full OAuth connection and file uploads (26 November)</td><td><span class="pill done">775 of 775 passed</span></td></tr>
+      <tr><td>Accounts role check (<code>accounts-roles.test.ts</code>): every Accounts route against an accountant, approver, auditor and employee, plus salaries and bank numbers hidden (26 November)</td><td><span class="pill done">548 of 548 passed</span></td></tr>
       <tr><td>Project management frontend (then Tasks) in real Chrome as a lead, a tester and a developer (12 November): lists, filters, export, points, QA, revert, files, logins, health, team, points and incentives</td><td><span class="pill done">21 of 21 checks passed</span></td></tr>
       <tr><td>New Master screens in real Chrome (11 November): password links, person page, photo, directory, clients and history, API tokens, profile, Log in as and stop, set-password page, phone width</td><td><span class="pill done">14 of 14 steps passed</span></td></tr>
       <tr><td>Test page, sign-in, permission, role editing and demo steps in real Chrome (6 November, not re-run for the Employee demo)</td><td><span class="pill done">All passed</span></td></tr>
@@ -374,6 +376,9 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
     <li>R2 storage hasn't been tried with a real bucket. The bucket needs CORS that allows PUT from the frontends and exposes <code>ETag</code>.</li>
     <li>The Project management frontend has no automated tests in the repo; the Chrome run was a one-off.</li>
     <li>Approving a task whose QA result is <code>fail</code> is allowed. The approver is expected to revert it instead.</li>
+    <li>Accounts payroll pays dummy employees until HR is built, and needs 2 to 3 more weeks of checking before it handles real company money.</li>
+    <li>Accounts backlog (P2): commission already paid on a receipt isn't taken back if the receipt is reversed; a foreign-currency invoice can be left 1 paisa off after a reversed receipt; an account made inactive at the instant of a posting can still take it.</li>
+    <li>Accounts posting accounts (receivable, payable, salaries and so on) are fixed in code; choosing them in Settings isn't built.</li>
   </ul>
 </section>
 
@@ -381,6 +386,10 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
+      <h3>26 November 2026: Accounts Day 6, Task 24: documents finished</h3>
+      <ul>
+        <li>README has an Accounts section (areas, routes and the rules that hold everywhere). <code>docs/api/accounts.md</code> covers all 136 routes, with an up-to-date introduction, every permission (update requests, regular expenses, provident fund, tax filings and budget were missing) and the full list of records that need a second person's approval. The Accounts handoff pack is in <code>module-packs/accounts/</code>, built by hand because the starter folder that <code>export:module-pack</code> needs is missing. This page's figures and Accounts rows are brought up to date.</li>
+      </ul>
       <h3>26 November 2026: Accounts Day 6, Task 23: role check</h3>
       <ul>
         <li>New test <code>accounts-roles.test.ts</code> (548 checks): four example profiles built from the manifest (accountant, approver, auditor, employee). Every Accounts route is refused (403) for a role without its permission and open to one with it, and each role's journey is checked: maker can't approve, auditor can't change anything, salaries and bank numbers hidden in records, the general ledger, history and exports, and an employee reaches nothing. All pass; no code change was needed.</li>
