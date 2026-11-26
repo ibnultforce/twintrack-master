@@ -199,7 +199,7 @@ describe('provident fund, regular expenses, office rent, VAT, tax filings and bu
     expect(filings.status).toBe(200);
     const tds = filings.body.filings.find((filing: { type: string; month: string }) => filing.type === 'vendor_tds' && filing.month === MONTH);
     const vat = filings.body.filings.find((filing: { type: string; month: string }) => filing.type === 'vat_purchases' && filing.month === MONTH);
-    expect(tds).toMatchObject({ base: 12_000_000, amount: 600_000, paymentStatus: 'unpaid' });
+    expect(tds).toMatchObject({ base: 12_000_000, amount: 600_000, paymentStatus: 'unpaid', challans: [] });
     expect(vat).toMatchObject({ base: 12_000_000, amount: 1_800_000 });
 
     // Paying the month's TDS, with its challan number, clears what is owed to the tax authority.
@@ -210,7 +210,11 @@ describe('provident fund, regular expenses, office rent, VAT, tax filings and bu
     await recordVoucher(payment.body.id);
     expect(await balanceOf(TAX_PAYABLE)).toBe(0);
     const paid = (await rahim.get('/accounts/tax-filings')).body.filings.find((filing: { type: string; month: string }) => filing.type === 'vendor_tds' && filing.month === MONTH);
-    expect(paid.paymentStatus).toBe('paid');
+    expect(paid).toMatchObject({ paymentStatus: 'paid', challans: ['CH-123'] });
+    // A reversed payment's challan is no longer listed.
+    expect((await (await as('farhana')).post(`${VOUCHERS}/${payment.body.id}/reverse`, {})).status).toBe(200);
+    const reversed = (await rahim.get('/accounts/tax-filings')).body.filings.find((filing: { type: string; month: string }) => filing.type === 'vendor_tds' && filing.month === MONTH);
+    expect(reversed).toMatchObject({ paymentStatus: 'unpaid', challans: [] });
   });
 
   it('the Day 5 test: a regular expense makes one draft bill per period, with no duplicates', async () => {

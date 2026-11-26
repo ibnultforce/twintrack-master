@@ -907,7 +907,7 @@ Worked out each month from recorded bills, never stored. TDS withheld from vendo
 
 ### `GET /accounts/tax-filings`
 
-**Access:** `private`, needs `taxFiling.read`. **Query:** optional `year`. Returns `filings`, newest first, one `vendor_tds` and one `vat_purchases` per month up to this month (`base`, `amount`, `dueDate`; TDS also has `paid`, `outstanding`, `pending`, `paymentStatus`), the Settings `taxRates` and `totals` (`tdsWithheld`, `tdsToPay`, `vatToClaim`).
+**Access:** `private`, needs `taxFiling.read`. **Query:** optional `year`. Returns `filings`, newest first, one `vendor_tds` and one `vat_purchases` per month up to this month (`base`, `amount`, `dueDate`; TDS also has `paid`, `outstanding`, `pending`, `paymentStatus` and `challans`, the challan numbers of its payments that aren't reversed), the Settings `taxRates` and `totals` (`tdsWithheld`, `tdsToPay`, `vatToClaim`).
 
 ### `POST /accounts/tax-filings/:month/pay`
 

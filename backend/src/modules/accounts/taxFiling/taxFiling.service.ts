@@ -3,7 +3,7 @@ import type { Actor } from '../../master/access/caller.js';
 import { addDays, assertWithinOpenAmount, paymentStateOf } from '../documents/documentState.js';
 import { addMonths } from '../fixedAsset/depreciation.js';
 import { financialYearLabel, financialYearOf, monthsOfFinancialYear } from '../financialYear.js';
-import { sumSettledAmounts } from '../journalVoucher/journalVoucher.repository.js';
+import { findLinkedReferences, sumSettledAmounts } from '../journalVoucher/journalVoucher.repository.js';
 import { createLinkedVoucher } from '../journalVoucher/journalVoucher.service.js';
 import { todayAsEntryDate } from '../ledger/ledger.service.js';
 import { Bill } from '../models/bill.js';
@@ -56,9 +56,10 @@ async function billTaxByMonth(firstMonth: string, lastMonth: string) {
 export async function getTaxFilings(year = financialYearOf(todayAsEntryDate())) {
   const thisMonth = todayAsEntryDate().slice(0, 7);
   const months = monthsOfFinancialYear(year).filter((month) => month <= thisMonth);
-  const [byMonth, settled, settings] = await Promise.all([
+  const [byMonth, settled, challans, settings] = await Promise.all([
     months.length > 0 ? billTaxByMonth(months[0] ?? thisMonth, months[months.length - 1] ?? thisMonth) : Promise.resolve(new Map()),
     sumSettledAmounts(months.map(filingDocumentId)),
+    findLinkedReferences(months.map(filingDocumentId)),
     findOrCreateSettings(),
   ]);
   const filings = months.flatMap((month) => {
@@ -74,6 +75,8 @@ export async function getTaxFilings(year = financialYearOf(todayAsEntryDate())) 
         amount: tds,
         dueDate: `${nextMonth}-${TDS_DUE_DAY}`,
         ...paymentStateOf(tds, `${nextMonth}-${TDS_DUE_DAY}`, settled.get(filingDocumentId(month))),
+        // The challan numbers of its payments that aren't reversed, including ones still waiting for approval.
+        challans: challans.get(filingDocumentId(month)) ?? [],
       },
       {
         type: 'vat_purchases' as const,

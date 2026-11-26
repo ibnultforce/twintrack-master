@@ -35,11 +35,9 @@ The company's bookkeeping: a ledger that every feature writes into, vouchers and
 | Path | Screen | Needs |
 |---|---|---|
 | `/` | Dashboard | `ledgerAccount.read` |
-| `/reports` | Reports | `ledgerAccount.read` |
-| `/export-center` | Export center | `ledgerAccount.read (or another read permission)` |
-| `/assistant` | Claude assistant | `ledgerAccount.read` |
 | `/cash-bank` | Cash and bank | `ledgerAccount.read` |
 | `/bank-reconciliation` | Bank reconciliation | `bankReconciliation.read` |
+| `/assistant` | Claude assistant | `ledgerAccount.read` |
 
 ### Review
 
@@ -71,7 +69,6 @@ The company's bookkeeping: a ledger that every feature writes into, vouchers and
 | `/bills` | Vendors and bills | `bill.read` |
 | `/vendors` | Vendors | `vendor.read` |
 | `/office-expenses` | Office expenses | `ledgerAccount.read` |
-| `/regular-expenses` | Regular expenses | `regularExpense.read` |
 | `/office-rent` | Office rent | `bill.read` |
 | `/disbursements` | Disbursements | `journalVoucher.read` |
 
@@ -85,7 +82,8 @@ The company's bookkeeping: a ledger that every feature writes into, vouchers and
 | `/commission` | Commission | `commissionRule.read` |
 | `/leave-cost` | Leave cost | `unpaidLeave.read` |
 | `/loans` | Loans and advances | `employeeLoan.read` |
-| `/provident-fund` | PF and gratuity | `providentFund.read` |
+| `/provident-fund` | Provident fund | `providentFund.read` |
+| `/regular-expenses` | Regular expenses | `regularExpense.read` |
 | `/inventory` | Inventory | `inventoryItem.read` |
 
 ### Tax and assets
@@ -93,8 +91,8 @@ The company's bookkeeping: a ledger that every feature writes into, vouchers and
 | Path | Screen | Needs |
 |---|---|---|
 | `/tax-vat` | Tax and VAT | `taxFiling.read` |
-| `/budget` | Budget against actual | `budget.read` |
 | `/fixed-assets` | Fixed assets | `fixedAsset.read` |
+| `/budget` | Budget | `budget.read` |
 
 ### Control
 
@@ -102,6 +100,8 @@ The company's bookkeeping: a ledger that every feature writes into, vouchers and
 |---|---|---|
 | `/approvals` | Approvals | `journalVoucher.read (or another read permission)` |
 | `/audit-log` | Audit log | `auditLog.read` |
+| `/export-center` | Export center | `ledgerAccount.read (or another read permission)` |
+| `/reports` | Reports | `ledgerAccount.read` |
 | `/settings` | Settings | `setting.read` |
 | `/status` | Status | `setting.read` |
 

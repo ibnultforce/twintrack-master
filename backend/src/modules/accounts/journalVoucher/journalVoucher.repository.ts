@@ -98,6 +98,21 @@ export async function sumSettledAmounts(documentIds: string[], session?: ClientS
   return settled;
 }
 
+/** The references (such as challan numbers) on each document's vouchers that aren't reversed, oldest first. */
+export async function findLinkedReferences(documentIds: string[]): Promise<Map<string, string[]>> {
+  const vouchers = await JournalVoucher.find({ 'linkedDocument.id': { $in: documentIds }, status: { $ne: 'reversed' }, reference: { $exists: true } })
+    .sort({ voucherDate: 1, number: 1 })
+    .select('linkedDocument.id reference')
+    .lean();
+  const references = new Map<string, string[]>();
+  for (const voucher of vouchers) {
+    const documentId = voucher.linkedDocument?.id;
+    if (!documentId || !voucher.reference) continue;
+    references.set(documentId, [...(references.get(documentId) ?? []), voucher.reference]);
+  }
+  return references;
+}
+
 /** The vouchers that settle one document, newest first, for its page. */
 export const findVouchersLinkedTo = (documentId: string) =>
   JournalVoucher.find({ 'linkedDocument.id': documentId }).sort({ voucherDate: -1, number: -1 }).lean();
