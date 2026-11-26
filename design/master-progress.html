@@ -381,7 +381,11 @@ footer { border-top: 1px solid var(--line); padding-top: 14px; }
   <h2 id="log-heading">Change log</h2>
   <div class="log">
     <div class="log-entry">
-      <h3>26 November 2026: Accounts Day 6, Task 21: bug fixes (manifest 1.21.1)</h3>
+      <h3>26 November 2026: Accounts Day 6, Task 23: role check</h3>
+      <ul>
+        <li>New test <code>accounts-roles.test.ts</code> (548 checks): four example profiles built from the manifest (accountant, approver, auditor, employee). Every Accounts route is refused (403) for a role without its permission and open to one with it, and each role's journey is checked: maker can't approve, auditor can't change anything, salaries and bank numbers hidden in records, the general ledger, history and exports, and an employee reaches nothing. All pass; no code change was needed.</li>
+      </ul>
+      <h3>26 November 2026: Accounts Day 6, Task 22: bug fixes (manifest 1.21.1)</h3>
       <ul>
         <li>Review of the Accounts backend, with the bugs sorted P0, P1 and P2. No P0 is left open.</li>
         <li><strong>Payments can't pass what is owed.</strong> A payment or receipt made from an invoice, bill, payroll run, payout, loan, provident fund month or tax filing now carries <code>linkedDocument.amountDue</code>, and approving it is refused with <code>409 more_than_owed</code> if the recorded payments would pass it. Before, two vouchers made at the same moment (a double click on Pay) could both be recorded.</li>
