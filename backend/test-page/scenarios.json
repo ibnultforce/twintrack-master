@@ -14529,6 +14529,63 @@
           ]
         },
         {
+          "id": "POST /accounts/assistant/messages",
+          "method": "POST",
+          "path": "/accounts/assistant/messages",
+          "purpose": "Asks the Claude assistant a question about the books. Claude reads them with six read-only tools, as you, and answers in plain words. Nothing is stored.",
+          "input": "messages: the conversation so far, each with role (user or assistant) and content, starting and ending with your question",
+          "access": "Needs ledgerAccount.read. Answers 503 when the server has no ANTHROPIC_API_KEY",
+          "scenarios": [
+            {
+              "kind": "fail",
+              "title": "The server has no Anthropic API key",
+              "expected": 503,
+              "code": "assistant_not_configured",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/assistant/messages",
+                "as": "farhana@twintrack.test",
+                "body": "{\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"How much cash do we have across all bank accounts?\"\n    }\n  ]\n}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "The conversation ends with Claude, not a question",
+              "expected": 422,
+              "code": "validation_failed",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/assistant/messages",
+                "as": "farhana@twintrack.test",
+                "body": "{\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello\"\n    },\n    {\n      \"role\": \"assistant\",\n      \"content\": \"Hi\"\n    }\n  ]\n}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "No access token",
+              "expected": 401,
+              "code": "no_token",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/assistant/messages",
+                "body": "{\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"How much cash do we have across all bank accounts?\"\n    }\n  ]\n}"
+              }
+            },
+            {
+              "kind": "fail",
+              "title": "Signed in, but without the permission",
+              "expected": 403,
+              "code": "forbidden",
+              "request": {
+                "method": "POST",
+                "path": "/accounts/assistant/messages",
+                "as": "karim@twintrack.test",
+                "body": "{\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"How much cash do we have across all bank accounts?\"\n    }\n  ]\n}"
+              }
+            }
+          ]
+        },
+        {
           "id": "GET /accounts/exports",
           "method": "GET",
           "path": "/accounts/exports",

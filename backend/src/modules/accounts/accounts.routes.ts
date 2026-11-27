@@ -1,5 +1,7 @@
 import type { ApiRoute } from '../../lib/apiRoute.js';
+import type { AppDependencies } from '../../appDependencies.js';
 import { approvalRoutes } from './approvals/approvals.routes.js';
+import { createAssistantRoutes } from './assistant/assistant.routes.js';
 import { bankReconciliationRoutes } from './bankReconciliation/bankReconciliation.routes.js';
 import { billRoutes } from './bill/bill.routes.js';
 import { auditLogRoutes } from './auditLog/auditLog.routes.js';
@@ -29,4 +31,4 @@ import { vendorRoutes } from './vendor/vendor.routes.js';
 export { ACCOUNTS_MODULE_KEY } from './accountsModule.js';
 
 /** Every built route of the Accounts module. A test checks this list against manifests/accounts.manifest.json. */
-export const accountsRoutes: ApiRoute[] = [...statusRoutes, ...settingsRoutes, ...ledgerAccountRoutes, ...journalVoucherRoutes, ...cashBankRoutes, ...generalLedgerRoutes, ...reportRoutes, ...exportRoutes, ...bankReconciliationRoutes, ...clientAccountRoutes, ...invoiceRoutes, ...vendorRoutes, ...billRoutes, ...payrollRoutes, ...staffPayoutRoutes, ...employeeLoanRoutes, ...providentFundRoutes, ...regularExpenseRoutes, ...taxFilingRoutes, ...budgetRoutes, ...fixedAssetRoutes, ...inventoryRoutes, ...updateRequestRoutes, ...changeHistoryRoutes, ...approvalRoutes, ...auditLogRoutes];
+export const createAccountsRoutes = (dependencies: Pick<AppDependencies, 'accountsAssistant'>): ApiRoute[] => [...statusRoutes, ...settingsRoutes, ...ledgerAccountRoutes, ...journalVoucherRoutes, ...cashBankRoutes, ...generalLedgerRoutes, ...reportRoutes, ...exportRoutes, ...bankReconciliationRoutes, ...clientAccountRoutes, ...invoiceRoutes, ...vendorRoutes, ...billRoutes, ...payrollRoutes, ...staffPayoutRoutes, ...employeeLoanRoutes, ...providentFundRoutes, ...regularExpenseRoutes, ...taxFilingRoutes, ...budgetRoutes, ...fixedAssetRoutes, ...inventoryRoutes, ...updateRequestRoutes, ...changeHistoryRoutes, ...approvalRoutes, ...auditLogRoutes, ...createAssistantRoutes(dependencies.accountsAssistant)];

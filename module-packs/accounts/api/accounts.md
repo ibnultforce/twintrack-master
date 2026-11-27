@@ -725,6 +725,28 @@ Datasets: `profit-and-loss`, `balance-sheet`, `cash-flow`, `trial-balance`, `cha
 
 Read-only Accounts tools on Master's MCP server (`POST /mcp`), for Claude or any MCP client signed in as the person. Each needs `ledgerAccount.read` in Accounts, like the reports, and answers in paisa: `accounts_dashboard` (`month`), `accounts_cash_and_bank` (`from`, `to`, this month if left out), `accounts_trial_balance` (`to`), `accounts_profit_and_loss` (`from`, `to`), `accounts_balance_sheet` (`to`) and `accounts_cash_flow` (`from`, `to`). None of them changes anything.
 
+## Claude assistant
+
+The chat on the Accounts app's Claude assistant screen. Claude reads the books with the same six tools as above, run as the signed-in person, so it sees only what their profile allows and changes nothing. The server calls the Anthropic API (model `claude-opus-5-5`) with `ANTHROPIC_API_KEY`; nothing about the conversation is stored in TwinTrack.
+
+### `POST /accounts/assistant/messages`
+
+**Access:** `private`, needs `ledgerAccount.read`.
+
+**Body:** `messages`, the conversation so far, oldest first: up to 40 turns, each `{ "role": "user" | "assistant", "content": "..." }` with 1 to 4,000 characters. It must start and end with a `user` turn. The screen keeps the conversation and sends it whole each time.
+
+```json
+{ "messages": [{ "role": "user", "content": "How much cash do we have across all bank accounts?" }] }
+```
+
+**Returns:** `reply` (Claude's answer as text, amounts in taka) and `toolsUsed` (the tools it read, in order).
+
+```json
+{ "reply": "You have Tk 2,24,81,920 across 3 accounts. City Bank holds most of it.", "toolsUsed": ["accounts_cash_and_bank"] }
+```
+
+**Errors:** `422 validation_failed` for a malformed conversation; `503 assistant_not_configured` when the server has no `ANTHROPIC_API_KEY`, or the key is refused; `503 assistant_busy` when the Anthropic API is rate-limiting; `502 assistant_unavailable` when it can't be reached. A question Claude declines, or one needing more than 8 rounds of reading, gets `200` with a reply saying so.
+
 ## Client accounts
 
 What each client was billed, paid and still owes, worked out from issued invoices and the recorded receipts linked to them. Amounts are in taka at each invoice's issue rate, as the books recorded them, so the total outstanding equals the 1300 Accounts receivable balance.

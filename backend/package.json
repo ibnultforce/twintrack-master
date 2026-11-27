@@ -15,6 +15,7 @@
     "test:postman": "tsx --env-file-if-exists=.env tests/run-postman.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "@aws-sdk/client-s3": "^3.1167.0",
     "@aws-sdk/s3-request-presigner": "^3.1167.0",
     "@modelcontextprotocol/sdk": "^1.32.2",

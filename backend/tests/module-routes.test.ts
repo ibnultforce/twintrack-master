@@ -1,4 +1,4 @@
-import { accountsRoutes } from '../src/modules/accounts/accounts.routes.js';
+import { createAccountsRoutes } from '../src/modules/accounts/accounts.routes.js';
 import { demoRoutes } from '../src/modules/demo/demo.routes.js';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -17,7 +17,7 @@ const moduleRouteLists: Record<string, ApiRoute[]> = {
   hr: hrRoutes,
   demo: demoRoutes,
   projects: createProjectsRoutes(config, dependencies),
-  accounts: accountsRoutes,
+  accounts: createAccountsRoutes(dependencies),
 };
 
 function loadManifest(moduleKey: string) {

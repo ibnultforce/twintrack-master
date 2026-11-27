@@ -62,6 +62,7 @@ const envSchema = z
     TEST_PAGE_ENABLED: z.enum(['true', 'false']).default('false'),
     MODULE_FILE_SYNC_ENABLED: z.enum(['true', 'false']).optional(),
     RESEND_API_KEY: z.string().trim().optional(),
+    ANTHROPIC_API_KEY: z.string().trim().optional(),
     EMAIL_FROM: z.string().trim().min(1).default('TwinTrack <no-reply@twintrack.com>'),
     PORTAL_URL: z.string().refine(isWebOrigin, 'must be an address such as https://twintrack.com').optional(),
     PASSWORD_LINK_TTL_HOURS: positiveInteger(24),
@@ -171,6 +172,8 @@ export interface Config {
   allowedOrigins: string[];
   /** Module key to the address of its frontend, for sending people to it after login. */
   moduleFrontendUrls: Map<string, string>;
+  /** For the Claude assistant in Accounts. Without it the assistant answers that it isn't set up. */
+  anthropicApiKey?: string;
   logLevel: string;
   /** How many proxies sit in front of the API, so rate limits see the caller's real address. */
   trustProxyHops: number;
@@ -249,5 +252,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       localDirectory: values.STORAGE_DIR,
     },
     defaultIncentiveHourlyRate: values.INCENTIVE_HOURLY_RATE_BDT,
+    anthropicApiKey: values.ANTHROPIC_API_KEY || undefined,
   };
 }

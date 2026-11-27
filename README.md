@@ -222,6 +222,7 @@ The company's bookkeeping, in `backend/src/modules/accounts/`, one folder per fe
 | People costs | `/accounts/payroll-runs`, `/staff-payouts`, `/commission-rules`, `/employee-loans`, `/unpaid-leave`, `/provident-fund`, `/employee-payments` | Payroll on dummy employees until HR is built, bonus, incentive (from Project management), commission, loans, PF and gratuity |
 | Assets, tax and planning | `/accounts/fixed-assets`, `/inventory-items`, `/tax-filings`, `/budgets` | Depreciation, stock, VAT and TDS per month, budget against actual |
 | Reports | `/accounts/dashboard`, `/reports/*`, `/exports` | Profit and loss, balance sheet, cash flow, and CSV of every list. Six read-only `accounts_*` MCP tools answer the same questions in Claude |
+| Claude assistant | `/accounts/assistant/messages` | Chat on the Accounts assistant screen: Claude answers with the same six read-only tools, as the signed-in person. Needs `ANTHROPIC_API_KEY` in `backend/.env` |
 
 The rules that hold everywhere:
 
